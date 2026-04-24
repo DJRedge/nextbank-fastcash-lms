@@ -7,45 +7,28 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --royal: #1a3a6b;
-    --royal-dark: #0f2347;
-    --royal-light: #2a5298;
-    --gold: #d4a017;
-    --gold-light: #f0c040;
-    --gold-pale: #fdf6e3;
-    --white: #ffffff;
-    --gray-50: #f8f9fc;
-    --gray-100: #eef0f5;
-    --gray-200: #d8dce8;
-    --gray-400: #8a93ae;
-    --gray-600: #4a5270;
-    --gray-800: #1e2340;
-    --success: #1a7f5a;
-    --success-bg: #e6f7f1;
-    --danger: #c0392b;
-    --danger-bg: #fdecea;
-    --warning: #d68910;
-    --warning-bg: #fef9e7;
-    --info: #1a5276;
-    --info-bg: #eaf2f8;
-    --sidebar-w: 220px;
-    --header-h: 62px;
-    --radius: 10px;
+    --royal: #1a3a6b; --royal-dark: #0f2347; --royal-light: #2a5298;
+    --gold: #d4a017; --gold-light: #f0c040; --gold-pale: #fdf6e3;
+    --white: #ffffff; --gray-50: #f8f9fc; --gray-100: #eef0f5;
+    --gray-200: #d8dce8; --gray-400: #8a93ae; --gray-600: #4a5270; --gray-800: #1e2340;
+    --success: #1a7f5a; --success-bg: #e6f7f1;
+    --danger: #c0392b; --danger-bg: #fdecea;
+    --warning: #d68910; --warning-bg: #fef9e7;
+    --info: #1a5276; --info-bg: #eaf2f8;
+    --sidebar-w: 220px; --header-h: 62px; --radius: 10px;
     --shadow: 0 2px 12px rgba(26,58,107,0.10);
     --shadow-md: 0 4px 24px rgba(26,58,107,0.15);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Nunito', sans-serif; background: var(--gray-50); color: var(--gray-800); min-height: 100vh; }
 
-  /* LOGIN */
-  #loginScreen {
-    position: fixed; inset: 0; background: linear-gradient(135deg, var(--royal-dark) 0%, var(--royal-light) 60%, #1a5276 100%);
-    display: flex; align-items: center; justify-content: center; z-index: 9999;
-  }
-  .login-card {
-    background: var(--white); border-radius: 18px; padding: 48px 44px; width: 420px;
-    box-shadow: 0 24px 80px rgba(0,0,0,0.35); text-align: center;
-  }
+  #loadingOverlay { position: fixed; inset: 0; background: rgba(15,35,71,0.82); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 99999; }
+  .spinner { width: 48px; height: 48px; border: 4px solid rgba(212,160,23,0.3); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 16px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loadingOverlay p { color: var(--gold-light); font-size: 14px; letter-spacing: 0.5px; }
+
+  #loginScreen { position: fixed; inset: 0; background: linear-gradient(135deg, var(--royal-dark) 0%, var(--royal-light) 60%, #1a5276 100%); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+  .login-card { background: var(--white); border-radius: 18px; padding: 48px 44px; width: 420px; box-shadow: 0 24px 80px rgba(0,0,0,0.35); text-align: center; }
   .login-logo { width: 72px; height: 72px; background: linear-gradient(135deg, var(--royal), var(--royal-light)); border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; }
   .login-logo span { color: var(--gold); font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; }
   .login-title { font-family: 'Playfair Display', serif; font-size: 22px; color: var(--royal-dark); margin-bottom: 4px; }
@@ -53,17 +36,12 @@
   .login-label { display: block; text-align: left; font-size: 12px; font-weight: 700; color: var(--gray-600); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
   .login-input { width: 100%; padding: 11px 14px; border: 1.5px solid var(--gray-200); border-radius: 8px; font-family: 'Nunito',sans-serif; font-size: 14px; margin-bottom: 18px; outline: none; transition: border .2s; }
   .login-input:focus { border-color: var(--royal-light); }
-  .login-btn { width: 100%; padding: 13px; background: linear-gradient(90deg, var(--royal-dark), var(--royal-light)); color: var(--gold-light); font-family: 'Nunito',sans-serif; font-size: 15px; font-weight: 700; border: none; border-radius: 8px; cursor: pointer; letter-spacing: 0.5px; transition: opacity .2s; }
+  .login-btn { width: 100%; padding: 13px; background: linear-gradient(90deg, var(--royal-dark), var(--royal-light)); color: var(--gold-light); font-family: 'Nunito',sans-serif; font-size: 15px; font-weight: 700; border: none; border-radius: 8px; cursor: pointer; transition: opacity .2s; }
   .login-btn:hover { opacity: 0.9; }
   .login-err { background: var(--danger-bg); color: var(--danger); font-size: 13px; padding: 8px 12px; border-radius: 6px; margin-bottom: 14px; display: none; }
 
-  /* APP LAYOUT */
   #app { display: none; min-height: 100vh; }
-  .sidebar {
-    position: fixed; left: 0; top: 0; bottom: 0; width: var(--sidebar-w);
-    background: linear-gradient(180deg, var(--royal-dark) 0%, var(--royal) 100%);
-    display: flex; flex-direction: column; z-index: 100; box-shadow: 4px 0 24px rgba(0,0,0,0.18);
-  }
+  .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: var(--sidebar-w); background: linear-gradient(180deg, var(--royal-dark) 0%, var(--royal) 100%); display: flex; flex-direction: column; z-index: 100; box-shadow: 4px 0 24px rgba(0,0,0,0.18); }
   .sidebar-logo { padding: 20px 18px 16px; border-bottom: 1px solid rgba(255,255,255,0.08); }
   .sidebar-logo .brand { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--gold-light); }
   .sidebar-logo .sub { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.6px; text-transform: uppercase; }
@@ -86,131 +64,115 @@
   .topbar-title { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--royal-dark); }
   .topbar-right { display: flex; align-items: center; gap: 16px; }
   .topbar-badge { background: var(--gold-pale); border: 1px solid var(--gold); color: var(--royal-dark); font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px; }
+  .db-status { font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 700; }
+  .db-online { background: var(--success-bg); color: var(--success); }
+  .db-offline { background: var(--danger-bg); color: var(--danger); }
 
   .content { flex: 1; padding: 28px; }
-
-  /* CARDS */
   .card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px 24px; margin-bottom: 22px; }
   .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
   .card-title { font-size: 16px; font-weight: 700; color: var(--royal-dark); }
-  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 22px; }
+  .stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 22px; }
   .stat-card { background: var(--white); border-radius: var(--radius); padding: 20px 22px; box-shadow: var(--shadow); border-left: 4px solid var(--royal-light); }
   .stat-label { font-size: 12px; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; }
-  .stat-value { font-size: 28px; font-weight: 700; color: var(--royal-dark); }
+  .stat-value { font-size: 26px; font-weight: 700; color: var(--royal-dark); }
   .stat-sub { font-size: 12px; color: var(--gray-400); margin-top: 4px; }
 
-  /* TABLES */
   .tbl-wrap { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
   th { background: var(--gray-50); color: var(--gray-600); font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; padding: 11px 14px; text-align: left; border-bottom: 2px solid var(--gray-200); }
   td { padding: 11px 14px; border-bottom: 1px solid var(--gray-100); color: var(--gray-800); vertical-align: middle; }
   tr:hover td { background: var(--gold-pale); }
 
-  /* BUTTONS */
   .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border-radius: 7px; font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; border: none; transition: all .2s; }
   .btn-primary { background: var(--royal); color: var(--gold-light); }
   .btn-primary:hover { background: var(--royal-dark); }
   .btn-gold { background: var(--gold); color: var(--royal-dark); }
   .btn-gold:hover { background: var(--gold-light); }
-  .btn-danger { background: var(--danger); color: #fff; }
   .btn-outline { background: transparent; border: 1.5px solid var(--royal); color: var(--royal); }
   .btn-outline:hover { background: var(--royal); color: var(--white); }
   .btn-sm { padding: 5px 12px; font-size: 12px; }
-  .btn-success { background: var(--success); color: #fff; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  /* BADGES */
   .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
   .badge-success { background: var(--success-bg); color: var(--success); }
   .badge-danger { background: var(--danger-bg); color: var(--danger); }
   .badge-info { background: var(--info-bg); color: var(--info); }
   .badge-warning { background: var(--warning-bg); color: var(--warning); }
 
-  /* FORMS */
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .form-group { margin-bottom: 16px; }
   .form-group.full { grid-column: 1 / -1; }
   label.fl { display: block; font-size: 12px; font-weight: 700; color: var(--gray-600); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px; }
-  input.fi, select.fi, textarea.fi {
-    width: 100%; padding: 10px 13px; border: 1.5px solid var(--gray-200); border-radius: 7px;
-    font-family: 'Nunito',sans-serif; font-size: 14px; outline: none; background: var(--white); color: var(--gray-800);
-  }
+  input.fi, select.fi, textarea.fi { width: 100%; padding: 10px 13px; border: 1.5px solid var(--gray-200); border-radius: 7px; font-family: 'Nunito',sans-serif; font-size: 14px; outline: none; background: var(--white); color: var(--gray-800); }
   input.fi:focus, select.fi:focus { border-color: var(--royal-light); box-shadow: 0 0 0 3px rgba(26,82,152,0.08); }
   textarea.fi { min-height: 80px; resize: vertical; }
 
-  /* SEARCH BAR */
   .search-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
   .search-input { flex: 1; min-width: 180px; padding: 9px 14px; border: 1.5px solid var(--gray-200); border-radius: 7px; font-family: 'Nunito',sans-serif; font-size: 13.5px; outline: none; }
   .search-input:focus { border-color: var(--royal-light); }
 
-  /* MODAL */
   .modal-bg { position: fixed; inset: 0; background: rgba(10,20,50,0.55); display: none; align-items: center; justify-content: center; z-index: 1000; }
   .modal-bg.open { display: flex; }
   .modal { background: var(--white); border-radius: 14px; padding: 30px 32px; width: 520px; max-width: 95vw; max-height: 85vh; overflow-y: auto; box-shadow: var(--shadow-md); }
   .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
   .modal-title { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--royal-dark); }
-  .modal-close { width: 30px; height: 30px; border-radius: 50%; background: var(--gray-100); border: none; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; color: var(--gray-600); }
+  .modal-close { width: 30px; height: 30px; border-radius: 50%; background: var(--gray-100); border: none; cursor: pointer; font-size: 16px; color: var(--gray-600); }
 
-  /* ALERT */
   .alert { padding: 12px 16px; border-radius: 8px; font-size: 13.5px; margin-bottom: 14px; display: none; }
   .alert-danger { background: var(--danger-bg); color: var(--danger); border-left: 4px solid var(--danger); }
   .alert-success { background: var(--success-bg); color: var(--success); border-left: 4px solid var(--success); }
   .alert-warning { background: var(--warning-bg); color: var(--warning); border-left: 4px solid var(--warning); }
 
-  /* RECEIPT */
   .receipt { background: var(--white); border: 2px dashed var(--gray-200); border-radius: 10px; padding: 24px; font-size: 13px; }
   .receipt-title { text-align: center; font-family: 'Playfair Display', serif; color: var(--royal-dark); font-size: 15px; margin-bottom: 4px; }
   .receipt-sub { text-align: center; font-size: 11px; color: var(--gray-400); margin-bottom: 14px; }
   .receipt-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dotted var(--gray-200); }
-  .receipt-row:last-child { border-bottom: none; }
   .receipt-amount { text-align: center; font-size: 28px; font-weight: 700; color: var(--royal-dark); margin: 14px 0; }
   .receipt-arn { text-align: center; font-size: 11px; color: var(--gray-400); margin-bottom: 10px; }
 
-  /* PAGE visibility */
   .page { display: none; }
   .page.active { display: block; }
 
-  /* DASHBOARD WELCOME */
   .welcome-banner { background: linear-gradient(135deg, var(--royal-dark) 0%, var(--royal-light) 100%); border-radius: var(--radius); padding: 28px 32px; color: var(--white); margin-bottom: 22px; display: flex; align-items: center; justify-content: space-between; }
   .welcome-text h2 { font-family: 'Playfair Display', serif; font-size: 22px; margin-bottom: 6px; }
   .welcome-text p { font-size: 13.5px; opacity: 0.75; }
   .welcome-icon { font-size: 52px; opacity: 0.35; }
-
   .page-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
-  /* PRINT */
   @media print {
-    .sidebar, .topbar, .modal-bg > .modal > div:last-child, button { display: none !important; }
+    .sidebar,.topbar,#loadingOverlay { display: none !important; }
     .main { margin-left: 0; }
     .modal-bg.open { position: static; background: none; display: block; }
     .modal { box-shadow: none; padding: 0; width: 100%; max-height: none; }
   }
-
-  @media (max-width: 900px) {
+  @media (max-width:900px) {
     .stat-grid { grid-template-columns: 1fr 1fr; }
-    .sidebar { width: 0; overflow: hidden; }
-    .main { margin-left: 0; }
   }
 </style>
 </head>
 <body>
 
-<!-- LOGIN SCREEN -->
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <p id="loadingMsg">Connecting to database...</p>
+</div>
+
 <div id="loginScreen">
   <div class="login-card">
     <div class="login-logo"><span>NB</span></div>
     <div class="login-title">NextBank FastCash</div>
     <div class="login-sub">GSIS · PVAO · SSS — Change Claiming System</div>
-    <div class="login-err" id="loginErr">Invalid username or password.</div>
+    <div class="login-err" id="loginErr"></div>
     <label class="login-label">Username</label>
     <input class="login-input" type="text" id="loginUser" placeholder="Enter username">
     <label class="login-label">Password</label>
     <input class="login-input" type="password" id="loginPass" placeholder="Enter password">
     <button class="login-btn" onclick="doLogin()">Sign In</button>
-    <p style="margin-top:18px;font-size:12px;color:var(--gray-400)">Demo: admin / admin123</p>
+    <p style="margin-top:14px;font-size:12px;color:var(--gray-400)">Default: admin / admin123</p>
   </div>
 </div>
 
-<!-- MAIN APP -->
 <div id="app">
   <div class="sidebar">
     <div class="sidebar-logo">
@@ -246,41 +208,33 @@
     <div class="topbar">
       <div class="topbar-title" id="topbarTitle">Dashboard</div>
       <div class="topbar-right">
+        <span class="db-status db-offline" id="dbStatus">⬤ Connecting...</span>
         <div class="topbar-badge">GSIS · PVAO · SSS</div>
         <div style="font-size:13px;color:var(--gray-400)" id="topbarDate"></div>
       </div>
     </div>
     <div class="content">
 
-      <!-- DASHBOARD -->
       <div class="page active" id="page-dashboard">
         <div class="welcome-banner">
           <div class="welcome-text">
             <h2>Welcome back, <span id="wName">Administrator</span>!</h2>
-            <p>NextBank FastCash Change Claiming System — All modules are operational.</p>
+            <p>NextBank FastCash — Live data powered by Supabase cloud.</p>
           </div>
           <div class="welcome-icon">🏦</div>
         </div>
         <div class="stat-grid">
           <div class="stat-card" style="border-left-color:var(--gold)">
-            <div class="stat-label">Total Clients</div>
-            <div class="stat-value" id="dsh-clients">0</div>
-            <div class="stat-sub">Active accounts</div>
+            <div class="stat-label">Total Clients</div><div class="stat-value" id="dsh-clients">—</div><div class="stat-sub">Registered accounts</div>
           </div>
           <div class="stat-card" style="border-left-color:#1a7f5a">
-            <div class="stat-label">Total Change Pool</div>
-            <div class="stat-value" id="dsh-pool">₱0</div>
-            <div class="stat-sub">Unclaimed balance</div>
+            <div class="stat-label">Change Pool</div><div class="stat-value" id="dsh-pool">—</div><div class="stat-sub">Unclaimed balance</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">Claims Today</div>
-            <div class="stat-value" id="dsh-today">0</div>
-            <div class="stat-sub">Transactions</div>
+            <div class="stat-label">Claims Today</div><div class="stat-value" id="dsh-today">—</div><div class="stat-sub">Transactions</div>
           </div>
           <div class="stat-card" style="border-left-color:var(--danger)">
-            <div class="stat-label">Claimed Total</div>
-            <div class="stat-value" id="dsh-claimed">₱0</div>
-            <div class="stat-sub">All time</div>
+            <div class="stat-label">Total Claimed</div><div class="stat-value" id="dsh-claimed">—</div><div class="stat-sub">All time</div>
           </div>
         </div>
         <div class="card">
@@ -289,22 +243,20 @@
         </div>
       </div>
 
-      <!-- CLIENTS -->
       <div class="page" id="page-clients">
         <div class="card">
           <div class="card-header">
             <div class="card-title">Client List</div>
-            <div class="page-actions">
-              <button class="btn btn-primary" onclick="openModal('modalAddClient')">+ Add Client</button>
-            </div>
+            <button class="btn btn-primary" onclick="openModal('modalAddClient')">+ Add Client</button>
           </div>
           <div class="search-bar">
-            <select class="fi" id="clientSearchBy" style="width:160px">
+            <select class="fi" id="clientSearchBy" style="width:160px" onchange="filterClients()">
               <option value="name">Name</option>
               <option value="clientcode">Client Code</option>
               <option value="pnno">PN No.</option>
             </select>
-            <input class="search-input" id="clientSearch" placeholder="Search clients..." oninput="renderClients()">
+            <input class="search-input" id="clientSearch" placeholder="Search clients..." oninput="filterClients()">
+            <button class="btn btn-outline" onclick="loadClients()">↻ Refresh</button>
           </div>
           <div class="tbl-wrap">
             <table id="clientTable">
@@ -315,7 +267,6 @@
         </div>
       </div>
 
-      <!-- UPLOAD -->
       <div class="page" id="page-upload">
         <div class="card">
           <div class="card-header">
@@ -329,7 +280,7 @@
           <div class="alert alert-danger" id="uploadAlert"></div>
           <div class="alert alert-success" id="uploadOK"></div>
           <div class="alert alert-warning" id="uploadWarn"></div>
-          <p style="font-size:13px;color:var(--gray-400);margin-bottom:18px;">Upload a CSV with columns: <b>branchcode, clientcode, name, amount, pnno, batchno</b>. Duplicate entries are automatically accumulated.</p>
+          <p style="font-size:13px;color:var(--gray-400);margin-bottom:18px;">CSV columns required: <b>branchcode, clientcode, name, amount, pnno, batchno</b>. Duplicate clientcodes are automatically accumulated.</p>
           <div class="tbl-wrap">
             <table id="uploadTable">
               <thead><tr><th>Batch No.</th><th>Client Code</th><th>Name</th><th>Branch</th><th>PN No.</th><th>Amount</th><th>Status</th></tr></thead>
@@ -338,7 +289,10 @@
           </div>
         </div>
         <div class="card">
-          <div class="card-header"><div class="card-title">NBMaster Records</div></div>
+          <div class="card-header">
+            <div class="card-title">NBMaster Records</div>
+            <button class="btn btn-outline" onclick="loadNBMaster()">↻ Refresh</button>
+          </div>
           <div class="tbl-wrap">
             <table id="nbTable">
               <thead><tr><th>Client Code</th><th>Name</th><th>PN No.</th><th>Batch No.</th><th>Amount</th></tr></thead>
@@ -348,14 +302,17 @@
         </div>
       </div>
 
-      <!-- CLAIMING -->
       <div class="page" id="page-claiming">
         <div class="card">
           <div class="card-header"><div class="card-title">Change Claiming</div></div>
           <div class="form-grid" style="margin-bottom:18px;">
             <div class="form-group">
               <label class="fl">Client Code</label>
-              <input class="fi" id="claimCode" placeholder="Enter client code" oninput="lookupClient()">
+              <input class="fi" id="claimCode" placeholder="Enter client code">
+            </div>
+            <div class="form-group">
+              <label class="fl">&nbsp;</label>
+              <button class="btn btn-outline" style="width:100%;margin-top:2px" onclick="lookupClient()">🔍 Lookup Client</button>
             </div>
             <div class="form-group">
               <label class="fl">Client Name</label>
@@ -367,7 +324,11 @@
             </div>
             <div class="form-group">
               <label class="fl">Amount to Claim</label>
-              <input class="fi" id="claimAmt" type="number" min="0" placeholder="0.00" oninput="checkClaim()">
+              <input class="fi" id="claimAmt" type="number" min="0" step="0.01" placeholder="0.00" oninput="checkClaim()">
+            </div>
+            <div class="form-group">
+              <label class="fl">Mode of Change</label>
+              <select class="fi" id="claimMOC"></select>
             </div>
             <div class="form-group full">
               <label class="fl">Remarks</label>
@@ -380,31 +341,30 @@
         </div>
       </div>
 
-      <!-- TRANSACTIONS -->
       <div class="page" id="page-transactions">
         <div class="card">
-          <div class="card-header"><div class="card-title">All Transactions</div></div>
+          <div class="card-header">
+            <div class="card-title">All Transactions</div>
+            <button class="btn btn-outline" onclick="loadTransactions()">↻ Refresh</button>
+          </div>
           <div class="search-bar">
-            <input class="search-input" id="txSearch" placeholder="Search by client, AR No., branch..." oninput="renderTransactions()">
+            <input class="search-input" id="txSearch" placeholder="Search by AR No., client code, branch..." oninput="filterTransactions()">
           </div>
           <div class="tbl-wrap">
             <table id="txTable">
-              <thead><tr><th>AR No.</th><th>Date</th><th>Client Code</th><th>Branch</th><th>Amount</th><th>MOC</th><th>Remarks</th><th>Printed By</th><th>Actions</th></tr></thead>
+              <thead><tr><th>AR No.</th><th>Date</th><th>Client Code</th><th>Branch</th><th>Amount</th><th>Remarks</th><th>Printed By</th><th>Actions</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
         </div>
       </div>
 
-      <!-- BRANCHES -->
       <div class="page" id="page-branches">
         <div class="card">
           <div class="card-header">
             <div class="card-title">Branch Management</div>
             <div class="page-actions">
               <button class="btn btn-outline" onclick="downloadBranchTemplate()">⬇ Template</button>
-              <button class="btn btn-gold" onclick="document.getElementById('branchUpload').click()">📤 Upload</button>
-              <input type="file" id="branchUpload" accept=".csv" style="display:none">
               <button class="btn btn-primary" onclick="openModal('modalAddBranch')">+ Add Branch</button>
             </div>
           </div>
@@ -417,15 +377,12 @@
         </div>
       </div>
 
-      <!-- MOC -->
       <div class="page" id="page-moc">
         <div class="card">
           <div class="card-header">
             <div class="card-title">Mode of Change (MOC)</div>
             <div class="page-actions">
               <button class="btn btn-outline" onclick="downloadMOCTemplate()">⬇ Template</button>
-              <button class="btn btn-gold" onclick="document.getElementById('mocUpload').click()">📤 Upload</button>
-              <input type="file" id="mocUpload" accept=".csv" style="display:none">
               <button class="btn btn-primary" onclick="openModal('modalAddMOC')">+ Add MOC</button>
             </div>
           </div>
@@ -438,14 +395,11 @@
         </div>
       </div>
 
-      <!-- USERS -->
       <div class="page" id="page-users">
         <div class="card">
           <div class="card-header">
             <div class="card-title">User Management</div>
-            <div class="page-actions">
-              <button class="btn btn-primary" onclick="openModal('modalAddUser')">+ Add User</button>
-            </div>
+            <button class="btn btn-primary" onclick="openModal('modalAddUser')">+ Add User</button>
           </div>
           <div class="tbl-wrap">
             <table id="userTable">
@@ -463,67 +417,67 @@
 <!-- MODALS -->
 <div class="modal-bg" id="modalAddClient">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title">Add / Edit Client</div><button class="modal-close" onclick="closeModal('modalAddClient')">✕</button></div>
+    <div class="modal-header"><div class="modal-title" id="clientModalTitle">Add Client</div><button class="modal-close" onclick="closeModal('modalAddClient')">✕</button></div>
     <div class="form-grid">
-      <div class="form-group"><label class="fl">Branch Code</label><select class="fi" id="cBranch"></select></div>
+      <div class="form-group"><label class="fl">Branch</label><select class="fi" id="cBranch"></select></div>
       <div class="form-group"><label class="fl">Client Code</label><input class="fi" id="cCode" placeholder="e.g. C-001"></div>
       <div class="form-group full"><label class="fl">Full Name</label><input class="fi" id="cName" placeholder="Last, First MI"></div>
-      <div class="form-group"><label class="fl">PN No.</label><input class="fi" id="cPN" placeholder="e.g. PN-2024-001"></div>
-      <div class="form-group"><label class="fl">Change Amount</label><input class="fi" type="number" id="cChange" placeholder="0.00"></div>
+      <div class="form-group"><label class="fl">PN No.</label><input class="fi" id="cPN"></div>
+      <div class="form-group"><label class="fl">Change Amount</label><input class="fi" type="number" id="cChange" placeholder="0.00" step="0.01"></div>
       <div class="form-group"><label class="fl">Mode of Change</label><select class="fi" id="cMOC"></select></div>
     </div>
     <div style="margin-top:18px;display:flex;gap:8px;justify-content:flex-end">
       <button class="btn btn-outline" onclick="closeModal('modalAddClient')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveClient()">Save Client</button>
+      <button class="btn btn-primary" onclick="saveClient()">💾 Save to Cloud</button>
     </div>
   </div>
 </div>
 
 <div class="modal-bg" id="modalAddBranch">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title">Add / Edit Branch</div><button class="modal-close" onclick="closeModal('modalAddBranch')">✕</button></div>
+    <div class="modal-header"><div class="modal-title" id="branchModalTitle">Add Branch</div><button class="modal-close" onclick="closeModal('modalAddBranch')">✕</button></div>
     <div class="form-grid">
-      <div class="form-group"><label class="fl">Branch Code</label><input class="fi" id="bCode" placeholder="e.g. BR-001"></div>
-      <div class="form-group"><label class="fl">Branch Name</label><input class="fi" id="bName" placeholder="Branch name"></div>
-      <div class="form-group full"><label class="fl">Address</label><input class="fi" id="bAddr" placeholder="Address"></div>
+      <div class="form-group"><label class="fl">Branch Code</label><input class="fi" id="bCode"></div>
+      <div class="form-group"><label class="fl">Branch Name</label><input class="fi" id="bName"></div>
+      <div class="form-group full"><label class="fl">Address</label><input class="fi" id="bAddr"></div>
       <div class="form-group"><label class="fl">Status</label><select class="fi" id="bStatus"><option>Active</option><option>Inactive</option></select></div>
     </div>
     <div style="margin-top:18px;display:flex;gap:8px;justify-content:flex-end">
       <button class="btn btn-outline" onclick="closeModal('modalAddBranch')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveBranch()">Save Branch</button>
+      <button class="btn btn-primary" onclick="saveBranch()">💾 Save to Cloud</button>
     </div>
   </div>
 </div>
 
 <div class="modal-bg" id="modalAddMOC">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title">Add / Edit Mode of Change</div><button class="modal-close" onclick="closeModal('modalAddMOC')">✕</button></div>
-    <div class="form-group"><label class="fl">MOC Code</label><input class="fi" id="mocCode" placeholder="e.g. CASH"></div>
-    <div class="form-group"><label class="fl">Description</label><input class="fi" id="mocDesc" placeholder="e.g. Cash over counter"></div>
+    <div class="modal-header"><div class="modal-title">Mode of Change</div><button class="modal-close" onclick="closeModal('modalAddMOC')">✕</button></div>
+    <div class="form-group"><label class="fl">MOC Code</label><input class="fi" id="mocCode"></div>
+    <div class="form-group"><label class="fl">Description</label><input class="fi" id="mocDesc"></div>
     <div style="margin-top:18px;display:flex;gap:8px;justify-content:flex-end">
       <button class="btn btn-outline" onclick="closeModal('modalAddMOC')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveMOC()">Save MOC</button>
+      <button class="btn btn-primary" onclick="saveMOC()">💾 Save to Cloud</button>
     </div>
   </div>
 </div>
 
 <div class="modal-bg" id="modalAddUser">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title">Add / Edit User</div><button class="modal-close" onclick="closeModal('modalAddUser')">✕</button></div>
+    <div class="modal-header"><div class="modal-title" id="userModalTitle">Add User</div><button class="modal-close" onclick="closeModal('modalAddUser')">✕</button></div>
     <div class="form-grid">
       <div class="form-group"><label class="fl">Last Name</label><input class="fi" id="uLast"></div>
       <div class="form-group"><label class="fl">First Name</label><input class="fi" id="uFirst"></div>
       <div class="form-group"><label class="fl">Middle Name</label><input class="fi" id="uMiddle"></div>
-      <div class="form-group"><label class="fl">Ext. (Jr/Sr)</label><input class="fi" id="uExt" placeholder="Jr., Sr., III"></div>
+      <div class="form-group"><label class="fl">Ext. (Jr/Sr)</label><input class="fi" id="uExt"></div>
       <div class="form-group"><label class="fl">Login Name</label><input class="fi" id="uLogin"></div>
-      <div class="form-group"><label class="fl">Password</label><input class="fi" type="password" id="uPass"></div>
-      <div class="form-group full"><label class="fl">Email Address</label><input class="fi" type="email" id="uEmail" placeholder="user@nextbank.com"></div>
+      <div class="form-group"><label class="fl">Password</label><input class="fi" type="password" id="uPass" placeholder="Leave blank to keep current"></div>
+      <div class="form-group full"><label class="fl">Email Address</label><input class="fi" type="email" id="uEmail"></div>
       <div class="form-group"><label class="fl">System Access</label><select class="fi" id="uAccess"><option>All</option><option>Upload</option><option>Claim</option><option>Reports</option></select></div>
       <div class="form-group"><label class="fl">Administrator</label><select class="fi" id="uAdmin"><option value="0">No</option><option value="1">Yes</option></select></div>
     </div>
     <div style="margin-top:18px;display:flex;gap:8px;justify-content:flex-end">
       <button class="btn btn-outline" onclick="closeModal('modalAddUser')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveUser()">Save User</button>
+      <button class="btn btn-primary" onclick="saveUser()">💾 Save to Cloud</button>
     </div>
   </div>
 </div>
@@ -554,271 +508,410 @@
 </div>
 
 <script>
-let DB = {
-  users: [
-    {code:'U001',lastname:'De Leon',firstname:'Maria',middlename:'Santos',extname:'',loginname:'admin',password:'admin123',email:'admin@nextbank.com',systemaccess:'All',administrator:1},
-    {code:'U002',lastname:'Reyes',firstname:'Juan',middlename:'Cruz',extname:'Jr.',loginname:'jreyes',password:'pass123',email:'jreyes@nextbank.com',systemaccess:'Upload',administrator:0},
-    {code:'U003',lastname:'Garcia',firstname:'Ana',middlename:'Lim',extname:'',loginname:'agarcia',password:'pass123',email:'agarcia@nextbank.com',systemaccess:'Claim',administrator:0}
-  ],
-  branches: [
-    {code:'BR-001',name:'Main Office – Makati',address:'Ayala Ave, Makati City',status:'Active'},
-    {code:'BR-002',name:'Quezon City Branch',address:'Commonwealth Ave, QC',status:'Active'},
-    {code:'BR-003',name:'Davao Branch',address:'JP Laurel Ave, Davao City',status:'Active'},
-    {code:'BR-004',name:'Cebu Branch',address:'Colon St, Cebu City',status:'Inactive'}
-  ],
-  moc: [
-    {moc:'CASH',desc:'Cash Over Counter'},
-    {moc:'CHECK',desc:"Manager's Check"},
-    {moc:'ONLINE',desc:'Online Transfer'},
-    {moc:'GCASH',desc:'GCash / E-Wallet'}
-  ],
-  clients: [
-    {branchcode:'BR-001',clientcode:'C-0001',name:'Dela Cruz, Jose M.',change:1250.00,moc:'CASH',pnno:'PN-2024-001'},
-    {branchcode:'BR-001',clientcode:'C-0002',name:'Santos, Maria T.',change:875.50,moc:'GCASH',pnno:'PN-2024-002'},
-    {branchcode:'BR-002',clientcode:'C-0003',name:'Reyes, Pedro J.',change:3200.00,moc:'CHECK',pnno:'PN-2024-003'},
-    {branchcode:'BR-002',clientcode:'C-0004',name:'Gonzales, Rosa A.',change:450.25,moc:'ONLINE',pnno:'PN-2024-004'},
-    {branchcode:'BR-003',clientcode:'C-0005',name:'Bautista, Manuel R.',change:2100.75,moc:'CASH',pnno:'PN-2024-005'},
-    {branchcode:'BR-003',clientcode:'C-0006',name:'Mendoza, Lita C.',change:620.00,moc:'GCASH',pnno:'PN-2024-006'},
-    {branchcode:'BR-001',clientcode:'C-0007',name:'Torres, Ricardo F.',change:4500.00,moc:'CHECK',pnno:'PN-2024-007'}
-  ],
-  nbmaster: [
-    {clientcode:'C-0001',pnno:'PN-2024-001',name:'Dela Cruz, Jose M.',amount:1250.00,batchno:'BATCH-2024-01'},
-    {clientcode:'C-0002',pnno:'PN-2024-002',name:'Santos, Maria T.',amount:875.50,batchno:'BATCH-2024-01'},
-    {clientcode:'C-0003',pnno:'PN-2024-003',name:'Reyes, Pedro J.',amount:3200.00,batchno:'BATCH-2024-02'},
-    {clientcode:'C-0004',pnno:'PN-2024-004',name:'Gonzales, Rosa A.',amount:450.25,batchno:'BATCH-2024-02'},
-    {clientcode:'C-0005',pnno:'PN-2024-005',name:'Bautista, Manuel R.',amount:2100.75,batchno:'BATCH-2024-03'},
-    {clientcode:'C-0006',pnno:'PN-2024-006',name:'Mendoza, Lita C.',amount:620.00,batchno:'BATCH-2024-03'},
-    {clientcode:'C-0007',pnno:'PN-2024-007',name:'Torres, Ricardo F.',amount:4500.00,batchno:'BATCH-2024-04'}
-  ],
-  changes: [
-    {branchcode:'BR-001',clientcode:'C-0001',date:'2025-01-10',arnumber:'AR-2025-0001',amount:500.00,remarks:'Partial claim',printedby:'admin',printeddatetime:'2025-01-10 09:15'},
-    {branchcode:'BR-002',clientcode:'C-0003',date:'2025-01-12',arnumber:'AR-2025-0002',amount:1000.00,remarks:'Full claim',printedby:'agarcia',printeddatetime:'2025-01-12 14:22'},
-    {branchcode:'BR-003',clientcode:'C-0005',date:'2025-01-15',arnumber:'AR-2025-0003',amount:300.00,remarks:'',printedby:'jreyes',printeddatetime:'2025-01-15 10:05'}
-  ],
-  uploadLog: []
+// ============================================================
+// SUPABASE CONFIG — NextBank FastCash LMS
+// ============================================================
+const SB_URL = 'https://bbpurrnroinfncwtyqsn.supabase.co';
+const SB_KEY = 'sb_publishable_k1ckt5dZvdYVAuALsEylSw_jYSBzPDs';
+
+async function sbFetch(method, table, body, query) {
+  query = query || '';
+  const url = `${SB_URL}/rest/v1/${table}${query}`;
+  const headers = {
+    'Content-Type': 'application/json',
+    'apikey': SB_KEY,
+    'Authorization': 'Bearer ' + SB_KEY
+  };
+  if (method !== 'GET') headers['Prefer'] = 'return=representation';
+  const opts = { method, headers };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  if (!res.ok) {
+    let msg = 'HTTP ' + res.status;
+    try { const j = await res.json(); msg = j.message || j.hint || j.details || msg; } catch(e) {}
+    throw new Error(msg);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : [];
+}
+
+const db = {
+  select: (t, q)    => sbFetch('GET',    t, null, q),
+  insert: (t, d)    => sbFetch('POST',   t, d,    ''),
+  update: (t, d, q) => sbFetch('PATCH',  t, d,    q),
+  delete: (t, q)    => sbFetch('DELETE', t, null, q)
 };
 
+// ============================================================
+// STATE
+// ============================================================
 let currentUser = null;
-let editIndex = {client:-1,branch:-1,moc:-1,user:-1};
-let arCounter = 4;
+let editKey = {};
+let cachedClients = [];
+let cachedBranches = [];
+let cachedMOC = [];
+let cachedTx = [];
+let claimClient = null;
 
-function pad(n){ return String(n).padStart(4,'0'); }
-function peso(n){ return '₱'+parseFloat(n||0).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-function nowDT(){ return new Date().toLocaleString('en-PH',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}); }
-function today(){ return new Date().toISOString().slice(0,10); }
+function peso(n) { return '₱' + parseFloat(n||0).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function today() { return new Date().toISOString().slice(0,10); }
+function nowDT() { return new Date().toLocaleString('en-PH',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}); }
+function pad(n,l) { return String(n).padStart(l||4,'0'); }
 
-function doLogin(){
-  const u=document.getElementById('loginUser').value.trim();
-  const p=document.getElementById('loginPass').value.trim();
-  const found=DB.users.find(x=>x.loginname===u&&x.password===p);
-  if(!found){document.getElementById('loginErr').style.display='block';return;}
-  currentUser=found;
-  document.getElementById('loginScreen').style.display='none';
-  document.getElementById('app').style.display='flex';
-  document.getElementById('sidebarName').textContent=found.firstname+' '+found.lastname;
-  document.getElementById('sidebarRole').textContent=found.administrator?'System Admin':'Staff';
-  document.getElementById('sidebarAv').textContent=(found.firstname[0]+found.lastname[0]).toUpperCase();
-  document.getElementById('wName').textContent=found.firstname;
-  setDate(); renderDashboard();
+function loading(show, msg) {
+  document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+  if (msg) document.getElementById('loadingMsg').textContent = msg;
 }
-function doLogout(){
-  currentUser=null;
-  document.getElementById('loginScreen').style.display='flex';
-  document.getElementById('app').style.display='none';
+function showAlert(id, msg, type) {
+  const el = document.getElementById(id);
+  el.textContent = msg; el.style.display = 'block';
+  el.className = 'alert alert-' + (type||'success');
+  setTimeout(() => { el.style.display='none'; }, 7000);
+}
+function setDate() {
+  document.getElementById('topbarDate').textContent = new Date().toLocaleDateString('en-PH',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
 }
 
-function nav(page,el){
+// ============================================================
+// AUTH
+// ============================================================
+async function doLogin() {
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value.trim();
+  const errEl = document.getElementById('loginErr');
+  errEl.style.display = 'none';
+  if (!u||!p) { errEl.textContent='Enter username and password.'; errEl.style.display='block'; return; }
+  loading(true, 'Signing in...');
+  try {
+    const rows = await db.select('users', '?loginname=eq.'+encodeURIComponent(u)+'&password=eq.'+encodeURIComponent(p));
+    if (!rows.length) { errEl.textContent='Invalid username or password.'; errEl.style.display='block'; loading(false); return; }
+    currentUser = rows[0];
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    document.getElementById('sidebarName').textContent = currentUser.firstname + ' ' + currentUser.lastname;
+    document.getElementById('sidebarRole').textContent = currentUser.administrator ? 'System Admin' : 'Staff';
+    document.getElementById('sidebarAv').textContent = (currentUser.firstname[0]+currentUser.lastname[0]).toUpperCase();
+    document.getElementById('wName').textContent = currentUser.firstname;
+    document.getElementById('dbStatus').textContent = '⬤ Cloud Connected';
+    document.getElementById('dbStatus').className = 'db-status db-online';
+    setDate();
+    await renderDashboard();
+  } catch(e) {
+    errEl.textContent = 'Connection error: ' + e.message; errEl.style.display='block';
+  }
+  loading(false);
+}
+
+function doLogout() {
+  currentUser = null;
+  cachedClients=[]; cachedBranches=[]; cachedMOC=[]; cachedTx=[];
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+async function nav(page, el) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
-  if(el) el.classList.add('active');
-  const titles={dashboard:'Dashboard',clients:'Client List',upload:'Upload Collection',claiming:'Claim Change',transactions:'Transactions',branches:'Branches',moc:'Mode of Change',users:'User Management'};
-  document.getElementById('topbarTitle').textContent=titles[page]||page;
-  if(page==='dashboard') renderDashboard();
-  if(page==='clients') renderClients();
-  if(page==='upload'){renderUploadLog();renderNBMaster();}
-  if(page==='transactions') renderTransactions();
-  if(page==='branches') renderBranches();
-  if(page==='moc') renderMOC();
-  if(page==='users') renderUsers();
+  if (el) el.classList.add('active');
+  const titles = {dashboard:'Dashboard',clients:'Client List',upload:'Upload Collection',claiming:'Claim Change',transactions:'Transactions',branches:'Branches',moc:'Mode of Change',users:'User Management'};
+  document.getElementById('topbarTitle').textContent = titles[page]||page;
+  if (page==='dashboard')    await renderDashboard();
+  if (page==='clients')      await loadClients();
+  if (page==='upload')       await loadNBMaster();
+  if (page==='claiming')     await loadClaimMOC();
+  if (page==='transactions') await loadTransactions();
+  if (page==='branches')     await loadBranches();
+  if (page==='moc')          await loadMOC();
+  if (page==='users')        await loadUsers();
 }
 
-function setDate(){
-  document.getElementById('topbarDate').textContent=new Date().toLocaleDateString('en-PH',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
-}
-
-function openModal(id){
-  if(id==='modalAddClient'){populateBranchSelect();populateMOCSelect();}
+// ============================================================
+// MODALS
+// ============================================================
+async function openModal(id) {
+  editKey[id] = null;
+  if (id==='modalAddClient') {
+    document.getElementById('clientModalTitle').textContent = 'Add Client';
+    await fillBranchSelect('cBranch');
+    await fillMOCSelect('cMOC');
+    ['cCode','cName','cPN','cChange'].forEach(x=>document.getElementById(x).value='');
+  }
+  if (id==='modalAddBranch') {
+    document.getElementById('branchModalTitle').textContent = 'Add Branch';
+    ['bCode','bName','bAddr'].forEach(x=>document.getElementById(x).value='');
+    document.getElementById('bStatus').value='Active';
+  }
+  if (id==='modalAddMOC') { document.getElementById('mocCode').value=''; document.getElementById('mocDesc').value=''; }
+  if (id==='modalAddUser') {
+    document.getElementById('userModalTitle').textContent = 'Add User';
+    ['uLast','uFirst','uMiddle','uExt','uLogin','uPass','uEmail'].forEach(x=>document.getElementById(x).value='');
+    document.getElementById('uAccess').value='All';
+    document.getElementById('uAdmin').value='0';
+  }
   document.getElementById(id).classList.add('open');
 }
-function closeModal(id){
-  document.getElementById(id).classList.remove('open');
-  editIndex.client=-1; editIndex.branch=-1; editIndex.moc=-1; editIndex.user=-1;
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+async function fillBranchSelect(selectId) {
+  if (!cachedBranches.length) cachedBranches = await db.select('branches','?status=eq.Active&order=name.asc');
+  document.getElementById(selectId).innerHTML = cachedBranches.map(b=>`<option value="${b.code}">${b.code} – ${b.name}</option>`).join('');
+}
+async function fillMOCSelect(selectId) {
+  if (!cachedMOC.length) cachedMOC = await db.select('moc','?order=moc.asc');
+  document.getElementById(selectId).innerHTML = cachedMOC.map(m=>`<option value="${m.moc}">${m.moc} – ${m.description}</option>`).join('');
 }
 
-function renderDashboard(){
-  document.getElementById('dsh-clients').textContent=DB.clients.length;
-  const pool=DB.clients.reduce((a,c)=>a+parseFloat(c.change||0),0);
-  document.getElementById('dsh-pool').textContent=peso(pool);
-  const todayClaims=DB.changes.filter(c=>c.date===today());
-  document.getElementById('dsh-today').textContent=todayClaims.length;
-  const claimed=DB.changes.reduce((a,c)=>a+parseFloat(c.amount||0),0);
-  document.getElementById('dsh-claimed').textContent=peso(claimed);
-  const tbody=document.querySelector('#dsh-table tbody');
-  tbody.innerHTML='';
-  [...DB.changes].reverse().slice(0,10).forEach(c=>{
-    const cl=DB.clients.find(x=>x.clientcode===c.clientcode)||{};
-    tbody.innerHTML+=`<tr><td>${c.arnumber}</td><td>${cl.name||c.clientcode}</td><td>${c.branchcode}</td><td style="color:var(--success);font-weight:700">${peso(c.amount)}</td><td>${c.date}</td><td>${c.printedby}</td></tr>`;
-  });
+// ============================================================
+// DASHBOARD
+// ============================================================
+async function renderDashboard() {
+  loading(true,'Loading dashboard...');
+  try {
+    const [clients, changes] = await Promise.all([
+      db.select('clients','?select=clientcode,name,change'),
+      db.select('changes','?order=id.desc&limit=10')
+    ]);
+    cachedClients = clients;
+    document.getElementById('dsh-clients').textContent = clients.length;
+    document.getElementById('dsh-pool').textContent = peso(clients.reduce((a,c)=>a+parseFloat(c.change||0),0));
+    document.getElementById('dsh-today').textContent = changes.filter(c=>c.date===today()).length;
+    document.getElementById('dsh-claimed').textContent = peso(changes.reduce((a,c)=>a+parseFloat(c.amount||0),0));
+    const tbody = document.querySelector('#dsh-table tbody');
+    tbody.innerHTML='';
+    changes.forEach(c=>{
+      const cl = clients.find(x=>x.clientcode===c.clientcode)||{};
+      tbody.innerHTML += `<tr><td>${c.arnumber}</td><td>${cl.name||c.clientcode}</td><td>${c.branchcode}</td><td style="color:var(--success);font-weight:700">${peso(c.amount)}</td><td>${c.date}</td><td>${c.printedby}</td></tr>`;
+    });
+  } catch(e) { console.error(e); }
+  loading(false);
 }
 
-function renderClients(){
-  const q=(document.getElementById('clientSearch')||{value:''}).value.toLowerCase();
-  const by=(document.getElementById('clientSearchBy')||{value:'name'}).value;
-  const tbody=document.querySelector('#clientTable tbody');
+// ============================================================
+// CLIENTS
+// ============================================================
+async function loadClients() {
+  loading(true,'Loading clients...');
+  try {
+    cachedClients = await db.select('clients','?order=name.asc');
+  } catch(e) { alert('Error loading clients: '+e.message); }
+  loading(false);
+  filterClients();
+}
+
+function filterClients() {
+  const q = document.getElementById('clientSearch').value.toLowerCase();
+  const by = document.getElementById('clientSearchBy').value;
+  const tbody = document.querySelector('#clientTable tbody');
   tbody.innerHTML='';
-  DB.clients.filter(c=>{
-    const val=(by==='name'?c.name:by==='clientcode'?c.clientcode:c.pnno||'').toLowerCase();
-    return !q||val.includes(q);
+  cachedClients.filter(c=>{
+    const v = (by==='name'?c.name:by==='clientcode'?c.clientcode:c.pnno||'').toLowerCase();
+    return !q||v.includes(q);
   }).forEach(c=>{
-    tbody.innerHTML+=`<tr>
+    tbody.innerHTML += `<tr>
       <td><b>${c.clientcode}</b></td><td>${c.name}</td><td>${c.branchcode}</td>
       <td>${c.pnno||'—'}</td>
       <td style="color:var(--success);font-weight:700">${peso(c.change)}</td>
-      <td><span class="badge badge-info">${c.moc}</span></td>
-      <td><button class="btn btn-outline btn-sm" onclick="editClient('${c.clientcode}')">✏ Edit</button></td>
+      <td><span class="badge badge-info">${c.moc||'—'}</span></td>
+      <td><button class="btn btn-outline btn-sm" onclick="editClient('${c.clientcode.replace(/'/g,"\\'")}')">✏ Edit</button></td>
     </tr>`;
   });
 }
 
-function populateBranchSelect(){
-  const s=document.getElementById('cBranch');
-  s.innerHTML=DB.branches.filter(b=>b.status==='Active').map(b=>`<option value="${b.code}">${b.code} – ${b.name}</option>`).join('');
-}
-function populateMOCSelect(){
-  const s=document.getElementById('cMOC');
-  s.innerHTML=DB.moc.map(m=>`<option value="${m.moc}">${m.moc} – ${m.desc}</option>`).join('');
-}
-function editClient(code){
-  const c=DB.clients.find(x=>x.clientcode===code);
-  if(!c) return;
-  editIndex.client=DB.clients.indexOf(c);
-  populateBranchSelect(); populateMOCSelect();
-  document.getElementById('cBranch').value=c.branchcode;
-  document.getElementById('cCode').value=c.clientcode;
-  document.getElementById('cName').value=c.name;
-  document.getElementById('cPN').value=c.pnno||'';
-  document.getElementById('cChange').value=c.change;
-  document.getElementById('cMOC').value=c.moc;
-  openModal('modalAddClient');
-}
-function saveClient(){
-  const obj={branchcode:document.getElementById('cBranch').value,clientcode:document.getElementById('cCode').value.trim(),name:document.getElementById('cName').value.trim(),pnno:document.getElementById('cPN').value.trim(),change:parseFloat(document.getElementById('cChange').value)||0,moc:document.getElementById('cMOC').value};
-  if(!obj.clientcode||!obj.name){alert('Client Code and Name are required.');return;}
-  if(editIndex.client>=0){DB.clients[editIndex.client]=obj;}
-  else{
-    if(DB.clients.find(c=>c.clientcode===obj.clientcode)){alert('Client Code already exists!');return;}
-    DB.clients.push(obj);
-  }
-  closeModal('modalAddClient'); renderClients(); renderDashboard();
+async function editClient(code) {
+  const c = cachedClients.find(x=>x.clientcode===code);
+  if (!c) return;
+  editKey['modalAddClient'] = code;
+  document.getElementById('clientModalTitle').textContent = 'Edit Client';
+  await fillBranchSelect('cBranch');
+  await fillMOCSelect('cMOC');
+  document.getElementById('cBranch').value = c.branchcode;
+  document.getElementById('cCode').value = c.clientcode;
+  document.getElementById('cName').value = c.name;
+  document.getElementById('cPN').value = c.pnno||'';
+  document.getElementById('cChange').value = c.change;
+  document.getElementById('cMOC').value = c.moc||'';
+  document.getElementById('modalAddClient').classList.add('open');
 }
 
-function downloadTemplate(){
-  const csv='branchcode,clientcode,name,amount,pnno,batchno\nBR-001,C-XXXX,Last First MI,0.00,PN-XXXX,BATCH-XXXX';
-  const a=document.createElement('a');a.href='data:text/csv,'+encodeURIComponent(csv);a.download='ForUpload_Template.csv';a.click();
-}
-function downloadBranchTemplate(){
-  const csv='branchcode,branchname,address\nBR-XXX,Branch Name,Address Here';
-  const a=document.createElement('a');a.href='data:text/csv,'+encodeURIComponent(csv);a.download='Branch_Template.csv';a.click();
-}
-function downloadMOCTemplate(){
-  const csv='moc,description\nCASH,Cash Over Counter';
-  const a=document.createElement('a');a.href='data:text/csv,'+encodeURIComponent(csv);a.download='MOC_Template.csv';a.click();
+async function saveClient() {
+  const obj = {
+    branchcode: document.getElementById('cBranch').value,
+    clientcode: document.getElementById('cCode').value.trim(),
+    name:       document.getElementById('cName').value.trim(),
+    pnno:       document.getElementById('cPN').value.trim(),
+    change:     parseFloat(document.getElementById('cChange').value)||0,
+    moc:        document.getElementById('cMOC').value
+  };
+  if (!obj.clientcode||!obj.name) { alert('Client Code and Name are required.'); return; }
+  loading(true, editKey['modalAddClient'] ? 'Updating client...' : 'Saving client...');
+  try {
+    if (editKey['modalAddClient']) {
+      await db.update('clients', obj, '?clientcode=eq.'+encodeURIComponent(obj.clientcode));
+    } else {
+      await db.insert('clients', obj);
+    }
+    cachedClients=[];
+    closeModal('modalAddClient');
+    await loadClients();
+    await renderDashboard();
+  } catch(e) { alert('Save error: '+e.message); }
+  loading(false);
 }
 
-function handleUpload(input){
-  const file=input.files[0]; if(!file) return;
-  const reader=new FileReader();
-  reader.onload=function(e){
-    const lines=e.target.result.split('\n').filter(l=>l.trim());
-    const headers=lines[0].toLowerCase().split(',').map(h=>h.trim());
-    const required=['branchcode','clientcode','name','amount','pnno','batchno'];
-    const missing=required.filter(r=>!headers.includes(r));
-    if(missing.length){showAlert('uploadAlert','Missing columns: '+missing.join(', '),false);return;}
-    let added=0,updated=0,duplicates=[];
-    lines.slice(1).forEach(line=>{
-      const vals=line.split(',').map(v=>v.trim());
-      if(vals.length<6) return;
-      const row={branchcode:vals[0],clientcode:vals[1],name:vals[2],amount:parseFloat(vals[3])||0,pnno:vals[4],batchno:vals[5]};
-      const existing=DB.clients.find(c=>c.clientcode===row.clientcode);
-      if(existing){const prev=existing.change;existing.change+=row.amount;duplicates.push(`${row.clientcode}: +${peso(row.amount)}`);updated++;}
-      else{DB.clients.push({branchcode:row.branchcode,clientcode:row.clientcode,name:row.name,change:row.amount,moc:'CASH',pnno:row.pnno});added++;}
-      if(!DB.nbmaster.find(n=>n.clientcode===row.clientcode&&n.batchno===row.batchno)) DB.nbmaster.push({clientcode:row.clientcode,pnno:row.pnno,name:row.name,amount:row.amount,batchno:row.batchno});
-      DB.uploadLog.push({...row,status:existing?'Updated':'New'});
-    });
-    showAlert('uploadOK',`Upload complete. ${added} new, ${updated} updated.`,true);
-    if(duplicates.length) showAlert('uploadWarn','Accumulated: '+duplicates.join('; '),null);
-    renderUploadLog(); renderNBMaster(); renderDashboard();
+// ============================================================
+// UPLOAD
+// ============================================================
+function downloadTemplate() {
+  const a=document.createElement('a');
+  a.href='data:text/csv,'+encodeURIComponent('branchcode,clientcode,name,amount,pnno,batchno\nBR-001,C-XXXX,Last First MI,0.00,PN-XXXX,BATCH-XXXX');
+  a.download='ForUpload_Template.csv'; a.click();
+}
+function downloadBranchTemplate() {
+  const a=document.createElement('a');
+  a.href='data:text/csv,'+encodeURIComponent('branchcode,branchname,address\nBR-XXX,Branch Name,Address');
+  a.download='Branch_Template.csv'; a.click();
+}
+function downloadMOCTemplate() {
+  const a=document.createElement('a');
+  a.href='data:text/csv,'+encodeURIComponent('moc,description\nCASH,Cash Over Counter');
+  a.download='MOC_Template.csv'; a.click();
+}
+
+async function handleUpload(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    const lines = e.target.result.split('\n').filter(l=>l.trim());
+    const headers = lines[0].toLowerCase().split(',').map(h=>h.trim());
+    const required = ['branchcode','clientcode','name','amount','pnno','batchno'];
+    const missing = required.filter(r=>!headers.includes(r));
+    if (missing.length) { showAlert('uploadAlert','Missing columns: '+missing.join(', '),'danger'); return; }
+    loading(true,'Uploading to cloud...');
+    let added=0, updated=0, errors=0, log=[];
+    const rows = lines.slice(1).filter(l=>l.trim()).map(l=>l.split(',').map(v=>v.trim()));
+    const existingClients = await db.select('clients','?select=clientcode,change');
+    for (const vals of rows) {
+      if (vals.length < 6) continue;
+      const row = {branchcode:vals[0],clientcode:vals[1],name:vals[2],amount:parseFloat(vals[3])||0,pnno:vals[4],batchno:vals[5]};
+      try {
+        const ex = existingClients.find(c=>c.clientcode===row.clientcode);
+        if (ex) {
+          await db.update('clients',{change:parseFloat(ex.change||0)+row.amount},'?clientcode=eq.'+encodeURIComponent(row.clientcode));
+          updated++; log.push({...row,status:'Updated'});
+        } else {
+          await db.insert('clients',{branchcode:row.branchcode,clientcode:row.clientcode,name:row.name,change:row.amount,moc:'CASH',pnno:row.pnno});
+          added++; log.push({...row,status:'New'});
+        }
+        const nb = await db.select('nbmaster','?clientcode=eq.'+encodeURIComponent(row.clientcode)+'&batchno=eq.'+encodeURIComponent(row.batchno));
+        if (!nb.length) await db.insert('nbmaster',{clientcode:row.clientcode,pnno:row.pnno,name:row.name,amount:row.amount,batchno:row.batchno});
+      } catch(err) { errors++; log.push({...row,status:'Error: '+err.message}); }
+    }
+    cachedClients=[];
+    showAlert('uploadOK',`Upload complete: ${added} new record(s), ${updated} balance(s) updated${errors?' ('+errors+' errors)':''}.`,'success');
+    if (updated) showAlert('uploadWarn',updated+' client(s) had duplicate entries — balance was accumulated.','warning');
+    renderUploadLog(log);
+    await loadNBMaster();
+    await renderDashboard();
+    loading(false);
   };
   reader.readAsText(file); input.value='';
 }
-function showAlert(id,msg,ok){
-  const el=document.getElementById(id);
-  el.textContent=msg; el.style.display='block';
-  el.className='alert '+(ok===true?'alert-success':ok===false?'alert-danger':'alert-warning');
-  setTimeout(()=>el.style.display='none',8000);
-}
-function renderUploadLog(){
-  const tbody=document.querySelector('#uploadTable tbody');
+
+function renderUploadLog(log) {
+  const tbody = document.querySelector('#uploadTable tbody');
   tbody.innerHTML='';
-  DB.uploadLog.forEach(r=>{tbody.innerHTML+=`<tr><td>${r.batchno}</td><td>${r.clientcode}</td><td>${r.name}</td><td>${r.branchcode}</td><td>${r.pnno}</td><td style="font-weight:700">${peso(r.amount)}</td><td><span class="badge ${r.status==='New'?'badge-success':'badge-warning'}">${r.status}</span></td></tr>`;});
-}
-function renderNBMaster(){
-  const tbody=document.querySelector('#nbTable tbody');
-  tbody.innerHTML='';
-  DB.nbmaster.forEach(r=>{tbody.innerHTML+=`<tr><td>${r.clientcode}</td><td>${r.name}</td><td>${r.pnno}</td><td>${r.batchno}</td><td style="font-weight:700">${peso(r.amount)}</td></tr>`;});
+  (log||[]).forEach(r=>{
+    tbody.innerHTML += `<tr><td>${r.batchno}</td><td>${r.clientcode}</td><td>${r.name}</td><td>${r.branchcode}</td><td>${r.pnno}</td><td style="font-weight:700">${peso(r.amount)}</td><td><span class="badge ${r.status==='New'?'badge-success':r.status==='Updated'?'badge-warning':'badge-danger'}">${r.status}</span></td></tr>`;
+  });
 }
 
-let claimClient=null;
-function lookupClient(){
-  const code=document.getElementById('claimCode').value.trim();
-  claimClient=DB.clients.find(c=>c.clientcode===code)||null;
-  document.getElementById('claimName').value=claimClient?claimClient.name:'';
-  document.getElementById('claimAvail').value=claimClient?peso(claimClient.change):'';
+async function loadNBMaster() {
+  loading(true,'Loading NBMaster...');
+  try {
+    const rows = await db.select('nbmaster','?order=id.desc');
+    const tbody = document.querySelector('#nbTable tbody');
+    tbody.innerHTML='';
+    rows.forEach(r=>{
+      tbody.innerHTML += `<tr><td>${r.clientcode}</td><td>${r.name}</td><td>${r.pnno}</td><td>${r.batchno}</td><td style="font-weight:700">${peso(r.amount)}</td></tr>`;
+    });
+  } catch(e) { alert('NBMaster error: '+e.message); }
+  loading(false);
+}
+
+// ============================================================
+// CLAIMING
+// ============================================================
+async function loadClaimMOC() {
+  cachedMOC = await db.select('moc','?order=moc.asc');
+  document.getElementById('claimMOC').innerHTML = cachedMOC.map(m=>`<option value="${m.moc}">${m.moc} – ${m.description}</option>`).join('');
+}
+
+async function lookupClient() {
+  const code = document.getElementById('claimCode').value.trim();
+  if (!code) { claimClient=null; document.getElementById('claimName').value=''; document.getElementById('claimAvail').value=''; checkClaim(); return; }
+  loading(true,'Looking up client...');
+  try {
+    const rows = await db.select('clients','?clientcode=eq.'+encodeURIComponent(code));
+    claimClient = rows[0]||null;
+    document.getElementById('claimName').value = claimClient ? claimClient.name : '⚠ Client not found';
+    document.getElementById('claimAvail').value = claimClient ? peso(claimClient.change) : '';
+  } catch(e) { claimClient=null; }
   checkClaim();
+  loading(false);
 }
-function checkClaim(){
-  const amt=parseFloat(document.getElementById('claimAmt').value)||0;
-  const avail=claimClient?parseFloat(claimClient.change):0;
-  const btn=document.getElementById('claimBtn');
-  const al=document.getElementById('claimAlert');
-  if(!claimClient||amt<=0){al.style.display='none';btn.disabled=true;return;}
-  if(amt>avail){al.textContent=`Insufficient! Claim ${peso(amt)} exceeds available ${peso(avail)}.`;al.style.display='block';btn.disabled=true;}
-  else{al.style.display='none';btn.disabled=false;}
+
+function checkClaim() {
+  const amt = parseFloat(document.getElementById('claimAmt').value)||0;
+  const avail = claimClient ? parseFloat(claimClient.change) : 0;
+  const btn = document.getElementById('claimBtn');
+  const al = document.getElementById('claimAlert');
+  if (!claimClient||amt<=0) { al.style.display='none'; btn.disabled=true; return; }
+  if (amt > avail) {
+    al.textContent = 'Insufficient balance! Claim amount ' + peso(amt) + ' exceeds available ' + peso(avail) + '.';
+    al.style.display='block'; btn.disabled=true;
+  } else { al.style.display='none'; btn.disabled=false; }
 }
-function processClaim(){
-  if(!claimClient) return;
-  const amt=parseFloat(document.getElementById('claimAmt').value)||0;
-  if(amt<=0||amt>claimClient.change) return;
-  const arn='AR-2025-'+pad(arCounter++);
-  const dt=nowDT();
-  const rem=document.getElementById('claimRemarks').value.trim();
-  const tx={branchcode:claimClient.branchcode,clientcode:claimClient.clientcode,date:today(),arnumber:arn,amount:amt,remarks:rem,printedby:currentUser.loginname,printeddatetime:dt};
-  DB.changes.push(tx);
-  claimClient.change-=amt;
-  document.getElementById('claimAvail').value=peso(claimClient.change);
-  document.getElementById('claimAmt').value='';
-  document.getElementById('claimRemarks').value='';
-  document.getElementById('claimBtn').disabled=true;
-  document.getElementById('claimOK').textContent='Claim processed! AR No: '+arn;
-  document.getElementById('claimOK').style.display='block';
-  setTimeout(()=>document.getElementById('claimOK').style.display='none',5000);
-  showReceipt(tx,claimClient);
-  renderDashboard();
+
+async function processClaim() {
+  if (!claimClient) return;
+  const amt = parseFloat(document.getElementById('claimAmt').value)||0;
+  if (amt<=0||amt>parseFloat(claimClient.change)) return;
+  loading(true,'Processing claim...');
+  try {
+    const last = await db.select('changes','?select=arnumber&order=id.desc&limit=1');
+    let nextNum = 1;
+    if (last.length) {
+      const parts = last[0].arnumber.split('-');
+      nextNum = parseInt(parts[parts.length-1]||'0')+1;
+    }
+    const year = new Date().getFullYear();
+    const arn = 'AR-'+year+'-'+pad(nextNum,4);
+    const moc = document.getElementById('claimMOC').value;
+    const rem = document.getElementById('claimRemarks').value.trim();
+    const tx = {branchcode:claimClient.branchcode,clientcode:claimClient.clientcode,date:today(),arnumber:arn,amount:amt,remarks:rem,printedby:currentUser.loginname,printeddatetime:nowDT()};
+    await db.insert('changes',tx);
+    const newBal = parseFloat(claimClient.change)-amt;
+    await db.update('clients',{change:newBal},'?clientcode=eq.'+encodeURIComponent(claimClient.clientcode));
+    claimClient.change = newBal;
+    cachedClients=[]; cachedTx=[];
+    document.getElementById('claimAvail').value = peso(newBal);
+    document.getElementById('claimAmt').value='';
+    document.getElementById('claimRemarks').value='';
+    document.getElementById('claimBtn').disabled=true;
+    showAlert('claimOK','✔ Claim saved to cloud! AR No: '+arn,'success');
+    showReceipt({...tx,moc}, claimClient);
+    await renderDashboard();
+  } catch(e) { alert('Claim error: '+e.message); }
+  loading(false);
 }
-function showReceipt(tx,cl){
-  if(!tx||!cl) return;
-  document.getElementById('receiptContent').innerHTML=`
+
+function showReceipt(tx, cl) {
+  if (!tx||!cl) return;
+  document.getElementById('receiptContent').innerHTML = `
     <div class="receipt">
       <div class="receipt-title">NextBank FastCash LMS</div>
       <div class="receipt-sub">GSIS · PVAO · SSS — Change Claiming System</div>
@@ -828,7 +921,7 @@ function showReceipt(tx,cl){
         <div class="receipt-row"><span>Client Code</span><b>${cl.clientcode}</b></div>
         <div class="receipt-row"><span>Name</span><b>${cl.name}</b></div>
         <div class="receipt-row"><span>Branch</span><b>${tx.branchcode}</b></div>
-        <div class="receipt-row"><span>Mode of Change</span><b>${cl.moc}</b></div>
+        <div class="receipt-row"><span>Mode of Change</span><b>${tx.moc||cl.moc||'—'}</b></div>
         <div class="receipt-row"><span>Date / Time</span><b>${tx.printeddatetime}</b></div>
         <div class="receipt-row"><span>Remaining Balance</span><b style="color:var(--success)">${peso(cl.change)}</b></div>
         ${tx.remarks?`<div class="receipt-row"><span>Remarks</span><b>${tx.remarks}</b></div>`:''}
@@ -836,100 +929,168 @@ function showReceipt(tx,cl){
       </div>
       <div style="text-align:center;margin-top:12px;font-size:11px;color:var(--gray-400)">This serves as your official acknowledgement receipt.</div>
     </div>`;
-  openModal('modalReceipt');
+  document.getElementById('modalReceipt').classList.add('open');
 }
 
-function renderTransactions(){
-  const q=(document.getElementById('txSearch')||{value:''}).value.toLowerCase();
-  const tbody=document.querySelector('#txTable tbody');
+// ============================================================
+// TRANSACTIONS
+// ============================================================
+async function loadTransactions() {
+  loading(true,'Loading transactions...');
+  try {
+    cachedTx = await db.select('changes','?order=id.desc');
+  } catch(e) { alert('Error: '+e.message); }
+  loading(false);
+  filterTransactions();
+}
+
+function filterTransactions() {
+  const q = (document.getElementById('txSearch')||{value:''}).value.toLowerCase();
+  const tbody = document.querySelector('#txTable tbody');
   tbody.innerHTML='';
-  [...DB.changes].reverse().filter(c=>!q||c.arnumber.toLowerCase().includes(q)||c.clientcode.toLowerCase().includes(q)||c.branchcode.toLowerCase().includes(q)).forEach(c=>{
-    const cl=DB.clients.find(x=>x.clientcode===c.clientcode)||{moc:'—'};
-    const safeARN=c.arnumber.replace(/'/g,"\\'");
-    const safeCode=c.clientcode.replace(/'/g,"\\'");
-    tbody.innerHTML+=`<tr>
+  cachedTx.filter(c=>!q||c.arnumber.toLowerCase().includes(q)||c.clientcode.toLowerCase().includes(q)||c.branchcode.toLowerCase().includes(q)).forEach(c=>{
+    tbody.innerHTML += `<tr>
       <td><b>${c.arnumber}</b></td><td>${c.date}</td><td>${c.clientcode}</td><td>${c.branchcode}</td>
       <td style="color:var(--success);font-weight:700">${peso(c.amount)}</td>
-      <td><span class="badge badge-info">${cl.moc||'—'}</span></td>
       <td>${c.remarks||'—'}</td><td>${c.printedby}</td>
-      <td><button class="btn btn-outline btn-sm" onclick="rerenderReceipt('${safeARN}','${safeCode}')">🖨 Receipt</button></td>
+      <td><button class="btn btn-outline btn-sm" onclick="showReceiptById(${c.id})">🖨 Receipt</button></td>
     </tr>`;
   });
 }
-function rerenderReceipt(arn,code){
-  const tx=DB.changes.find(x=>x.arnumber===arn);
-  const cl=DB.clients.find(x=>x.clientcode===code)||{name:code,clientcode:code,branchcode:'—',moc:'—',change:0};
-  showReceipt(tx,cl);
+
+async function showReceiptById(id) {
+  loading(true,'Loading...');
+  try {
+    const txRows = await db.select('changes','?id=eq.'+id);
+    const tx = txRows[0]; if (!tx) { loading(false); return; }
+    const clRows = await db.select('clients','?clientcode=eq.'+encodeURIComponent(tx.clientcode));
+    const cl = clRows[0]||{name:tx.clientcode,clientcode:tx.clientcode,branchcode:tx.branchcode,moc:'—',change:0};
+    showReceipt(tx,cl);
+  } catch(e) { alert('Error: '+e.message); }
+  loading(false);
 }
 
-function renderBranches(){
-  const tbody=document.querySelector('#branchTable tbody');
-  tbody.innerHTML='';
-  DB.branches.forEach((b,i)=>{
-    tbody.innerHTML+=`<tr>
-      <td><b>${b.code}</b></td><td>${b.name}</td><td>${b.address}</td>
-      <td><span class="badge ${b.status==='Active'?'badge-success':'badge-danger'}">${b.status}</span></td>
-      <td><button class="btn btn-outline btn-sm" onclick="editBranch(${i})">✏ Edit</button></td>
-    </tr>`;
-  });
-}
-function editBranch(i){
-  const b=DB.branches[i]; editIndex.branch=i;
-  document.getElementById('bCode').value=b.code;
-  document.getElementById('bName').value=b.name;
-  document.getElementById('bAddr').value=b.address;
-  document.getElementById('bStatus').value=b.status;
-  openModal('modalAddBranch');
-}
-function saveBranch(){
-  const obj={code:document.getElementById('bCode').value.trim(),name:document.getElementById('bName').value.trim(),address:document.getElementById('bAddr').value.trim(),status:document.getElementById('bStatus').value};
-  if(!obj.code||!obj.name){alert('Code and Name required.');return;}
-  if(editIndex.branch>=0) DB.branches[editIndex.branch]=obj;
-  else DB.branches.push(obj);
-  closeModal('modalAddBranch'); renderBranches();
+// ============================================================
+// BRANCHES
+// ============================================================
+async function loadBranches() {
+  loading(true,'Loading branches...');
+  try {
+    cachedBranches = await db.select('branches','?order=name.asc');
+    const tbody = document.querySelector('#branchTable tbody');
+    tbody.innerHTML='';
+    cachedBranches.forEach(b=>{
+      tbody.innerHTML += `<tr>
+        <td><b>${b.code}</b></td><td>${b.name}</td><td>${b.address||'—'}</td>
+        <td><span class="badge ${b.status==='Active'?'badge-success':'badge-danger'}">${b.status}</span></td>
+        <td><button class="btn btn-outline btn-sm" onclick="editBranch('${b.code.replace(/'/g,"\\'")}')">✏ Edit</button></td>
+      </tr>`;
+    });
+  } catch(e) { alert('Error: '+e.message); }
+  loading(false);
 }
 
-function renderMOC(){
-  const tbody=document.querySelector('#mocTable tbody');
-  tbody.innerHTML='';
-  DB.moc.forEach((m,i)=>{
-    tbody.innerHTML+=`<tr><td><b>${m.moc}</b></td><td>${m.desc}</td>
-      <td><button class="btn btn-outline btn-sm" onclick="editMOC(${i})">✏ Edit</button></td></tr>`;
-  });
-}
-function editMOC(i){
-  const m=DB.moc[i]; editIndex.moc=i;
-  document.getElementById('mocCode').value=m.moc;
-  document.getElementById('mocDesc').value=m.desc;
-  openModal('modalAddMOC');
-}
-function saveMOC(){
-  const obj={moc:document.getElementById('mocCode').value.trim(),desc:document.getElementById('mocDesc').value.trim()};
-  if(!obj.moc){alert('MOC Code required.');return;}
-  if(editIndex.moc>=0) DB.moc[editIndex.moc]=obj;
-  else DB.moc.push(obj);
-  closeModal('modalAddMOC'); renderMOC();
+async function editBranch(code) {
+  const b = cachedBranches.find(x=>x.code===code); if (!b) return;
+  editKey['modalAddBranch'] = code;
+  document.getElementById('branchModalTitle').textContent = 'Edit Branch';
+  document.getElementById('bCode').value = b.code;
+  document.getElementById('bName').value = b.name;
+  document.getElementById('bAddr').value = b.address||'';
+  document.getElementById('bStatus').value = b.status;
+  document.getElementById('modalAddBranch').classList.add('open');
 }
 
-function renderUsers(){
-  const tbody=document.querySelector('#userTable tbody');
-  tbody.innerHTML='';
-  DB.users.forEach((u,i)=>{
-    tbody.innerHTML+=`<tr>
-      <td><b>${u.loginname}</b></td>
-      <td>${u.lastname}, ${u.firstname} ${u.middlename||''} ${u.extname||''}</td>
-      <td>${u.email||'—'}</td>
-      <td><span class="badge badge-info">${u.systemaccess}</span></td>
-      <td><span class="badge ${u.administrator?'badge-warning':'badge-success'}">${u.administrator?'Admin':'Staff'}</span></td>
-      <td style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn btn-outline btn-sm" onclick="editUser(${i})">✏ Edit</button>
-        <button class="btn btn-primary btn-sm" onclick="openResetPw('${u.loginname}')">🔑 Reset PW</button>
-      </td>
-    </tr>`;
-  });
+async function saveBranch() {
+  const obj = {code:document.getElementById('bCode').value.trim(),name:document.getElementById('bName').value.trim(),address:document.getElementById('bAddr').value.trim(),status:document.getElementById('bStatus').value};
+  if (!obj.code||!obj.name) { alert('Code and Name required.'); return; }
+  loading(true,'Saving branch...');
+  try {
+    if (editKey['modalAddBranch']) {
+      await db.update('branches',{name:obj.name,address:obj.address,status:obj.status},'?code=eq.'+encodeURIComponent(obj.code));
+    } else {
+      await db.insert('branches',obj);
+    }
+    cachedBranches=[];
+    closeModal('modalAddBranch');
+    await loadBranches();
+  } catch(e) { alert('Save error: '+e.message); }
+  loading(false);
 }
-function editUser(i){
-  const u=DB.users[i]; editIndex.user=i;
+
+// ============================================================
+// MOC
+// ============================================================
+async function loadMOC() {
+  loading(true,'Loading MOC...');
+  try {
+    cachedMOC = await db.select('moc','?order=moc.asc');
+    const tbody = document.querySelector('#mocTable tbody');
+    tbody.innerHTML='';
+    cachedMOC.forEach(m=>{
+      tbody.innerHTML += `<tr><td><b>${m.moc}</b></td><td>${m.description}</td>
+        <td><button class="btn btn-outline btn-sm" onclick="editMOC('${m.moc.replace(/'/g,"\\'")}')">✏ Edit</button></td></tr>`;
+    });
+  } catch(e) { alert('Error: '+e.message); }
+  loading(false);
+}
+
+async function editMOC(code) {
+  const m = cachedMOC.find(x=>x.moc===code); if (!m) return;
+  editKey['modalAddMOC'] = code;
+  document.getElementById('mocCode').value = m.moc;
+  document.getElementById('mocDesc').value = m.description;
+  document.getElementById('modalAddMOC').classList.add('open');
+}
+
+async function saveMOC() {
+  const obj = {moc:document.getElementById('mocCode').value.trim(),description:document.getElementById('mocDesc').value.trim()};
+  if (!obj.moc) { alert('MOC Code required.'); return; }
+  loading(true,'Saving MOC...');
+  try {
+    if (editKey['modalAddMOC']) {
+      await db.update('moc',{description:obj.description},'?moc=eq.'+encodeURIComponent(obj.moc));
+    } else {
+      await db.insert('moc',obj);
+    }
+    cachedMOC=[];
+    closeModal('modalAddMOC');
+    await loadMOC();
+  } catch(e) { alert('Save error: '+e.message); }
+  loading(false);
+}
+
+// ============================================================
+// USERS
+// ============================================================
+let cachedUsersAll = [];
+async function loadUsers() {
+  loading(true,'Loading users...');
+  try {
+    cachedUsersAll = await db.select('users','?order=lastname.asc');
+    const tbody = document.querySelector('#userTable tbody');
+    tbody.innerHTML='';
+    cachedUsersAll.forEach(u=>{
+      tbody.innerHTML += `<tr>
+        <td><b>${u.loginname}</b></td>
+        <td>${u.lastname}, ${u.firstname} ${u.middlename||''} ${u.extname||''}</td>
+        <td>${u.email||'—'}</td>
+        <td><span class="badge badge-info">${u.systemaccess}</span></td>
+        <td><span class="badge ${u.administrator?'badge-warning':'badge-success'}">${u.administrator?'Admin':'Staff'}</span></td>
+        <td style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" onclick="editUser('${u.loginname.replace(/'/g,"\\'")}')">✏ Edit</button>
+          <button class="btn btn-primary btn-sm" onclick="openResetPw('${u.loginname.replace(/'/g,"\\'")}')">🔑 Reset PW</button>
+        </td>
+      </tr>`;
+    });
+  } catch(e) { alert('Error: '+e.message); }
+  loading(false);
+}
+
+async function editUser(loginname) {
+  const u = cachedUsersAll.find(x=>x.loginname===loginname); if (!u) return;
+  editKey['modalAddUser'] = loginname;
+  document.getElementById('userModalTitle').textContent = 'Edit User';
   document.getElementById('uLast').value=u.lastname;
   document.getElementById('uFirst').value=u.firstname;
   document.getElementById('uMiddle').value=u.middlename||'';
@@ -938,47 +1099,67 @@ function editUser(i){
   document.getElementById('uPass').value='';
   document.getElementById('uEmail').value=u.email||'';
   document.getElementById('uAccess').value=u.systemaccess;
-  document.getElementById('uAdmin').value=u.administrator;
-  openModal('modalAddUser');
+  document.getElementById('uAdmin').value=String(u.administrator);
+  document.getElementById('modalAddUser').classList.add('open');
 }
-function saveUser(){
-  const obj={
-    code:editIndex.user>=0?DB.users[editIndex.user].code:'U'+pad(DB.users.length+1),
+
+async function saveUser() {
+  const isEdit = editKey['modalAddUser'];
+  const pw = document.getElementById('uPass').value;
+  const obj = {
     lastname:document.getElementById('uLast').value.trim(),
     firstname:document.getElementById('uFirst').value.trim(),
     middlename:document.getElementById('uMiddle').value.trim(),
     extname:document.getElementById('uExt').value.trim(),
     loginname:document.getElementById('uLogin').value.trim(),
-    password:document.getElementById('uPass').value||(editIndex.user>=0?DB.users[editIndex.user].password:'changeme'),
     email:document.getElementById('uEmail').value.trim(),
     systemaccess:document.getElementById('uAccess').value,
     administrator:parseInt(document.getElementById('uAdmin').value)
   };
-  if(!obj.loginname||!obj.lastname){alert('Login Name and Last Name required.');return;}
-  if(editIndex.user>=0) DB.users[editIndex.user]=obj;
-  else DB.users.push(obj);
-  closeModal('modalAddUser'); renderUsers();
+  if (pw) obj.password = pw;
+  if (!obj.loginname||!obj.lastname) { alert('Login Name and Last Name required.'); return; }
+  loading(true,'Saving user...');
+  try {
+    if (isEdit) {
+      await db.update('users',obj,'?loginname=eq.'+encodeURIComponent(isEdit));
+    } else {
+      if (!pw) { alert('Password required for new user.'); loading(false); return; }
+      obj.password = pw;
+      obj.code = 'U' + Date.now();
+      await db.insert('users',obj);
+    }
+    cachedUsersAll=[];
+    closeModal('modalAddUser');
+    await loadUsers();
+  } catch(e) { alert('Save error: '+e.message); }
+  loading(false);
 }
-function openResetPw(loginname){
-  document.getElementById('rpUser').value=loginname;
+
+function openResetPw(loginname) {
+  document.getElementById('rpUser').value = loginname;
   document.getElementById('rpPass').value='';
   document.getElementById('rpConfirm').value='';
   document.getElementById('rpAlert').style.display='none';
-  openModal('modalResetPw');
-}
-function doResetPw(){
-  const login=document.getElementById('rpUser').value;
-  const p1=document.getElementById('rpPass').value;
-  const p2=document.getElementById('rpConfirm').value;
-  const al=document.getElementById('rpAlert');
-  if(!p1){al.textContent='Enter a new password.';al.style.display='block';return;}
-  if(p1!==p2){al.textContent='Passwords do not match.';al.style.display='block';return;}
-  const u=DB.users.find(x=>x.loginname===login);
-  if(u) u.password=p1;
-  closeModal('modalResetPw');
-  alert('Password reset successfully for: '+login);
+  document.getElementById('modalResetPw').classList.add('open');
 }
 
+async function doResetPw() {
+  const login = document.getElementById('rpUser').value;
+  const p1 = document.getElementById('rpPass').value;
+  const p2 = document.getElementById('rpConfirm').value;
+  const al = document.getElementById('rpAlert');
+  if (!p1) { al.textContent='Enter a new password.'; al.style.display='block'; return; }
+  if (p1!==p2) { al.textContent='Passwords do not match.'; al.style.display='block'; return; }
+  loading(true,'Resetting password...');
+  try {
+    await db.update('users',{password:p1},'?loginname=eq.'+encodeURIComponent(login));
+    closeModal('modalResetPw');
+    alert('Password reset successfully for: '+login);
+  } catch(e) { al.textContent='Error: '+e.message; al.style.display='block'; }
+  loading(false);
+}
+
+// ============================================================
 setDate();
 </script>
 </body>
