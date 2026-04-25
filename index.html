@@ -268,7 +268,7 @@
               <option value="clientcode">Client Code</option>
               <option value="pnno">PN No.</option>
             </select>
-            <input class="search-input" id="clientSearch" placeholder="Search clients..." oninput="filterClients()">
+            <input class="search-input" id="clientSearch" placeholder="Search clients..." oninput="serverSearchClients()">
             <button class="btn btn-outline" onclick="loadClients()">↻ Refresh</button>
           </div>
           <div class="tbl-wrap">
@@ -721,7 +721,9 @@ async function sbFetch(method, table, body, query) {
   const headers = {
     'Content-Type': 'application/json',
     'apikey': SB_KEY,
-    'Authorization': 'Bearer ' + SB_KEY
+    'Authorization': 'Bearer ' + SB_KEY,
+    'Accept-Encoding': 'gzip',          // request compressed responses
+    'X-Client-Info': 'nextbank-lms/1.0' // identify client
   };
   if (method !== 'GET') headers['Prefer'] = 'return=representation';
   const opts = { method, headers };
@@ -826,7 +828,8 @@ async function doLogin() {
 function doLogout() {
   stopSessionTimer();
   currentUser = null;
-  cachedClients=[]; cachedBranches=[]; cachedMOC=[]; cachedTx=[];
+  // Reset all caches on logout
+  cachedClients=[]; cachedBranches=[]; cachedMOC=[]; cachedTx=[]; cachedUsersAll=[];
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
   // Reset login error style back to default
@@ -926,10 +929,32 @@ async function renderDashboard() {
 async function loadClients() {
   loading(true,'Loading clients...');
   try {
-    cachedClients = await db.select('clients','?order=name.asc');
+    cachedClients = await db.select('clients','?order=name.asc&limit=500');
   } catch(e) { alert('Error loading clients: '+e.message); }
   loading(false);
   filterClients();
+}
+
+// Server-side search for large datasets
+let clientSearchTimer = null;
+async function serverSearchClients() {
+  const q  = document.getElementById('clientSearch').value.trim();
+  const by = document.getElementById('clientSearchBy').value;
+  if (!q) { await loadClients(); return; }
+
+  clearTimeout(clientSearchTimer);
+  clientSearchTimer = setTimeout(async () => {
+    loading(true,'Searching...');
+    try {
+      let query = '?order=name.asc&limit=200';
+      if (by==='name')       query += '&name=ilike.*'+encodeURIComponent(q)+'*';
+      if (by==='clientcode') query += '&clientcode=ilike.*'+encodeURIComponent(q)+'*';
+      if (by==='pnno')       query += '&pnno=ilike.*'+encodeURIComponent(q)+'*';
+      cachedClients = await db.select('clients', query);
+      filterClients();
+    } catch(e) { alert('Search error: '+e.message); }
+    loading(false);
+  }, 400);
 }
 
 function filterClients() {
@@ -995,7 +1020,7 @@ async function viewClient(code) {
 
   // Load transaction history async
   try {
-    const txRows = await db.select('changes','?clientcode=eq.'+encodeURIComponent(code)+'&order=id.desc&limit=10');
+    const txRows = await db.select('changes','?clientcode=eq.'+encodeURIComponent(code)+'&order=id.desc&limit=5');
     const txEl = document.getElementById('viewClientTx');
     if (!txRows.length) {
       txEl.innerHTML = '<span style="color:var(--gray-400);font-style:italic;">No claims on record.</span>';
@@ -1146,12 +1171,19 @@ async function handleUpload(input) {
     let log=[];           // successful records
     let unlocated=[];     // branch not found records
 
-    loading(true,'Uploading records...');
+    loading(true, 'Processing ' + lines.slice(1).filter(r=>r.length>=6).length + ' records...');
 
     const dataRows = lines.slice(1).filter(r=>r.length>=6);
+
+    // ── STEP 1: Parse all rows — separate valid vs unlocated ────────
+    const toInsert   = [];   // new clients
+    const toUpdate   = [];   // existing clients (need accumulation)
+    const nbToInsert = [];   // nbmaster records
+    const nbExisting = new Set(); // existing nbmaster keys
+
     for (const vals of dataRows) {
       const row = {
-        branchcode: vals[0]?.trim()||'',
+        branchcode: (vals[0]?.trim()||'').toUpperCase(),
         clientcode: vals[1]?.trim()||'',
         name:       vals[2]?.trim()||'',
         amount:     parseFloat(vals[3])||0,
@@ -1160,52 +1192,79 @@ async function handleUpload(input) {
       };
       if (!row.clientcode) continue;
 
-      // ── BRANCH VALIDATION ──────────────────────────────
-      // If branch code not found → add to unlocated list, skip saving
-      if (!validBranchCodes.has(row.branchcode.toUpperCase())) {
+      // Branch validation
+      if (!validBranchCodes.has(row.branchcode)) {
         unlocated.push(row);
         log.push({...row, status:'Branch Not Found'});
         continue;
       }
 
-      // ── MULTIPLE LOANS: Always accumulate amount ───────
-      // A client can have multiple loans — each upload adds to their balance
-      try {
-        const ex = existingClients.find(c=>c.clientcode===row.clientcode);
-        if (ex) {
-          // Existing client — ADD new loan amount to existing balance
-          const newBal = parseFloat(ex.change||0) + row.amount;
-          await db.update('clients',{change:newBal},'?clientcode=eq.'+encodeURIComponent(row.clientcode));
-          // Update our local cache so next iteration uses fresh balance
-          ex.change = newBal;
-          updated++; log.push({...row,status:'Accumulated'});
-        } else {
-          // New client — create record
-          await db.insert('clients',{
-            branchcode:row.branchcode,
-            clientcode:row.clientcode,
-            name:row.name,
-            change:row.amount,
-            moc:'CASH',
-            pnno:row.pnno
-          });
-          existingClients.push({clientcode:row.clientcode,change:row.amount});
-          added++; log.push({...row,status:'New'});
+      // Client: new or accumulate
+      const ex = existingClients.find(c=>c.clientcode===row.clientcode);
+      if (ex) {
+        ex.change = parseFloat(ex.change||0) + row.amount; // accumulate locally
+        toUpdate.push({ clientcode: row.clientcode, change: ex.change });
+        updated++; log.push({...row, status:'Accumulated'});
+      } else {
+        toInsert.push({
+          branchcode: row.branchcode,
+          clientcode: row.clientcode,
+          name:       row.name,
+          change:     row.amount,
+          moc:        'CASH',
+          pnno:       row.pnno
+        });
+        existingClients.push({clientcode:row.clientcode, change:row.amount});
+        added++; log.push({...row, status:'New'});
+      }
+
+      // NBMaster — deduplicate locally
+      const nbKey = row.clientcode+'|'+row.batchno+'|'+row.pnno;
+      if (!nbExisting.has(nbKey)) {
+        nbExisting.add(nbKey);
+        nbToInsert.push({
+          clientcode: row.clientcode,
+          pnno:       row.pnno,
+          name:       row.name,
+          amount:     row.amount,
+          batchno:    row.batchno
+        });
+      }
+    }
+
+    // ── STEP 2: Batch save — all in chunks of 500 ───────────────────
+    const CHUNK = 500;
+
+    // Insert new clients in batches
+    if (toInsert.length) {
+      loading(true, `Saving ${toInsert.length} new client(s)...`);
+      for (let i=0; i<toInsert.length; i+=CHUNK) {
+        await db.insert('clients', toInsert.slice(i, i+CHUNK));
+      }
+    }
+
+    // Update existing clients in batches using RPC — group by same new balance
+    if (toUpdate.length) {
+      loading(true, `Updating ${toUpdate.length} client balance(s)...`);
+      // Batch update using Supabase upsert on clientcode
+      for (let i=0; i<toUpdate.length; i+=CHUNK) {
+        const chunk = toUpdate.slice(i, i+CHUNK);
+        // Build individual updates in parallel batches of 50
+        const PARALLEL = 50;
+        for (let j=0; j<chunk.length; j+=PARALLEL) {
+          const batch = chunk.slice(j, j+PARALLEL);
+          await Promise.all(batch.map(u =>
+            db.update('clients',{change:u.change},'?clientcode=eq.'+encodeURIComponent(u.clientcode))
+          ));
         }
-        // ── NBMASTER: record every upload per batch ──────
-        const nb = await db.select('nbmaster',
-          '?clientcode=eq.'+encodeURIComponent(row.clientcode)+
-          '&batchno=eq.'+encodeURIComponent(row.batchno)+
-          '&pnno=eq.'+encodeURIComponent(row.pnno));
-        if (!nb.length) {
-          await db.insert('nbmaster',{
-            clientcode:row.clientcode,pnno:row.pnno,
-            name:row.name,amount:row.amount,batchno:row.batchno
-          });
-        }
-      } catch(err) {
-        errors++;
-        log.push({...row,status:'Error: '+err.message});
+      }
+    }
+
+    // Insert nbmaster in batches
+    if (nbToInsert.length) {
+      loading(true, `Saving ${nbToInsert.length} upload record(s)...`);
+      for (let i=0; i<nbToInsert.length; i+=CHUNK) {
+        await db.insert('nbmaster', nbToInsert.slice(i, i+CHUNK));
       }
     }
 
@@ -1318,7 +1377,7 @@ function renderUploadLog(log) {
 async function loadNBMaster() {
   loading(true,'Loading NBMaster...');
   try {
-    const rows = await db.select('nbmaster','?order=id.desc');
+    const rows = await db.select('nbmaster','?order=id.desc&limit=500');
     const tbody = document.querySelector('#nbTable tbody');
     tbody.innerHTML='';
     rows.forEach(r=>{
@@ -1490,7 +1549,8 @@ function showReceipt(tx, cl) {
 async function loadTransactions() {
   loading(true,'Loading transactions...');
   try {
-    cachedTx = await db.select('changes','?order=id.desc');
+    // Limit to latest 1000 for speed — use search to find older ones
+    cachedTx = await db.select('changes','?order=id.desc&limit=1000');
   } catch(e) { alert('Error: '+e.message); }
   loading(false);
   filterTransactions();
@@ -1626,42 +1686,52 @@ async function handleBranchUpload(input) {
     let added=0, updated=0, skipped=0, errors=0;
     const dataRows = lines.slice(1).filter(r => r.length >= 2);
 
+    // ── Parse all branch rows first ────────────────────────────────
+    const branchToInsert = [];
+    const branchToUpdate = [];
+
     for (const vals of dataRows) {
       const code   = (vals[codeIdx]   || '').trim().toUpperCase();
       const name   = (vals[nameIdx]   || '').trim();
       const addr   = addrIdx >= 0   ? (vals[addrIdx]   || '').trim() : '';
       const status = statusIdx >= 0 ? (vals[statusIdx] || 'Active').trim() : 'Active';
 
-      if (!code) { skipped++; continue; }  // only branch code is required
+      if (!code) { skipped++; continue; }
 
-      try {
-        // Use code as fallback name if name is empty
-        const branchName   = name   || code;
-        const branchAddr   = addr   || '';
-        const branchStatus = status || 'Active';
+      const branchName   = name   || code;
+      const branchAddr   = addr   || '';
+      const branchStatus = status || 'Active';
 
-        if (existingCodes.has(code)) {
-          // Update existing branch
-          await db.update('branches',
-            { name: branchName, address: branchAddr, status: branchStatus },
-            '?code=eq.' + encodeURIComponent(code)
-          );
-          updated++;
-        } else {
-          // Insert new branch — name defaults to code if blank
-          await db.insert('branches', {
-            code,
-            name:    branchName,
-            address: branchAddr,
-            status:  branchStatus
-          });
-          existingCodes.add(code);
-          added++;
-        }
-      } catch(err) {
-        errors++;
-        console.error('Branch upload error:', code, err.message);
+      if (existingCodes.has(code)) {
+        branchToUpdate.push({ code, name:branchName, address:branchAddr, status:branchStatus });
+        updated++;
+      } else {
+        branchToInsert.push({ code, name:branchName, address:branchAddr, status:branchStatus });
+        existingCodes.add(code);
+        added++;
       }
+    }
+
+    // ── Batch insert new branches (500 per chunk) ────────────────
+    const CHUNK = 500;
+    try {
+      for (let i=0; i<branchToInsert.length; i+=CHUNK) {
+        await db.insert('branches', branchToInsert.slice(i, i+CHUNK));
+      }
+      // Update existing in parallel batches of 50
+      const PARALLEL = 50;
+      for (let i=0; i<branchToUpdate.length; i+=PARALLEL) {
+        const batch = branchToUpdate.slice(i, i+PARALLEL);
+        await Promise.all(batch.map(b =>
+          db.update('branches',
+            {name:b.name, address:b.address, status:b.status},
+            '?code=eq.'+encodeURIComponent(b.code)
+          )
+        ));
+      }
+    } catch(err) {
+      errors++;
+      console.error('Branch batch error:', err.message);
     }
 
     cachedBranches = [];
