@@ -1048,7 +1048,8 @@ function makeXLSX(headers, sampleRows, filename, sheetName, headerColor) {
   });
 
   XLSX.utils.book_append_sheet(wb, ws, sheetName || 'Sheet1');
-  XLSX.writeFile(wb, filename);
+  // Write as xls (biff8) — compatible with all Excel versions
+  XLSX.writeFile(wb, filename, { bookType: 'xls' });
 }
 
 function downloadTemplate() {
@@ -1059,7 +1060,7 @@ function downloadTemplate() {
       ['BR-002', 'C-0002', 'SANTOS, MARIA T.',    875.50, 'PN-2024-002', 'BATCH-2024-01'],
       ['BR-003', 'C-0003', 'REYES, PEDRO J.',    3200.00, 'PN-2024-003', 'BATCH-2024-02']
     ],
-    'ForUpload_Template.xlsx',
+    'ForUpload_Template.xls',
     'ForUpload'
   );
 }
@@ -1072,7 +1073,7 @@ function downloadBranchTemplate() {
       ['BR-002', 'Quezon City Branch',   'Commonwealth Ave, QC'],
       ['BR-003', 'Davao Branch',         'JP Laurel Ave, Davao City']
     ],
-    'Branch_Template.xlsx',
+    'Branch_Template.xls',
     'Branches'
   );
 }
@@ -1086,7 +1087,7 @@ function downloadMOCTemplate() {
       ['GCASH',  'GCash / E-Wallet'],
       ['ONLINE', 'Online Transfer']
     ],
-    'MOC_Template.xlsx',
+    'MOC_Template.xls',
     'MOC'
   );
 }
@@ -1269,7 +1270,7 @@ function downloadUnlocated() {
 
   makeXLSX(
     headers, rows,
-    'Unlocated_Branches_' + today() + '.xlsx',
+    'Unlocated_Branches_' + today() + '.xls',
     'Unlocated Branches'
   );
 }
