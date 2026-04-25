@@ -983,9 +983,10 @@ async function renderDashboard() {
       db.select('changes','?order=id.desc&limit=10')
     ]);
     cachedClients = clients;
-    document.getElementById('dsh-clients').textContent = clients.length;
-    document.getElementById('dsh-pool').textContent = peso(clients.reduce((a,c)=>a+parseFloat(c.change||0),0));
-    document.getElementById('dsh-today').textContent = changes.filter(c=>c.date===today()).length;
+    // Format numbers with comma separators where applicable
+    document.getElementById('dsh-clients').textContent = clients.length.toLocaleString('en-PH');
+    document.getElementById('dsh-pool').textContent    = peso(clients.reduce((a,c)=>a+parseFloat(c.change||0),0));
+    document.getElementById('dsh-today').textContent   = changes.filter(c=>c.date===today()).length.toLocaleString('en-PH');
     document.getElementById('dsh-claimed').textContent = peso(changes.reduce((a,c)=>a+parseFloat(c.amount||0),0));
     const tbody = document.querySelector('#dsh-table tbody');
     tbody.innerHTML='';
