@@ -247,7 +247,6 @@
         <div class="card">
           <div class="card-header">
             <div class="card-title">Client List</div>
-            <button class="btn btn-primary" onclick="openModal('modalAddClient')">+ Add Client</button>
           </div>
           <div class="search-bar">
             <select class="fi" id="clientSearchBy" style="width:160px" onchange="filterClients()">
@@ -442,20 +441,20 @@
 </div>
 
 <!-- MODALS -->
-<div class="modal-bg" id="modalAddClient">
-  <div class="modal">
-    <div class="modal-header"><div class="modal-title" id="clientModalTitle">Add Client</div><button class="modal-close" onclick="closeModal('modalAddClient')">✕</button></div>
-    <div class="form-grid">
-      <div class="form-group"><label class="fl">Branch</label><select class="fi" id="cBranch"></select></div>
-      <div class="form-group"><label class="fl">Client Code</label><input class="fi" id="cCode" placeholder="e.g. C-001"></div>
-      <div class="form-group full"><label class="fl">Full Name</label><input class="fi" id="cName" placeholder="Last, First MI"></div>
-      <div class="form-group"><label class="fl">PN No.</label><input class="fi" id="cPN"></div>
-      <div class="form-group"><label class="fl">Change Amount</label><input class="fi" type="number" id="cChange" placeholder="0.00" step="0.01"></div>
-      <div class="form-group"><label class="fl">Mode of Change</label><select class="fi" id="cMOC"></select></div>
+
+<!-- VIEW CLIENT MODAL -->
+<div class="modal-bg" id="modalViewClient">
+  <div class="modal" style="max-width:480px;padding:0;overflow:hidden;">
+    <div class="modal-header" style="padding:20px 24px 16px;border-bottom:1px solid var(--gray-200);">
+      <div>
+        <div class="modal-title">Client Record</div>
+        <div style="font-size:12px;color:var(--gray-400);margin-top:2px;">Read-only view</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('modalViewClient')">✕</button>
     </div>
-    <div style="margin-top:18px;display:flex;gap:8px;justify-content:flex-end">
-      <button class="btn btn-outline" onclick="closeModal('modalAddClient')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveClient()">💾 Save to Cloud</button>
+    <div id="viewClientContent"></div>
+    <div style="padding:16px 24px;border-top:1px solid var(--gray-200);display:flex;justify-content:flex-end;">
+      <button class="btn btn-outline" onclick="closeModal('modalViewClient')">Close</button>
     </div>
   </div>
 </div>
@@ -661,12 +660,7 @@ async function nav(page, el) {
 // ============================================================
 async function openModal(id) {
   editKey[id] = null;
-  if (id==='modalAddClient') {
-    document.getElementById('clientModalTitle').textContent = 'Add Client';
-    await fillBranchSelect('cBranch');
-    await fillMOCSelect('cMOC');
-    ['cCode','cName','cPN','cChange'].forEach(x=>document.getElementById(x).value='');
-  }
+  // modalAddClient is disabled — view only via viewClient()
   if (id==='modalAddBranch') {
     document.getElementById('branchModalTitle').textContent = 'Add Branch';
     ['bCode','bName','bAddr'].forEach(x=>document.getElementById(x).value='');
@@ -681,7 +675,10 @@ async function openModal(id) {
   }
   document.getElementById(id).classList.add('open');
 }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+
+}
 
 async function fillBranchSelect(selectId) {
   if (!cachedBranches.length) cachedBranches = await db.select('branches','?status=eq.Active&order=name.asc');
@@ -738,56 +735,87 @@ function filterClients() {
     const v = (by==='name'?c.name:by==='clientcode'?c.clientcode:c.pnno||'').toLowerCase();
     return !q||v.includes(q);
   }).forEach(c=>{
+    const safeCode = c.clientcode.replace(/'/g,"\\'");
     tbody.innerHTML += `<tr>
       <td><b>${c.clientcode}</b></td><td>${c.name}</td><td>${c.branchcode}</td>
       <td>${c.pnno||'—'}</td>
       <td style="color:var(--success);font-weight:700">${peso(c.change)}</td>
       <td><span class="badge badge-info">${c.moc||'—'}</span></td>
-      <td><button class="btn btn-outline btn-sm" onclick="editClient('${c.clientcode.replace(/'/g,"\\'")}')">✏ Edit</button></td>
+      <td>
+        <button class="btn btn-gold btn-sm" onclick="viewClient('${safeCode}')">&#128065; View</button>
+      </td>
     </tr>`;
   });
 }
 
-async function editClient(code) {
+// VIEW CLIENT — read-only modal with transaction history
+async function viewClient(code) {
   const c = cachedClients.find(x=>x.clientcode===code);
   if (!c) return;
-  editKey['modalAddClient'] = code;
-  document.getElementById('clientModalTitle').textContent = 'Edit Client';
-  await fillBranchSelect('cBranch');
-  await fillMOCSelect('cMOC');
-  document.getElementById('cBranch').value = c.branchcode;
-  document.getElementById('cCode').value = c.clientcode;
-  document.getElementById('cName').value = c.name;
-  document.getElementById('cPN').value = c.pnno||'';
-  document.getElementById('cChange').value = c.change;
-  document.getElementById('cMOC').value = c.moc||'';
-  document.getElementById('modalAddClient').classList.add('open');
+
+  // Show modal immediately with client details
+  document.getElementById('viewClientContent').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;">
+      <div style="padding:12px 16px;background:var(--gray-50);border-bottom:1px solid var(--gray-100);">
+        <div style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px;">Client Code</div>
+        <div style="font-size:15px;font-weight:700;color:var(--royal-dark);">${c.clientcode}</div>
+      </div>
+      <div style="padding:12px 16px;background:var(--gray-50);border-bottom:1px solid var(--gray-100);border-left:1px solid var(--gray-100);">
+        <div style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px;">Branch</div>
+        <div style="font-size:15px;font-weight:700;color:var(--royal-dark);">${c.branchcode}</div>
+      </div>
+      <div style="padding:12px 16px;grid-column:1/-1;border-bottom:1px solid var(--gray-100);">
+        <div style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px;">Full Name</div>
+        <div style="font-size:15px;font-weight:700;color:var(--royal-dark);">${c.name}</div>
+      </div>
+      <div style="padding:12px 16px;border-bottom:1px solid var(--gray-100);">
+        <div style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px;">PN No.</div>
+        <div style="font-size:14px;color:var(--gray-800);">${c.pnno||'—'}</div>
+      </div>
+      <div style="padding:12px 16px;border-bottom:1px solid var(--gray-100);border-left:1px solid var(--gray-100);">
+        <div style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px;">Mode of Change</div>
+        <div style="font-size:14px;"><span class="badge badge-info">${c.moc||'—'}</span></div>
+      </div>
+      <div style="padding:16px;grid-column:1/-1;background:var(--success-bg);border-top:2px solid var(--success);border-bottom:2px solid var(--success);">
+        <div style="font-size:11px;font-weight:700;color:var(--success);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px;">Available Change Balance</div>
+        <div style="font-size:26px;font-weight:700;color:var(--success);">${peso(c.change)}</div>
+      </div>
+      <div style="padding:12px 16px;grid-column:1/-1;">
+        <div style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px;">Claim History</div>
+        <div id="viewClientTx" style="font-size:13px;color:var(--gray-400);">Loading transactions...</div>
+      </div>
+    </div>`;
+  document.getElementById('modalViewClient').classList.add('open');
+
+  // Load transaction history async
+  try {
+    const txRows = await db.select('changes','?clientcode=eq.'+encodeURIComponent(code)+'&order=id.desc&limit=10');
+    const txEl = document.getElementById('viewClientTx');
+    if (!txRows.length) {
+      txEl.innerHTML = '<span style="color:var(--gray-400);font-style:italic;">No claims on record.</span>';
+    } else {
+      txEl.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12.5px;">'
+        + '<thead><tr>'
+        + '<th style="text-align:left;padding:6px 8px;background:var(--gray-50);color:var(--gray-600);font-size:11px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--gray-200);">AR No.</th>'
+        + '<th style="text-align:left;padding:6px 8px;background:var(--gray-50);color:var(--gray-600);font-size:11px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--gray-200);">Date</th>'
+        + '<th style="text-align:right;padding:6px 8px;background:var(--gray-50);color:var(--gray-600);font-size:11px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--gray-200);">Amount</th>'
+        + '<th style="text-align:left;padding:6px 8px;background:var(--gray-50);color:var(--gray-600);font-size:11px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--gray-200);">Printed By</th>'
+        + '</tr></thead><tbody>'
+        + txRows.map(t=>`<tr>
+            <td style="padding:6px 8px;border-bottom:1px solid var(--gray-100);font-weight:700;">${t.arnumber}</td>
+            <td style="padding:6px 8px;border-bottom:1px solid var(--gray-100);">${t.date}</td>
+            <td style="padding:6px 8px;border-bottom:1px solid var(--gray-100);text-align:right;color:var(--success);font-weight:700;">${peso(t.amount)}</td>
+            <td style="padding:6px 8px;border-bottom:1px solid var(--gray-100);">${t.printedby}</td>
+          </tr>`).join('')
+        + '</tbody></table>';
+    }
+  } catch(e) {
+    const txEl = document.getElementById('viewClientTx');
+    if (txEl) txEl.innerHTML = '<span style="color:var(--danger);">Could not load transactions.</span>';
+  }
 }
 
-async function saveClient() {
-  const obj = {
-    branchcode: document.getElementById('cBranch').value,
-    clientcode: document.getElementById('cCode').value.trim(),
-    name:       document.getElementById('cName').value.trim(),
-    pnno:       document.getElementById('cPN').value.trim(),
-    change:     parseFloat(document.getElementById('cChange').value)||0,
-    moc:        document.getElementById('cMOC').value
-  };
-  if (!obj.clientcode||!obj.name) { alert('Client Code and Name are required.'); return; }
-  loading(true, editKey['modalAddClient'] ? 'Updating client...' : 'Saving client...');
-  try {
-    if (editKey['modalAddClient']) {
-      await db.update('clients', obj, '?clientcode=eq.'+encodeURIComponent(obj.clientcode));
-    } else {
-      await db.insert('clients', obj);
-    }
-    cachedClients=[];
-    closeModal('modalAddClient');
-    await loadClients();
-    await renderDashboard();
-  } catch(e) { alert('Save error: '+e.message); }
-  loading(false);
-}
+// Edit disabled — clients are view-only. Use Upload to add/modify records.
 
 // ============================================================
 // UPLOAD
