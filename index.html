@@ -305,22 +305,49 @@
       <div class="page" id="page-claiming">
         <div class="card">
           <div class="card-header"><div class="card-title">Change Claiming</div></div>
+
+          <!-- SEARCH SECTION -->
+          <div style="background:var(--gray-50);border:1.5px solid var(--gray-200);border-radius:8px;padding:16px 18px;margin-bottom:20px;">
+            <div style="font-size:12px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:12px;">🔍 Search Client</div>
+            <div style="display:grid;grid-template-columns:160px 1fr auto;gap:10px;align-items:flex-end;">
+              <div>
+                <label class="fl">Search By</label>
+                <select class="fi" id="claimSearchBy" onchange="clearClaimSearch()">
+                  <option value="name">Name</option>
+                  <option value="clientcode">Client Code</option>
+                  <option value="pnno">PN No.</option>
+                </select>
+              </div>
+              <div>
+                <label class="fl">Search Value</label>
+                <input class="fi" id="claimSearchVal" placeholder="Type to search..." oninput="searchClaimClients()">
+              </div>
+              <div>
+                <label class="fl">&nbsp;</label>
+                <button class="btn btn-outline" style="width:100%" onclick="clearClaimForm()">✕ Clear</button>
+              </div>
+            </div>
+            <!-- DROPDOWN RESULTS -->
+            <div id="claimSearchResults" style="display:none;margin-top:10px;border:1.5px solid var(--gray-200);border-radius:7px;background:var(--white);max-height:200px;overflow-y:auto;box-shadow:var(--shadow);"></div>
+          </div>
+
+          <!-- CLAIM FORM -->
           <div class="form-grid" style="margin-bottom:18px;">
             <div class="form-group">
               <label class="fl">Client Code</label>
-              <input class="fi" id="claimCode" placeholder="Enter client code">
-            </div>
-            <div class="form-group">
-              <label class="fl">&nbsp;</label>
-              <button class="btn btn-outline" style="width:100%;margin-top:2px" onclick="lookupClient()">🔍 Lookup Client</button>
+              <input class="fi" id="claimCode" placeholder="— select from search above —" readonly style="background:var(--gray-50);">
             </div>
             <div class="form-group">
               <label class="fl">Client Name</label>
-              <input class="fi" id="claimName" readonly>
+              <input class="fi" id="claimName" readonly style="background:var(--gray-50);">
+            </div>
+            <div class="form-group">
+              <label class="fl">Branch</label>
+              <input class="fi" id="claimBranch" readonly style="background:var(--gray-50);">
             </div>
             <div class="form-group">
               <label class="fl">Available Change</label>
-              <input class="fi" id="claimAvail" readonly style="font-weight:700;color:var(--success);font-size:16px;">
+              <input class="fi" id="claimAvail" readonly style="font-weight:700;color:var(--success);font-size:16px;background:var(--gray-50);">
             </div>
             <div class="form-group">
               <label class="fl">Amount to Claim</label>
@@ -850,17 +877,83 @@ async function loadClaimMOC() {
   document.getElementById('claimMOC').innerHTML = cachedMOC.map(m=>`<option value="${m.moc}">${m.moc} – ${m.description}</option>`).join('');
 }
 
-async function lookupClient() {
-  const code = document.getElementById('claimCode').value.trim();
-  if (!code) { claimClient=null; document.getElementById('claimName').value=''; document.getElementById('claimAvail').value=''; checkClaim(); return; }
-  loading(true,'Looking up client...');
+let claimSearchTimer = null;
+function clearClaimSearch() {
+  document.getElementById('claimSearchVal').value='';
+  document.getElementById('claimSearchResults').style.display='none';
+}
+
+function clearClaimForm() {
+  claimClient = null;
+  ['claimCode','claimName','claimBranch','claimAvail','claimAmt','claimRemarks'].forEach(id=>{
+    const el = document.getElementById(id);
+    if (el) el.value='';
+  });
+  document.getElementById('claimSearchVal').value='';
+  document.getElementById('claimSearchResults').style.display='none';
+  document.getElementById('claimAlert').style.display='none';
+  document.getElementById('claimOK').style.display='none';
+  document.getElementById('claimBtn').disabled=true;
+}
+
+async function searchClaimClients() {
+  const q = document.getElementById('claimSearchVal').value.trim();
+  const by = document.getElementById('claimSearchBy').value;
+  const resultsBox = document.getElementById('claimSearchResults');
+
+  if (q.length < 2) { resultsBox.style.display='none'; return; }
+
+  // Debounce — wait 350ms after typing stops, like a TIMER in VFP
+  clearTimeout(claimSearchTimer);
+  claimSearchTimer = setTimeout(async () => {
+    try {
+      let query = '?order=name.asc&limit=20';
+      if (by==='name')       query += '&name=ilike.*'+encodeURIComponent(q)+'*';
+      if (by==='clientcode') query += '&clientcode=ilike.*'+encodeURIComponent(q)+'*';
+      if (by==='pnno')       query += '&pnno=ilike.*'+encodeURIComponent(q)+'*';
+
+      const rows = await db.select('clients', query);
+
+      if (!rows.length) {
+        resultsBox.innerHTML = '<div style="padding:12px 16px;color:var(--gray-400);font-size:13px;">No clients found.</div>';
+        resultsBox.style.display='block'; return;
+      }
+
+      resultsBox.innerHTML = rows.map(c=>`
+        <div onclick="selectClaimClient('${c.clientcode.replace(/'/g,"\\'")}')"
+          style="padding:11px 16px;cursor:pointer;border-bottom:1px solid var(--gray-100);display:flex;justify-content:space-between;align-items:center;font-size:13.5px;transition:background .15s;"
+          onmouseover="this.style.background='var(--gold-pale)'"
+          onmouseout="this.style.background='var(--white)'">
+          <div>
+            <div style="font-weight:700;color:var(--royal-dark)">${c.name}</div>
+            <div style="font-size:11.5px;color:var(--gray-400);margin-top:2px">${c.clientcode} &nbsp;·&nbsp; PN: ${c.pnno||'—'} &nbsp;·&nbsp; ${c.branchcode}</div>
+          </div>
+          <div style="font-weight:700;color:var(--success);white-space:nowrap;margin-left:12px">${peso(c.change)}</div>
+        </div>`).join('');
+      resultsBox.style.display='block';
+    } catch(e) { console.error(e); }
+  }, 350);
+}
+
+async function selectClaimClient(code) {
+  loading(true,'Loading client...');
   try {
     const rows = await db.select('clients','?clientcode=eq.'+encodeURIComponent(code));
     claimClient = rows[0]||null;
-    document.getElementById('claimName').value = claimClient ? claimClient.name : '⚠ Client not found';
-    document.getElementById('claimAvail').value = claimClient ? peso(claimClient.change) : '';
-  } catch(e) { claimClient=null; }
-  checkClaim();
+    if (claimClient) {
+      document.getElementById('claimCode').value   = claimClient.clientcode;
+      document.getElementById('claimName').value   = claimClient.name;
+      document.getElementById('claimBranch').value = claimClient.branchcode;
+      document.getElementById('claimAvail').value  = peso(claimClient.change);
+      // Auto-select MOC matching client's MOC
+      const mocSel = document.getElementById('claimMOC');
+      if (claimClient.moc) mocSel.value = claimClient.moc;
+      document.getElementById('claimSearchVal').value = claimClient.name;
+    }
+    document.getElementById('claimSearchResults').style.display='none';
+    document.getElementById('claimAmt').focus();
+    checkClaim();
+  } catch(e) { alert('Error: '+e.message); }
   loading(false);
 }
 
