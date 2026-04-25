@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NextBank FastCash LMS</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root {
     --royal: #0a1f5c; --royal-dark: #061240; --royal-light: #1a3a8f;
@@ -32,7 +33,7 @@
   .login-logo { width: 92px; height: 92px; background: var(--royal-dark); border-radius: 22px; border: 3px solid var(--gold); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; box-shadow: 0 0 0 6px rgba(245,197,24,0.15); }
   .login-logo span { color: var(--gold); font-family: 'Playfair Display', serif; font-size: 36px; font-weight: 800; letter-spacing: 2px; }
   .login-title { font-family: 'Playfair Display', serif; font-size: 22px; color: var(--royal-dark); margin-bottom: 4px; letter-spacing: 0.3px; }
-  .login-sub { font-size: 13px; color: var(--gray-400); margin-bottom: 32px; }
+  .login-sub { font-size: 13px; color: var(--royal-dark); font-weight: 800; margin-bottom: 32px; letter-spacing: 0.5px; }
   .login-label { display: block; text-align: left; font-size: 12px; font-weight: 700; color: var(--gray-600); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
   .login-input { width: 100%; padding: 11px 14px; border: 1.5px solid var(--gray-200); border-radius: 8px; font-family: 'Nunito',sans-serif; font-size: 14px; margin-bottom: 18px; outline: none; transition: border .2s; }
   .login-input:focus { border-color: var(--royal-light); }
@@ -285,15 +286,15 @@
             <div class="card-title">Upload Collection / Change</div>
             <div class="page-actions">
               <button class="btn btn-outline" onclick="downloadTemplate()">⬇ Download Template</button>
-              <button class="btn btn-gold" onclick="document.getElementById('csvUpload').click()">📤 Upload CSV</button>
-              <input type="file" id="csvUpload" accept=".csv" style="display:none" onchange="handleUpload(this)">
+              <button class="btn btn-gold" onclick="document.getElementById('csvUpload').click()">📤 Upload Excel / CSV</button>
+              <input type="file" id="csvUpload" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleUpload(this)">
               <button class="btn btn-danger" id="btnDownloadUnlocated" onclick="downloadUnlocated()" style="display:none;background:var(--danger);color:#fff;">⬇ Download Unlocated</button>
             </div>
           </div>
           <div class="alert alert-danger" id="uploadAlert"></div>
           <div class="alert alert-success" id="uploadOK"></div>
           <div class="alert alert-warning" id="uploadWarn"></div>
-          <p style="font-size:13px;color:var(--gray-400);margin-bottom:18px;">CSV columns required: <b>branchcode, clientcode, name, amount, pnno, batchno</b>. Duplicate clientcodes are automatically accumulated.</p>
+          <p style="font-size:13px;color:var(--gray-400);margin-bottom:18px;">Upload <b>Excel (.xlsx/.xls)</b> or <b>CSV</b> file. Required columns: <b>branchcode, clientcode, name, amount, pnno, batchno</b>. Duplicate clientcodes are automatically accumulated. Multiple loans per client are supported.</p>
           <div class="tbl-wrap">
             <table id="uploadTable">
               <thead><tr><th>Batch No.</th><th>Client Code</th><th>Name</th><th>Branch</th><th>PN No.</th><th>Amount</th><th>Status</th></tr></thead>
@@ -1019,29 +1020,107 @@ async function viewClient(code) {
 // ============================================================
 // UPLOAD
 // ============================================================
+// ── XLSX Template Generator — uses SheetJS ──────────────────
+function makeXLSX(headers, sampleRows, filename, sheetName, headerColor) {
+  const wb = XLSX.utils.book_new();
+  const wsData = [headers, ...sampleRows];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+  // Column widths — auto-size based on longest content
+  const colWidths = headers.map((h, i) => {
+    const maxLen = Math.max(h.length, ...sampleRows.map(r => String(r[i]||'').length));
+    return { wch: maxLen + 4 };
+  });
+  ws['!cols'] = colWidths;
+
+  // Style header row (row 0) — gold background, bold, royal blue text
+  headers.forEach((h, i) => {
+    const cellRef = XLSX.utils.encode_cell({ r: 0, c: i });
+    if (!ws[cellRef]) return;
+    ws[cellRef].s = {
+      font:    { bold: true, color: { rgb: '061240' }, sz: 11 },
+      fill:    { fgColor: { rgb: 'F5C518' } },
+      alignment: { horizontal: 'center', vertical: 'center' },
+      border: {
+        bottom: { style: 'medium', color: { rgb: '061240' } }
+      }
+    };
+  });
+
+  XLSX.utils.book_append_sheet(wb, ws, sheetName || 'Sheet1');
+  XLSX.writeFile(wb, filename);
+}
+
 function downloadTemplate() {
-  const a=document.createElement('a');
-  a.href='data:text/csv,'+encodeURIComponent('branchcode,clientcode,name,amount,pnno,batchno\nBR-001,C-XXXX,Last First MI,0.00,PN-XXXX,BATCH-XXXX');
-  a.download='ForUpload_Template.csv'; a.click();
+  makeXLSX(
+    ['branchcode', 'clientcode', 'name', 'amount', 'pnno', 'batchno'],
+    [
+      ['BR-001', 'C-0001', 'DELA CRUZ, JOSE M.', 1250.00, 'PN-2024-001', 'BATCH-2024-01'],
+      ['BR-002', 'C-0002', 'SANTOS, MARIA T.',    875.50, 'PN-2024-002', 'BATCH-2024-01'],
+      ['BR-003', 'C-0003', 'REYES, PEDRO J.',    3200.00, 'PN-2024-003', 'BATCH-2024-02']
+    ],
+    'ForUpload_Template.xlsx',
+    'ForUpload'
+  );
 }
+
 function downloadBranchTemplate() {
-  const a=document.createElement('a');
-  a.href='data:text/csv,'+encodeURIComponent('branchcode,branchname,address\nBR-XXX,Branch Name,Address');
-  a.download='Branch_Template.csv'; a.click();
+  makeXLSX(
+    ['branchcode', 'branchname', 'address'],
+    [
+      ['BR-001', 'Main Office – Makati', 'Ayala Ave, Makati City'],
+      ['BR-002', 'Quezon City Branch',   'Commonwealth Ave, QC'],
+      ['BR-003', 'Davao Branch',         'JP Laurel Ave, Davao City']
+    ],
+    'Branch_Template.xlsx',
+    'Branches'
+  );
 }
+
 function downloadMOCTemplate() {
-  const a=document.createElement('a');
-  a.href='data:text/csv,'+encodeURIComponent('moc,description\nCASH,Cash Over Counter');
-  a.download='MOC_Template.csv'; a.click();
+  makeXLSX(
+    ['moc', 'description'],
+    [
+      ['CASH',   'Cash Over Counter'],
+      ['CHECK',  "Manager's Check"],
+      ['GCASH',  'GCash / E-Wallet'],
+      ['ONLINE', 'Online Transfer']
+    ],
+    'MOC_Template.xlsx',
+    'MOC'
+  );
 }
 
 async function handleUpload(input) {
   const file = input.files[0]; if (!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  const isXLSX = (ext==='xlsx'||ext==='xls');
+
   const reader = new FileReader();
   reader.onload = async function(e) {
-    // Parse CSV — handle quoted fields (names with commas)
-    const lines = parseCSVLines(e.target.result);
-    if (lines.length < 2) { showAlert('uploadAlert','CSV file is empty or invalid.','danger'); return; }
+    let lines = [];
+
+    if (isXLSX) {
+      // ── XLSX / XLS reading via SheetJS ──────────────────
+      try {
+        const data = new Uint8Array(e.target.result);
+        const wb   = XLSX.read(data, { type: 'array' });
+        const ws   = wb.Sheets[wb.SheetNames[0]];
+        const raw  = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        // Convert to same format as CSV parser — array of arrays as strings
+        lines = raw
+          .filter(r => r.some(c => String(c).trim() !== ''))
+          .map(r => r.map(c => String(c).trim()));
+      } catch(err) {
+        showAlert('uploadAlert', 'Could not read Excel file: ' + err.message, 'danger');
+        loading(false); return;
+      }
+    } else {
+      // ── CSV reading — handle quoted fields ───────────────
+      lines = parseCSVLines(e.target.result);
+    }
+
+    if (lines.length < 2) { showAlert('uploadAlert','File is empty or invalid.','danger'); return; }
     const headers = lines[0].map(h=>h.toLowerCase().trim());
     const required = ['branchcode','clientcode','name','amount','pnno','batchno'];
     const missing = required.filter(r=>!headers.includes(r));
@@ -1147,7 +1226,13 @@ async function handleUpload(input) {
     await renderDashboard();
     loading(false);
   };
-  reader.readAsText(file); input.value='';
+  // XLSX needs readAsArrayBuffer, CSV needs readAsText
+  if (isXLSX) {
+    reader.readAsArrayBuffer(file);
+  } else {
+    reader.readAsText(file);
+  }
+  input.value='';
 }
 
 // ── Parse CSV properly — handles quoted fields with commas ──
@@ -1174,26 +1259,19 @@ function parseCSVLines(text) {
 function downloadUnlocated() {
   const data = window._unlocatedRecords || [];
   if (!data.length) { alert('No unlocated records to download.'); return; }
-  const headers = ['branchcode','clientcode','name','amount','pnno','batchno','reason'];
-  const csvRows = [headers.join(',')];
-  data.forEach(r => {
-    csvRows.push([
-      r.branchcode,
-      r.clientcode,
-      '"'+r.name+'"',
-      r.amount,
-      r.pnno,
-      r.batchno,
-      '"Branch code not found in system"'
-    ].join(','));
-  });
-  const csv = csvRows.join('\n');
-  const blob = new Blob([csv], {type:'text/csv'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'Unlocated_Branches_'+today()+'.csv';
-  a.click();
-  URL.revokeObjectURL(a.href);
+
+  const headers = ['Branch Code','Client Code','Name','Amount','PN No.','Batch No.','Reason'];
+  const rows = data.map(r => [
+    r.branchcode, r.clientcode, r.name,
+    r.amount, r.pnno, r.batchno,
+    'Branch code not found in system'
+  ]);
+
+  makeXLSX(
+    headers, rows,
+    'Unlocated_Branches_' + today() + '.xlsx',
+    'Unlocated Branches'
+  );
 }
 
 function renderUploadLog(log) {
