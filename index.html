@@ -679,6 +679,25 @@
   </div>
 </div>
 
+<!-- AUTO LOGOUT WARNING MODAL -->
+<div class="modal-bg" id="modalAutoLogout" style="z-index:9998;">
+  <div class="modal" style="max-width:420px;text-align:center;border-top:4px solid var(--danger);">
+    <div style="font-size:48px;margin-bottom:12px;">⏱</div>
+    <div class="modal-title" style="justify-content:center;font-size:20px;color:var(--danger);margin-bottom:8px;">Session Expiring Soon</div>
+    <p style="font-size:14px;color:var(--gray-600);margin-bottom:18px;line-height:1.6;">
+      You have been inactive for <b>4 minutes</b>.<br>
+      You will be automatically signed out in:
+    </p>
+    <div id="countdownDisplay" style="font-size:52px;font-weight:800;color:var(--danger);font-family:'Playfair Display',serif;margin-bottom:18px;line-height:1;">60</div>
+    <div style="font-size:13px;color:var(--gray-400);margin-bottom:22px;">seconds</div>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button class="btn btn-outline" onclick="doLogout()" style="border-color:var(--danger);color:var(--danger);">Sign Out Now</button>
+      <button class="btn btn-primary" onclick="resetSessionTimer()" style="background:var(--success);font-size:14px;padding:10px 24px;">✅ I'm Still Here — Continue</button>
+    </div>
+    <p style="font-size:11px;color:var(--gray-400);margin-top:14px;">For security, inactive sessions are automatically closed after 5 minutes.</p>
+  </div>
+</div>
+
 <script>
 // ============================================================
 // SUPABASE CONFIG — NextBank FastCash LMS
@@ -786,6 +805,7 @@ async function doLogin() {
     document.getElementById('dbStatus').textContent = '⬤ Cloud Connected';
     document.getElementById('dbStatus').className = 'db-status db-online';
     setDate();
+    startSessionTimer();
     await renderDashboard();
   } catch(e) {
     errEl.textContent = 'Connection error: ' + e.message; errEl.style.display='block';
@@ -794,10 +814,19 @@ async function doLogin() {
 }
 
 function doLogout() {
+  stopSessionTimer();
   currentUser = null;
   cachedClients=[]; cachedBranches=[]; cachedMOC=[]; cachedTx=[];
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
+  // Reset login error style back to default
+  const errEl = document.getElementById('loginErr');
+  if (errEl) {
+    errEl.style.background = '';
+    errEl.style.color = '';
+    errEl.style.borderLeft = '';
+    errEl.style.borderRadius = '';
+  }
 }
 
 // ============================================================
@@ -1686,6 +1715,109 @@ function printReport() {
   document.getElementById('rptPrintHeader').style.display = 'none';
 }
 
+
+// ============================================================
+// AUTO LOGOUT — 5 minute inactivity timeout
+// VFP analogy: Like a TIMER control that signs out after no keyboard/mouse activity
+// ============================================================
+const SESSION_TIMEOUT   = 5 * 60 * 1000;   // 5 minutes total (ms)
+const WARNING_BEFORE    = 1 * 60 * 1000;   // Show warning at 4 minutes (1 min before)
+const COUNTDOWN_SECS    = 60;              // 60 second countdown
+
+let sessionTimer    = null;   // main inactivity timer
+let countdownTimer  = null;   // countdown ticker inside warning modal
+let countdownLeft   = COUNTDOWN_SECS;
+let warningShown    = false;
+
+// ── Activity events — reset timer on any user interaction ──
+const ACTIVITY_EVENTS = [
+  'mousemove','mousedown','keydown',
+  'touchstart','scroll','click','input'
+];
+
+function attachActivityListeners() {
+  ACTIVITY_EVENTS.forEach(evt => {
+    document.addEventListener(evt, onUserActivity, { passive: true });
+  });
+}
+
+function onUserActivity() {
+  // Only reset if warning is NOT shown — if warning is shown, user must click button
+  if (!warningShown) {
+    resetSessionTimer();
+  }
+}
+
+function resetSessionTimer() {
+  // Hide warning modal if visible
+  warningShown = false;
+  document.getElementById('modalAutoLogout').classList.remove('open');
+  clearInterval(countdownTimer);
+  countdownLeft = COUNTDOWN_SECS;
+  document.getElementById('countdownDisplay').textContent = countdownLeft;
+
+  // Reset main timer
+  clearTimeout(sessionTimer);
+  if (currentUser) {
+    sessionTimer = setTimeout(showLogoutWarning, SESSION_TIMEOUT - WARNING_BEFORE);
+  }
+}
+
+function showLogoutWarning() {
+  if (!currentUser) return;
+  warningShown = true;
+  countdownLeft = COUNTDOWN_SECS;
+  document.getElementById('countdownDisplay').textContent = countdownLeft;
+  document.getElementById('modalAutoLogout').classList.add('open');
+
+  // Start countdown ticker
+  clearInterval(countdownTimer);
+  countdownTimer = setInterval(() => {
+    countdownLeft--;
+    const el = document.getElementById('countdownDisplay');
+    if (el) el.textContent = countdownLeft;
+
+    // Color shift as time runs out
+    if (countdownLeft <= 10) {
+      if (el) el.style.color = '#7b1c10';
+    }
+
+    if (countdownLeft <= 0) {
+      clearInterval(countdownTimer);
+      autoLogout();
+    }
+  }, 1000);
+}
+
+function autoLogout() {
+  document.getElementById('modalAutoLogout').classList.remove('open');
+  warningShown = false;
+  clearTimeout(sessionTimer);
+  clearInterval(countdownTimer);
+  doLogout();
+
+  // Show signed-out message on login screen
+  const errEl = document.getElementById('loginErr');
+  if (errEl) {
+    errEl.textContent = '🔒 You were automatically signed out due to 5 minutes of inactivity.';
+    errEl.style.display = 'block';
+    errEl.style.background = '#fffbeb';
+    errEl.style.color = '#92400e';
+    errEl.style.borderLeft = '4px solid #f5c518';
+    errEl.style.borderRadius = '0 6px 6px 0';
+  }
+}
+
+function startSessionTimer() {
+  attachActivityListeners();
+  resetSessionTimer();
+}
+
+function stopSessionTimer() {
+  clearTimeout(sessionTimer);
+  clearInterval(countdownTimer);
+  warningShown = false;
+}
 
 // ============================================================
 setDate();
