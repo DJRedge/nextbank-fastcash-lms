@@ -1611,9 +1611,9 @@ async function handleBranchUpload(input) {
     const addrIdx   = headers.findIndex(h => h==='address'     || h==='addr'       || h==='branch address');
     const statusIdx = headers.findIndex(h => h==='status');
 
-    if (codeIdx === -1 || nameIdx === -1) {
+    if (codeIdx === -1) {
       showBranchAlert('branchUploadAlert',
-        `Missing required columns. Found: [${headers.join(', ')}]. File must have: branchcode, branchname.`,'danger');
+        `Missing required column. Found: [${headers.join(', ')}]. File must have at least: branchcode.`,'danger');
       return;
     }
 
@@ -1632,20 +1632,28 @@ async function handleBranchUpload(input) {
       const addr   = addrIdx >= 0   ? (vals[addrIdx]   || '').trim() : '';
       const status = statusIdx >= 0 ? (vals[statusIdx] || 'Active').trim() : 'Active';
 
-      if (!code || !name) { skipped++; continue; }
+      if (!code) { skipped++; continue; }  // only branch code is required
 
       try {
+        // Use code as fallback name if name is empty
+        const branchName   = name   || code;
+        const branchAddr   = addr   || '';
+        const branchStatus = status || 'Active';
+
         if (existingCodes.has(code)) {
           // Update existing branch
           await db.update('branches',
-            { name, address: addr, status },
+            { name: branchName, address: branchAddr, status: branchStatus },
             '?code=eq.' + encodeURIComponent(code)
           );
           updated++;
         } else {
-          // Insert new branch
+          // Insert new branch — name defaults to code if blank
           await db.insert('branches', {
-            code, name, address: addr, status
+            code,
+            name:    branchName,
+            address: branchAddr,
+            status:  branchStatus
           });
           existingCodes.add(code);
           added++;
