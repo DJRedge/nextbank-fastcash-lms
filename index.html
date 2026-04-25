@@ -218,7 +218,12 @@
       <div class="topbar-right">
         <span class="db-status db-offline" id="dbStatus">⬤ Connecting...</span>
         <div class="topbar-badge">GSIS · PVAO · SSS</div>
-        <div style="font-size:13px;color:var(--gray-400)" id="topbarDate"></div>
+        <div style="display:flex;align-items:center;gap:8px;background:var(--gold-pale);border:1.5px solid var(--gold);border-radius:8px;padding:5px 14px;">
+          <div style="display:flex;flex-direction:column;align-items:flex-end;line-height:1.3;">
+            <span id="liveClock" style="font-size:15px;font-weight:800;color:var(--royal-dark);font-family:'Playfair Display',serif;letter-spacing:0.5px;"></span>
+            <span id="liveDate" style="font-size:10.5px;color:var(--gray-600);font-weight:600;letter-spacing:0.3px;"></span>
+          </div>
+        </div>
       </div>
     </div>
     <div class="content">
@@ -736,7 +741,26 @@ function showAlert(id, msg, type) {
   setTimeout(() => { el.style.display='none'; }, 7000);
 }
 function setDate() {
-  document.getElementById('topbarDate').textContent = new Date().toLocaleDateString('en-PH',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
+  // Initial render
+  updateClock();
+  // Tick every second — live clock
+  setInterval(updateClock, 1000);
+}
+
+function updateClock() {
+  const now = new Date();
+  // Time — 12-hour format with seconds
+  const time = now.toLocaleTimeString('en-PH', {
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+  });
+  // Date — full readable format
+  const date = now.toLocaleDateString('en-PH', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+  const clockEl = document.getElementById('liveClock');
+  const dateEl  = document.getElementById('liveDate');
+  if (clockEl) clockEl.textContent = time;
+  if (dateEl)  dateEl.textContent  = date;
 }
 
 // ============================================================
