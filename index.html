@@ -4,90 +4,90 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NextBank FastCash LMS</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --royal: #1a3a6b; --royal-dark: #0f2347; --royal-light: #2a5298;
-    --gold: #d4a017; --gold-light: #f0c040; --gold-pale: #fdf6e3;
-    --white: #ffffff; --gray-50: #f8f9fc; --gray-100: #eef0f5;
-    --gray-200: #d8dce8; --gray-400: #8a93ae; --gray-600: #4a5270; --gray-800: #1e2340;
-    --success: #1a7f5a; --success-bg: #e6f7f1;
-    --danger: #c0392b; --danger-bg: #fdecea;
-    --warning: #d68910; --warning-bg: #fef9e7;
-    --info: #1a5276; --info-bg: #eaf2f8;
-    --sidebar-w: 220px; --header-h: 62px; --radius: 10px;
-    --shadow: 0 2px 12px rgba(26,58,107,0.10);
-    --shadow-md: 0 4px 24px rgba(26,58,107,0.15);
+    --royal: #0a1f5c; --royal-dark: #061240; --royal-light: #1a3a8f;
+    --gold: #f5c518; --gold-light: #ffe066; --gold-pale: #fffbeb;
+    --white: #ffffff; --gray-50: #f8f6ee; --gray-100: #f0ead8;
+    --gray-200: #d4b896; --gray-400: #b89a6a; --gray-600: #78580e; --gray-800: #1a1a2e;
+    --success: #065f46; --success-bg: #ecfdf5;
+    --danger: #991b1b; --danger-bg: #fef2f2;
+    --warning: #92400e; --warning-bg: #fffbeb;
+    --info: #0a1f5c; --info-bg: #eff6ff;
+    --sidebar-w: 220px; --header-h: 62px; --radius: 8px;
+    --shadow: 0 2px 12px rgba(6,18,64,0.12);
+    --shadow-md: 0 4px 24px rgba(6,18,64,0.18);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Nunito', sans-serif; background: var(--gray-50); color: var(--gray-800); min-height: 100vh; }
+  body { font-family: 'Nunito', sans-serif; background: var(--gray-50); color: var(--gray-800); min-height: 100vh; } 
 
   #loadingOverlay { position: fixed; inset: 0; background: rgba(15,35,71,0.82); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 99999; }
   .spinner { width: 48px; height: 48px; border: 4px solid rgba(212,160,23,0.3); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 16px; }
   @keyframes spin { to { transform: rotate(360deg); } }
   #loadingOverlay p { color: var(--gold-light); font-size: 14px; letter-spacing: 0.5px; }
 
-  #loginScreen { position: fixed; inset: 0; background: linear-gradient(135deg, var(--royal-dark) 0%, var(--royal-light) 60%, #1a5276 100%); display: flex; align-items: center; justify-content: center; z-index: 9999; }
-  .login-card { background: var(--white); border-radius: 18px; padding: 48px 44px; width: 420px; box-shadow: 0 24px 80px rgba(0,0,0,0.35); text-align: center; }
-  .login-logo { width: 72px; height: 72px; background: linear-gradient(135deg, var(--royal), var(--royal-light)); border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; }
-  .login-logo span { color: var(--gold); font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; }
-  .login-title { font-family: 'Playfair Display', serif; font-size: 22px; color: var(--royal-dark); margin-bottom: 4px; }
+  #loginScreen { position: fixed; inset: 0; background: linear-gradient(135deg, var(--royal-dark) 0%, var(--royal) 55%, var(--royal-light) 100%); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+  .login-card { background: var(--white); border-radius: 18px; padding: 48px 44px; width: 420px; box-shadow: 0 24px 80px rgba(0,0,0,0.35); text-align: center; border-top: 4px solid var(--gold); }
+  .login-logo { width: 92px; height: 92px; background: var(--royal-dark); border-radius: 22px; border: 3px solid var(--gold); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; box-shadow: 0 0 0 6px rgba(245,197,24,0.15); }
+  .login-logo span { color: var(--gold); font-family: 'Playfair Display', serif; font-size: 36px; font-weight: 800; letter-spacing: 2px; }
+  .login-title { font-family: 'Playfair Display', serif; font-size: 22px; color: var(--royal-dark); margin-bottom: 4px; letter-spacing: 0.3px; }
   .login-sub { font-size: 13px; color: var(--gray-400); margin-bottom: 32px; }
   .login-label { display: block; text-align: left; font-size: 12px; font-weight: 700; color: var(--gray-600); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
   .login-input { width: 100%; padding: 11px 14px; border: 1.5px solid var(--gray-200); border-radius: 8px; font-family: 'Nunito',sans-serif; font-size: 14px; margin-bottom: 18px; outline: none; transition: border .2s; }
   .login-input:focus { border-color: var(--royal-light); }
-  .login-btn { width: 100%; padding: 13px; background: linear-gradient(90deg, var(--royal-dark), var(--royal-light)); color: var(--gold-light); font-family: 'Nunito',sans-serif; font-size: 15px; font-weight: 700; border: none; border-radius: 8px; cursor: pointer; transition: opacity .2s; }
+  .login-btn { width: 100%; padding: 13px; background: linear-gradient(90deg, var(--royal-dark), var(--royal)); color: var(--gold); font-family: 'Nunito',sans-serif; font-size: 15px; font-weight: 800; border: none; border-radius: 8px; cursor: pointer; transition: opacity .2s; letter-spacing: 0.5px; border: 1.5px solid var(--gold); }
   .login-btn:hover { opacity: 0.9; }
   .login-err { background: var(--danger-bg); color: var(--danger); font-size: 13px; padding: 8px 12px; border-radius: 6px; margin-bottom: 14px; display: none; }
 
   #app { display: none; min-height: 100vh; }
-  .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: var(--sidebar-w); background: linear-gradient(180deg, var(--royal-dark) 0%, var(--royal) 100%); display: flex; flex-direction: column; z-index: 100; box-shadow: 4px 0 24px rgba(0,0,0,0.18); }
-  .sidebar-logo { padding: 20px 18px 16px; border-bottom: 1px solid rgba(255,255,255,0.08); }
-  .sidebar-logo .brand { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--gold-light); }
+  .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: var(--sidebar-w); background: linear-gradient(180deg, var(--royal-dark) 0%, var(--royal) 100%); border-right: 1px solid rgba(245,197,24,0.15); display: flex; flex-direction: column; z-index: 100; box-shadow: 4px 0 24px rgba(0,0,0,0.18); }
+  .sidebar-logo { padding: 20px 18px 16px; border-bottom: 1px solid rgba(245,197,24,0.25); }
+  .sidebar-logo .brand { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--gold); letter-spacing: 0.5px; }
   .sidebar-logo .sub { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.6px; text-transform: uppercase; }
   .sidebar-nav { flex: 1; padding: 14px 10px; overflow-y: auto; }
   .nav-section { font-size: 10px; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 1px; padding: 12px 8px 4px; }
   .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; cursor: pointer; color: rgba(255,255,255,0.7); font-size: 13.5px; font-weight: 500; margin-bottom: 2px; transition: all .2s; }
   .nav-item:hover { background: rgba(255,255,255,0.09); color: var(--white); }
-  .nav-item.active { background: rgba(212,160,23,0.2); color: var(--gold-light); border-left: 3px solid var(--gold); }
+  .nav-item.active { background: rgba(245,197,24,0.18); color: var(--gold); border-left: 3px solid var(--gold); }
   .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
-  .sidebar-footer { padding: 14px 14px 18px; border-top: 1px solid rgba(255,255,255,0.08); }
+  .sidebar-footer { padding: 14px 14px 18px; border-top: 1px solid rgba(245,197,24,0.2); }
   .user-chip { display: flex; align-items: center; gap: 10px; }
-  .user-av { width: 34px; height: 34px; border-radius: 50%; background: var(--gold); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; color: var(--royal-dark); }
+  .user-av { width: 34px; height: 34px; border-radius: 50%; background: var(--gold); border: 2px solid rgba(245,197,24,0.5); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; color: var(--royal-dark); }
   .user-info .name { font-size: 13px; color: var(--white); font-weight: 600; }
   .user-info .role { font-size: 11px; color: rgba(255,255,255,0.45); }
   .logout-btn { margin-top: 10px; width: 100%; padding: 8px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); border-radius: 7px; color: rgba(255,255,255,0.6); font-size: 12px; cursor: pointer; font-family: 'Nunito',sans-serif; transition: all .2s; }
   .logout-btn:hover { background: rgba(255,255,255,0.13); color: var(--white); }
 
   .main { margin-left: var(--sidebar-w); min-height: 100vh; display: flex; flex-direction: column; }
-  .topbar { height: var(--header-h); background: var(--white); border-bottom: 1px solid var(--gray-200); display: flex; align-items: center; justify-content: space-between; padding: 0 28px; position: sticky; top: 0; z-index: 50; box-shadow: var(--shadow); }
-  .topbar-title { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--royal-dark); }
+  .topbar { height: var(--header-h); background: var(--white); border-bottom: 3px solid var(--gold); display: flex; align-items: center; justify-content: space-between; padding: 0 28px; position: sticky; top: 0; z-index: 50; box-shadow: var(--shadow); }
+  .topbar-title { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--royal-dark); letter-spacing: 0.3px; }
   .topbar-right { display: flex; align-items: center; gap: 16px; }
-  .topbar-badge { background: var(--gold-pale); border: 1px solid var(--gold); color: var(--royal-dark); font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px; }
+  .topbar-badge { background: var(--gold); border: 1px solid var(--gold); color: var(--royal-dark); font-size: 12px; font-weight: 800; padding: 4px 12px; border-radius: 20px; letter-spacing: 0.3px; }
   .db-status { font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 700; }
-  .db-online { background: var(--success-bg); color: var(--success); }
+  .db-online { background: var(--gold-pale); color: var(--royal-dark); border: 1px solid var(--gold); }
   .db-offline { background: var(--danger-bg); color: var(--danger); }
 
   .content { flex: 1; padding: 28px; }
-  .card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px 24px; margin-bottom: 22px; }
+  .card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px 24px; margin-bottom: 22px; border-top: 2px solid var(--gold); }
   .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
-  .card-title { font-size: 16px; font-weight: 700; color: var(--royal-dark); }
+  .card-title { font-size: 16px; font-weight: 700; color: var(--royal-dark); letter-spacing: 0.2px; }
   .stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 22px; }
-  .stat-card { background: var(--white); border-radius: var(--radius); padding: 20px 22px; box-shadow: var(--shadow); border-left: 4px solid var(--royal-light); }
+  .stat-card { background: var(--white); border-radius: var(--radius); padding: 20px 22px; box-shadow: var(--shadow); border-top: 3px solid var(--royal); border-left: none; }
   .stat-label { font-size: 12px; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; }
   .stat-value { font-size: 26px; font-weight: 700; color: var(--royal-dark); }
   .stat-sub { font-size: 12px; color: var(--gray-400); margin-top: 4px; }
 
   .tbl-wrap { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-  th { background: var(--gray-50); color: var(--gray-600); font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; padding: 11px 14px; text-align: left; border-bottom: 2px solid var(--gray-200); }
+  th { background: var(--gold-pale); color: var(--gray-600); font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; padding: 11px 14px; text-align: left; border-bottom: 2px solid var(--gold); }
   td { padding: 11px 14px; border-bottom: 1px solid var(--gray-100); color: var(--gray-800); vertical-align: middle; }
-  tr:hover td { background: var(--gold-pale); }
+  tr:hover td { background: #fffbeb; }
 
   .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border-radius: 7px; font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; border: none; transition: all .2s; }
-  .btn-primary { background: var(--royal); color: var(--gold-light); }
+  .btn-primary { background: var(--royal); color: var(--gold); font-weight: 700; }
   .btn-primary:hover { background: var(--royal-dark); }
-  .btn-gold { background: var(--gold); color: var(--royal-dark); }
+  .btn-gold { background: var(--gold); color: var(--royal-dark); font-weight: 800; }
   .btn-gold:hover { background: var(--gold-light); }
   .btn-outline { background: transparent; border: 1.5px solid var(--royal); color: var(--royal); }
   .btn-outline:hover { background: var(--royal); color: var(--white); }
@@ -114,9 +114,9 @@
 
   .modal-bg { position: fixed; inset: 0; background: rgba(10,20,50,0.55); display: none; align-items: center; justify-content: center; z-index: 1000; }
   .modal-bg.open { display: flex; }
-  .modal { background: var(--white); border-radius: 14px; padding: 30px 32px; width: 520px; max-width: 95vw; max-height: 85vh; overflow-y: auto; box-shadow: var(--shadow-md); }
+  .modal { background: var(--white); border-radius: 14px; padding: 30px 32px; width: 520px; max-width: 95vw; max-height: 85vh; overflow-y: auto; box-shadow: var(--shadow-md); border-top: 3px solid var(--gold); }
   .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
-  .modal-title { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--royal-dark); }
+  .modal-title { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--royal-dark); letter-spacing: 0.2px; }
   .modal-close { width: 30px; height: 30px; border-radius: 50%; background: var(--gray-100); border: none; cursor: pointer; font-size: 16px; color: var(--gray-600); }
 
   .alert { padding: 12px 16px; border-radius: 8px; font-size: 13.5px; margin-bottom: 14px; display: none; }
@@ -124,27 +124,34 @@
   .alert-success { background: var(--success-bg); color: var(--success); border-left: 4px solid var(--success); }
   .alert-warning { background: var(--warning-bg); color: var(--warning); border-left: 4px solid var(--warning); }
 
-  .receipt { background: var(--white); border: 2px dashed var(--gray-200); border-radius: 10px; padding: 24px; font-size: 13px; }
-  .receipt-title { text-align: center; font-family: 'Playfair Display', serif; color: var(--royal-dark); font-size: 15px; margin-bottom: 4px; }
+  .receipt { background: var(--white); border: 2px dashed var(--gold); border-radius: 10px; padding: 24px; font-size: 13px; }
+  .receipt-title { text-align: center; font-family: 'Playfair Display', serif; color: var(--royal-dark); font-size: 15px; margin-bottom: 4px; letter-spacing: 0.5px; }
   .receipt-sub { text-align: center; font-size: 11px; color: var(--gray-400); margin-bottom: 14px; }
   .receipt-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dotted var(--gray-200); }
-  .receipt-amount { text-align: center; font-size: 28px; font-weight: 700; color: var(--royal-dark); margin: 14px 0; }
+  .receipt-amount { text-align: center; font-size: 28px; font-weight: 800; color: var(--royal-dark); margin: 14px 0; padding: 10px; background: var(--gold-pale); border-radius: 8px; border: 1px solid var(--gold); }
   .receipt-arn { text-align: center; font-size: 11px; color: var(--gray-400); margin-bottom: 10px; }
 
   .page { display: none; }
   .page.active { display: block; }
 
-  .welcome-banner { background: linear-gradient(135deg, var(--royal-dark) 0%, var(--royal-light) 100%); border-radius: var(--radius); padding: 28px 32px; color: var(--white); margin-bottom: 22px; display: flex; align-items: center; justify-content: space-between; }
-  .welcome-text h2 { font-family: 'Playfair Display', serif; font-size: 22px; margin-bottom: 6px; }
+  .welcome-banner { background: linear-gradient(135deg, var(--royal-dark) 0%, var(--royal) 70%, var(--royal-light) 100%); border-radius: var(--radius); padding: 28px 32px; color: var(--white); margin-bottom: 22px; display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid var(--gold); }
+  .welcome-text h2 { font-family: 'Playfair Display', serif; font-size: 22px; margin-bottom: 6px; color: var(--gold); letter-spacing: 0.3px; }
   .welcome-text p { font-size: 13.5px; opacity: 0.75; }
   .welcome-icon { font-size: 52px; opacity: 0.35; }
   .page-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
   @media print {
-    .sidebar,.topbar,#loadingOverlay { display: none !important; }
+    .sidebar,.topbar,#loadingOverlay,.page-actions,
+    #rptSummary .stat-card button, .btn, .search-bar,
+    .card-header .page-actions { display: none !important; }
     .main { margin-left: 0; }
     .modal-bg.open { position: static; background: none; display: block; }
     .modal { box-shadow: none; padding: 0; width: 100%; max-height: none; }
+    .page.active { display: block !important; }
+    #rptPrintHeader { display: block !important; }
+    #rptSummary { display: grid !important; }
+    table { font-size: 11px; }
+    th, td { padding: 6px 8px !important; }
   }
   @media (max-width:900px) {
     .stat-grid { grid-template-columns: 1fr 1fr; }
@@ -161,7 +168,7 @@
 <div id="loginScreen">
   <div class="login-card">
     <div class="login-logo"><span>NB</span></div>
-    <div class="login-title">NextBank FastCash</div>
+    <div class="login-title">NextBank-FastCash</div>
     <div class="login-sub">GSIS · PVAO · SSS — Change Claiming System</div>
     <div class="login-err" id="loginErr"></div>
     <label class="login-label">Username</label>
@@ -169,7 +176,7 @@
     <label class="login-label">Password</label>
     <input class="login-input" type="password" id="loginPass" placeholder="Enter password">
     <button class="login-btn" onclick="doLogin()">Sign In</button>
-    <p style="margin-top:14px;font-size:12px;color:var(--gray-400)">Default: admin / admin123</p>
+    
   </div>
 </div>
 
@@ -187,6 +194,7 @@
       <div class="nav-item" onclick="nav('upload',this)"><span class="icon">📤</span> Upload Collection</div>
       <div class="nav-item" onclick="nav('claiming',this)"><span class="icon">💰</span> Claim Change</div>
       <div class="nav-item" onclick="nav('transactions',this)"><span class="icon">📋</span> Transactions</div>
+      <div class="nav-item" onclick="nav('reports',this)"><span class="icon">📈</span> Reports</div>
       <div class="nav-section">Setup</div>
       <div class="nav-item" onclick="nav('branches',this)"><span class="icon">🏦</span> Branches</div>
       <div class="nav-item" onclick="nav('moc',this)"><span class="icon">🔄</span> Mode of Change</div>
@@ -210,7 +218,12 @@
       <div class="topbar-right">
         <span class="db-status db-offline" id="dbStatus">⬤ Connecting...</span>
         <div class="topbar-badge">GSIS · PVAO · SSS</div>
-        <div style="font-size:13px;color:var(--gray-400)" id="topbarDate"></div>
+        <div style="display:flex;align-items:center;gap:8px;background:var(--gold-pale);border:1.5px solid var(--gold);border-radius:8px;padding:5px 14px;">
+          <div style="display:flex;flex-direction:column;align-items:flex-end;line-height:1.3;">
+            <span id="liveClock" style="font-size:15px;font-weight:800;color:var(--royal-dark);font-family:'Playfair Display',serif;letter-spacing:0.5px;"></span>
+            <span id="liveDate" style="font-size:10.5px;color:var(--gray-600);font-weight:600;letter-spacing:0.3px;"></span>
+          </div>
+        </div>
       </div>
     </div>
     <div class="content">
@@ -385,7 +398,140 @@
         </div>
       </div>
 
-      <div class="page" id="page-branches">
+      <div class="page" id="page-reports">
+        <!-- FILTER CARD -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📈 Change Claimed Report</div>
+            <div class="page-actions">
+              <button class="btn btn-outline" onclick="resetReportFilters()">↺ Reset</button>
+              <button class="btn btn-gold" onclick="generateReport()">🔍 Generate Report</button>
+              <button class="btn btn-primary" onclick="printReport()">🖨 Print</button>
+            </div>
+          </div>
+          <!-- FILTERS -->
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;margin-bottom:6px;">
+            <div>
+              <label class="fl">Date From</label>
+              <input class="fi" type="date" id="rptDateFrom">
+            </div>
+            <div>
+              <label class="fl">Date To</label>
+              <input class="fi" type="date" id="rptDateTo">
+            </div>
+            <div>
+              <label class="fl">Branch</label>
+              <select class="fi" id="rptBranch">
+                <option value="">— All Branches —</option>
+              </select>
+            </div>
+            <div>
+              <label class="fl">Mode of Change</label>
+              <select class="fi" id="rptMOC">
+                <option value="">— All MOC —</option>
+              </select>
+            </div>
+          </div>
+          <!-- SORT -->
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:10px;padding-top:14px;border-top:1px solid var(--gray-100);">
+            <div>
+              <label class="fl">Sort By</label>
+              <select class="fi" id="rptSortBy">
+                <option value="date">Date</option>
+                <option value="branch">Branch</option>
+                <option value="moc">Mode of Change</option>
+                <option value="amount">Amount</option>
+                <option value="clientcode">Client Code</option>
+              </select>
+            </div>
+            <div>
+              <label class="fl">Sort Order</label>
+              <select class="fi" id="rptSortOrder">
+                <option value="asc">Ascending ↑</option>
+                <option value="desc">Descending ↓</option>
+              </select>
+            </div>
+            <div>
+              <label class="fl">Group By</label>
+              <select class="fi" id="rptGroupBy">
+                <option value="">— No Grouping —</option>
+                <option value="branch">Branch</option>
+                <option value="moc">Mode of Change</option>
+                <option value="date">Date</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUMMARY STATS -->
+        <div id="rptSummary" style="display:none;">
+          <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);">
+            <div class="stat-card" style="border-left-color:var(--gold)">
+              <div class="stat-label">Total Records</div>
+              <div class="stat-value" id="rptTotalCount">0</div>
+              <div class="stat-sub">Transactions</div>
+            </div>
+            <div class="stat-card" style="border-left-color:var(--success)">
+              <div class="stat-label">Total Amount</div>
+              <div class="stat-value" id="rptTotalAmount">₱0.00</div>
+              <div class="stat-sub">Total claimed</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Average Claim</div>
+              <div class="stat-value" id="rptAvgAmount">₱0.00</div>
+              <div class="stat-sub">Per transaction</div>
+            </div>
+            <div class="stat-card" style="border-left-color:var(--royal-light)">
+              <div class="stat-label">Highest Claim</div>
+              <div class="stat-value" id="rptMaxAmount">₱0.00</div>
+              <div class="stat-sub">Single transaction</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- REPORT TABLE -->
+        <div class="card" id="rptTableCard" style="display:none;">
+          <div class="card-header">
+            <div class="card-title" id="rptTableTitle">Change Claimed Report</div>
+            <div style="font-size:12px;color:var(--gray-400);" id="rptGeneratedAt"></div>
+          </div>
+          <!-- PRINT HEADER (only shows on print) -->
+          <div id="rptPrintHeader" style="display:none;">
+            <div style="text-align:center;margin-bottom:18px;">
+              <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--royal-dark);">NextBank FastCash LMS</div>
+              <div style="font-size:13px;color:var(--gray-600);margin-top:4px;">GSIS · PVAO · SSS — Change Claiming System</div>
+              <div style="font-size:15px;font-weight:700;color:var(--royal-dark);margin-top:10px;" id="rptPrintTitle"></div>
+              <div style="font-size:12px;color:var(--gray-400);margin-top:4px;" id="rptPrintParams"></div>
+            </div>
+          </div>
+          <div class="tbl-wrap">
+            <table id="rptTable">
+              <thead><tr>
+                <th onclick="sortReportBy('date')" style="cursor:pointer;">Date <span id="sort-date"></span></th>
+                <th onclick="sortReportBy('arnumber')" style="cursor:pointer;">AR No. <span id="sort-arnumber"></span></th>
+                <th onclick="sortReportBy('clientcode')" style="cursor:pointer;">Client Code <span id="sort-clientcode"></span></th>
+                <th>Client Name</th>
+                <th onclick="sortReportBy('branchcode')" style="cursor:pointer;">Branch <span id="sort-branchcode"></span></th>
+                <th onclick="sortReportBy('moc')" style="cursor:pointer;">MOC <span id="sort-moc"></span></th>
+                <th onclick="sortReportBy('amount')" style="cursor:pointer;text-align:right;">Amount <span id="sort-amount"></span></th>
+                <th>Printed By</th>
+              </tr></thead>
+              <tbody id="rptTableBody"></tbody>
+              <tfoot id="rptTableFoot"></tfoot>
+            </table>
+          </div>
+        </div>
+
+        <div id="rptEmpty" style="display:none;">
+          <div class="card" style="text-align:center;padding:40px;">
+            <div style="font-size:40px;margin-bottom:12px;">📭</div>
+            <div style="font-size:15px;font-weight:700;color:var(--gray-600);">No records found</div>
+            <div style="font-size:13px;color:var(--gray-400);margin-top:6px;">Try adjusting your filters and generate again.</div>
+          </div>
+        </div>
+      </div>
+
+            <div class="page" id="page-branches">
         <div class="card">
           <div class="card-header">
             <div class="card-title">Branch Management</div>
@@ -595,7 +741,26 @@ function showAlert(id, msg, type) {
   setTimeout(() => { el.style.display='none'; }, 7000);
 }
 function setDate() {
-  document.getElementById('topbarDate').textContent = new Date().toLocaleDateString('en-PH',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
+  // Initial render
+  updateClock();
+  // Tick every second — live clock
+  setInterval(updateClock, 1000);
+}
+
+function updateClock() {
+  const now = new Date();
+  // Time — 12-hour format with seconds
+  const time = now.toLocaleTimeString('en-PH', {
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+  });
+  // Date — full readable format
+  const date = now.toLocaleDateString('en-PH', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+  const clockEl = document.getElementById('liveClock');
+  const dateEl  = document.getElementById('liveDate');
+  if (clockEl) clockEl.textContent = time;
+  if (dateEl)  dateEl.textContent  = date;
 }
 
 // ============================================================
@@ -643,13 +808,14 @@ async function nav(page, el) {
   document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   if (el) el.classList.add('active');
-  const titles = {dashboard:'Dashboard',clients:'Client List',upload:'Upload Collection',claiming:'Claim Change',transactions:'Transactions',branches:'Branches',moc:'Mode of Change',users:'User Management'};
+  const titles = {dashboard:'Dashboard',clients:'Client List',upload:'Upload Collection',claiming:'Claim Change',transactions:'Transactions',reports:'Reports',branches:'Branches',moc:'Mode of Change',users:'User Management'};
   document.getElementById('topbarTitle').textContent = titles[page]||page;
   if (page==='dashboard')    await renderDashboard();
   if (page==='clients')      await loadClients();
   if (page==='upload')       await loadNBMaster();
   if (page==='claiming')     await loadClaimMOC();
   if (page==='transactions') await loadTransactions();
+  if (page==='reports')      await initReports();
   if (page==='branches')     await loadBranches();
   if (page==='moc')          await loadMOC();
   if (page==='users')        await loadUsers();
@@ -1279,6 +1445,247 @@ async function doResetPw() {
   } catch(e) { al.textContent='Error: '+e.message; al.style.display='block'; }
   loading(false);
 }
+
+// ============================================================
+// REPORTS MODULE
+// ============================================================
+let rptData = [];          // full dataset from Supabase
+let rptFiltered = [];      // after filters applied
+let rptClientMap = {};     // clientcode -> name lookup
+let rptCurrentSort = { col: 'date', order: 'asc' };
+
+async function initReports() {
+  // Populate Branch filter
+  if (!cachedBranches.length) cachedBranches = await db.select('branches','?order=name.asc');
+  const brSel = document.getElementById('rptBranch');
+  brSel.innerHTML = '<option value="">— All Branches —</option>'
+    + cachedBranches.map(b=>`<option value="${b.code}">${b.code} – ${b.name}</option>`).join('');
+
+  // Populate MOC filter
+  if (!cachedMOC.length) cachedMOC = await db.select('moc','?order=moc.asc');
+  const mocSel = document.getElementById('rptMOC');
+  mocSel.innerHTML = '<option value="">— All MOC —</option>'
+    + cachedMOC.map(m=>`<option value="${m.moc}">${m.moc} – ${m.description}</option>`).join('');
+
+  // Default date range: first day of current month → today
+  const now = new Date();
+  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0,10);
+  document.getElementById('rptDateFrom').value = firstDay;
+  document.getElementById('rptDateTo').value   = today();
+
+  // Hide results until generated
+  document.getElementById('rptSummary').style.display   = 'none';
+  document.getElementById('rptTableCard').style.display = 'none';
+  document.getElementById('rptEmpty').style.display     = 'none';
+}
+
+function resetReportFilters() {
+  const now = new Date();
+  document.getElementById('rptDateFrom').value  = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0,10);
+  document.getElementById('rptDateTo').value    = today();
+  document.getElementById('rptBranch').value    = '';
+  document.getElementById('rptMOC').value       = '';
+  document.getElementById('rptSortBy').value    = 'date';
+  document.getElementById('rptSortOrder').value = 'asc';
+  document.getElementById('rptGroupBy').value   = '';
+  document.getElementById('rptSummary').style.display   = 'none';
+  document.getElementById('rptTableCard').style.display = 'none';
+  document.getElementById('rptEmpty').style.display     = 'none';
+  rptData = []; rptFiltered = [];
+}
+
+async function generateReport() {
+  const dateFrom  = document.getElementById('rptDateFrom').value;
+  const dateTo    = document.getElementById('rptDateTo').value;
+  const branch    = document.getElementById('rptBranch').value;
+  const moc       = document.getElementById('rptMOC').value;
+  const sortBy    = document.getElementById('rptSortBy').value;
+  const sortOrder = document.getElementById('rptSortOrder').value;
+  const groupBy   = document.getElementById('rptGroupBy').value;
+
+  if (!dateFrom || !dateTo) { alert('Please set both Date From and Date To.'); return; }
+  if (dateFrom > dateTo)    { alert('Date From cannot be later than Date To.'); return; }
+
+  loading(true, 'Generating report...');
+
+  try {
+    // Build Supabase query — like VFP: SELECT * FROM changes WHERE date BETWEEN ...
+    let query = '?order='+sortBy+'.'+sortOrder;
+    query += '&date=gte.'+dateFrom;
+    query += '&date=lte.'+dateTo;
+    if (branch) query += '&branchcode=eq.'+encodeURIComponent(branch);
+
+    let rows = await db.select('changes', query);
+
+    // Load client names for lookup (batch)
+    const clients = await db.select('clients','?select=clientcode,name,moc');
+    rptClientMap = {};
+    clients.forEach(c => rptClientMap[c.clientcode] = { name: c.name, moc: c.moc });
+
+    // Attach client name + moc to each row
+    rows = rows.map(r => ({
+      ...r,
+      clientname: rptClientMap[r.clientcode]?.name || r.clientcode,
+      moc: rptClientMap[r.clientcode]?.moc || '—'
+    }));
+
+    // Client-side MOC filter (since moc is on clients table not changes)
+    if (moc) rows = rows.filter(r => r.moc === moc);
+
+    rptData     = rows;
+    rptFiltered = rows;
+    rptCurrentSort = { col: sortBy === 'branch' ? 'branchcode' : sortBy, order: sortOrder };
+
+    renderReportTable(groupBy, dateFrom, dateTo, branch, moc);
+  } catch(e) {
+    alert('Report error: ' + e.message);
+  }
+  loading(false);
+}
+
+function renderReportTable(groupBy, dateFrom, dateTo, branch, moc) {
+  const rows    = rptFiltered;
+  const groupEl = groupBy || document.getElementById('rptGroupBy').value;
+
+  // Summary stats
+  const total   = rows.reduce((a,r) => a + parseFloat(r.amount||0), 0);
+  const avg     = rows.length ? total / rows.length : 0;
+  const max     = rows.length ? Math.max(...rows.map(r=>parseFloat(r.amount||0))) : 0;
+
+  document.getElementById('rptTotalCount').textContent  = rows.length.toLocaleString();
+  document.getElementById('rptTotalAmount').textContent = peso(total);
+  document.getElementById('rptAvgAmount').textContent   = peso(avg);
+  document.getElementById('rptMaxAmount').textContent   = peso(max);
+
+  if (!rows.length) {
+    document.getElementById('rptSummary').style.display   = 'none';
+    document.getElementById('rptTableCard').style.display = 'none';
+    document.getElementById('rptEmpty').style.display     = 'block';
+    return;
+  }
+
+  document.getElementById('rptSummary').style.display   = 'grid';
+  document.getElementById('rptTableCard').style.display = 'block';
+  document.getElementById('rptEmpty').style.display     = 'none';
+
+  // Report title and params
+  const df = dateFrom || document.getElementById('rptDateFrom').value;
+  const dt = dateTo   || document.getElementById('rptDateTo').value;
+  const brLabel  = branch ? branch : 'All Branches';
+  const mocLabel = moc    ? moc    : 'All MOC';
+  const titleStr = 'Change Claimed Report';
+  const paramStr = `Period: ${df} to ${dt}  |  Branch: ${brLabel}  |  MOC: ${mocLabel}  |  ${rows.length} record(s)`;
+
+  document.getElementById('rptTableTitle').textContent   = titleStr;
+  document.getElementById('rptGeneratedAt').textContent  = 'Generated: ' + nowDT();
+  document.getElementById('rptPrintTitle').textContent   = titleStr;
+  document.getElementById('rptPrintParams').textContent  = paramStr;
+
+  // Update sort indicators
+  ['date','arnumber','clientcode','branchcode','moc','amount'].forEach(col => {
+    const el = document.getElementById('sort-'+col);
+    if (!el) return;
+    const active = rptCurrentSort.col === col;
+    el.textContent = active ? (rptCurrentSort.order === 'asc' ? ' ▲' : ' ▼') : '';
+    el.style.color = active ? 'var(--gold)' : '';
+  });
+
+  const tbody = document.getElementById('rptTableBody');
+  const tfoot = document.getElementById('rptTableFoot');
+  tbody.innerHTML = '';
+  tfoot.innerHTML = '';
+
+  if (groupEl) {
+    // GROUP BY rendering — like VFP TOTAL ON groupfield
+    const groups = {};
+    rows.forEach(r => {
+      const key = groupEl === 'branch' ? r.branchcode
+                : groupEl === 'moc'    ? r.moc
+                : groupEl === 'date'   ? r.date
+                : r.branchcode;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(r);
+    });
+
+    Object.keys(groups).sort().forEach(groupKey => {
+      const groupRows = groups[groupKey];
+      const groupTotal = groupRows.reduce((a,r) => a+parseFloat(r.amount||0), 0);
+
+      // Group header row
+      tbody.innerHTML += `
+        <tr>
+          <td colspan="8" style="background:var(--royal-dark);color:var(--gold-light);font-weight:700;font-size:12px;padding:8px 14px;letter-spacing:0.5px;">
+            ${groupEl.toUpperCase()}: ${groupKey} &nbsp;·&nbsp; ${groupRows.length} record(s) &nbsp;·&nbsp; Subtotal: ${peso(groupTotal)}
+          </td>
+        </tr>`;
+
+      // Data rows in group
+      groupRows.forEach(r => {
+        tbody.innerHTML += buildReportRow(r);
+      });
+
+      // Group subtotal row
+      tbody.innerHTML += `
+        <tr style="background:var(--gold-pale);">
+          <td colspan="6" style="padding:8px 14px;font-weight:700;font-size:12px;color:var(--royal-dark);">Subtotal — ${groupKey}</td>
+          <td style="padding:8px 14px;font-weight:700;font-size:13px;color:var(--success);text-align:right;">${peso(groupTotal)}</td>
+          <td></td>
+        </tr>`;
+    });
+  } else {
+    // No grouping — plain list
+    rows.forEach(r => { tbody.innerHTML += buildReportRow(r); });
+  }
+
+  // Grand total footer
+  tfoot.innerHTML = `
+    <tr style="background:var(--royal);color:var(--white);">
+      <td colspan="6" style="padding:11px 14px;font-weight:700;font-size:13px;">GRAND TOTAL — ${rows.length} Transaction(s)</td>
+      <td style="padding:11px 14px;font-weight:700;font-size:15px;text-align:right;color:var(--gold-light);">${peso(total)}</td>
+      <td></td>
+    </tr>`;
+}
+
+function buildReportRow(r) {
+  return `<tr>
+    <td>${r.date}</td>
+    <td><b>${r.arnumber}</b></td>
+    <td>${r.clientcode}</td>
+    <td>${r.clientname}</td>
+    <td>${r.branchcode}</td>
+    <td><span class="badge badge-info">${r.moc||'—'}</span></td>
+    <td style="text-align:right;font-weight:700;color:var(--success);">${peso(r.amount)}</td>
+    <td>${r.printedby}</td>
+  </tr>`;
+}
+
+function sortReportBy(col) {
+  // Toggle sort order if same column, else default asc
+  if (rptCurrentSort.col === col) {
+    rptCurrentSort.order = rptCurrentSort.order === 'asc' ? 'desc' : 'asc';
+  } else {
+    rptCurrentSort = { col, order: 'asc' };
+  }
+
+  rptFiltered.sort((a, b) => {
+    let va = a[col] ?? '';
+    let vb = b[col] ?? '';
+    if (col === 'amount') { va = parseFloat(va||0); vb = parseFloat(vb||0); }
+    else { va = String(va).toLowerCase(); vb = String(vb).toLowerCase(); }
+    if (va < vb) return rptCurrentSort.order === 'asc' ? -1 :  1;
+    if (va > vb) return rptCurrentSort.order === 'asc' ?  1 : -1;
+    return 0;
+  });
+  renderReportTable('', null, null, null, null);
+}
+
+function printReport() {
+  if (!rptFiltered.length) { alert('Generate a report first before printing.'); return; }
+  document.getElementById('rptPrintHeader').style.display = 'block';
+  window.print();
+  document.getElementById('rptPrintHeader').style.display = 'none';
+}
+
 
 // ============================================================
 setDate();
