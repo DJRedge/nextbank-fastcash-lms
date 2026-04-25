@@ -141,10 +141,17 @@
   .page-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
   @media print {
-    .sidebar,.topbar,#loadingOverlay { display: none !important; }
+    .sidebar,.topbar,#loadingOverlay,.page-actions,
+    #rptSummary .stat-card button, .btn, .search-bar,
+    .card-header .page-actions { display: none !important; }
     .main { margin-left: 0; }
     .modal-bg.open { position: static; background: none; display: block; }
     .modal { box-shadow: none; padding: 0; width: 100%; max-height: none; }
+    .page.active { display: block !important; }
+    #rptPrintHeader { display: block !important; }
+    #rptSummary { display: grid !important; }
+    table { font-size: 11px; }
+    th, td { padding: 6px 8px !important; }
   }
   @media (max-width:900px) {
     .stat-grid { grid-template-columns: 1fr 1fr; }
@@ -187,6 +194,7 @@
       <div class="nav-item" onclick="nav('upload',this)"><span class="icon">📤</span> Upload Collection</div>
       <div class="nav-item" onclick="nav('claiming',this)"><span class="icon">💰</span> Claim Change</div>
       <div class="nav-item" onclick="nav('transactions',this)"><span class="icon">📋</span> Transactions</div>
+      <div class="nav-item" onclick="nav('reports',this)"><span class="icon">📈</span> Reports</div>
       <div class="nav-section">Setup</div>
       <div class="nav-item" onclick="nav('branches',this)"><span class="icon">🏦</span> Branches</div>
       <div class="nav-item" onclick="nav('moc',this)"><span class="icon">🔄</span> Mode of Change</div>
@@ -385,7 +393,140 @@
         </div>
       </div>
 
-      <div class="page" id="page-branches">
+      <div class="page" id="page-reports">
+        <!-- FILTER CARD -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📈 Change Claimed Report</div>
+            <div class="page-actions">
+              <button class="btn btn-outline" onclick="resetReportFilters()">↺ Reset</button>
+              <button class="btn btn-gold" onclick="generateReport()">🔍 Generate Report</button>
+              <button class="btn btn-primary" onclick="printReport()">🖨 Print</button>
+            </div>
+          </div>
+          <!-- FILTERS -->
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;margin-bottom:6px;">
+            <div>
+              <label class="fl">Date From</label>
+              <input class="fi" type="date" id="rptDateFrom">
+            </div>
+            <div>
+              <label class="fl">Date To</label>
+              <input class="fi" type="date" id="rptDateTo">
+            </div>
+            <div>
+              <label class="fl">Branch</label>
+              <select class="fi" id="rptBranch">
+                <option value="">— All Branches —</option>
+              </select>
+            </div>
+            <div>
+              <label class="fl">Mode of Change</label>
+              <select class="fi" id="rptMOC">
+                <option value="">— All MOC —</option>
+              </select>
+            </div>
+          </div>
+          <!-- SORT -->
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:10px;padding-top:14px;border-top:1px solid var(--gray-100);">
+            <div>
+              <label class="fl">Sort By</label>
+              <select class="fi" id="rptSortBy">
+                <option value="date">Date</option>
+                <option value="branch">Branch</option>
+                <option value="moc">Mode of Change</option>
+                <option value="amount">Amount</option>
+                <option value="clientcode">Client Code</option>
+              </select>
+            </div>
+            <div>
+              <label class="fl">Sort Order</label>
+              <select class="fi" id="rptSortOrder">
+                <option value="asc">Ascending ↑</option>
+                <option value="desc">Descending ↓</option>
+              </select>
+            </div>
+            <div>
+              <label class="fl">Group By</label>
+              <select class="fi" id="rptGroupBy">
+                <option value="">— No Grouping —</option>
+                <option value="branch">Branch</option>
+                <option value="moc">Mode of Change</option>
+                <option value="date">Date</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUMMARY STATS -->
+        <div id="rptSummary" style="display:none;">
+          <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);">
+            <div class="stat-card" style="border-left-color:var(--gold)">
+              <div class="stat-label">Total Records</div>
+              <div class="stat-value" id="rptTotalCount">0</div>
+              <div class="stat-sub">Transactions</div>
+            </div>
+            <div class="stat-card" style="border-left-color:var(--success)">
+              <div class="stat-label">Total Amount</div>
+              <div class="stat-value" id="rptTotalAmount">₱0.00</div>
+              <div class="stat-sub">Total claimed</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Average Claim</div>
+              <div class="stat-value" id="rptAvgAmount">₱0.00</div>
+              <div class="stat-sub">Per transaction</div>
+            </div>
+            <div class="stat-card" style="border-left-color:var(--royal-light)">
+              <div class="stat-label">Highest Claim</div>
+              <div class="stat-value" id="rptMaxAmount">₱0.00</div>
+              <div class="stat-sub">Single transaction</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- REPORT TABLE -->
+        <div class="card" id="rptTableCard" style="display:none;">
+          <div class="card-header">
+            <div class="card-title" id="rptTableTitle">Change Claimed Report</div>
+            <div style="font-size:12px;color:var(--gray-400);" id="rptGeneratedAt"></div>
+          </div>
+          <!-- PRINT HEADER (only shows on print) -->
+          <div id="rptPrintHeader" style="display:none;">
+            <div style="text-align:center;margin-bottom:18px;">
+              <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--royal-dark);">NextBank FastCash LMS</div>
+              <div style="font-size:13px;color:var(--gray-600);margin-top:4px;">GSIS · PVAO · SSS — Change Claiming System</div>
+              <div style="font-size:15px;font-weight:700;color:var(--royal-dark);margin-top:10px;" id="rptPrintTitle"></div>
+              <div style="font-size:12px;color:var(--gray-400);margin-top:4px;" id="rptPrintParams"></div>
+            </div>
+          </div>
+          <div class="tbl-wrap">
+            <table id="rptTable">
+              <thead><tr>
+                <th onclick="sortReportBy('date')" style="cursor:pointer;">Date <span id="sort-date"></span></th>
+                <th onclick="sortReportBy('arnumber')" style="cursor:pointer;">AR No. <span id="sort-arnumber"></span></th>
+                <th onclick="sortReportBy('clientcode')" style="cursor:pointer;">Client Code <span id="sort-clientcode"></span></th>
+                <th>Client Name</th>
+                <th onclick="sortReportBy('branchcode')" style="cursor:pointer;">Branch <span id="sort-branchcode"></span></th>
+                <th onclick="sortReportBy('moc')" style="cursor:pointer;">MOC <span id="sort-moc"></span></th>
+                <th onclick="sortReportBy('amount')" style="cursor:pointer;text-align:right;">Amount <span id="sort-amount"></span></th>
+                <th>Printed By</th>
+              </tr></thead>
+              <tbody id="rptTableBody"></tbody>
+              <tfoot id="rptTableFoot"></tfoot>
+            </table>
+          </div>
+        </div>
+
+        <div id="rptEmpty" style="display:none;">
+          <div class="card" style="text-align:center;padding:40px;">
+            <div style="font-size:40px;margin-bottom:12px;">📭</div>
+            <div style="font-size:15px;font-weight:700;color:var(--gray-600);">No records found</div>
+            <div style="font-size:13px;color:var(--gray-400);margin-top:6px;">Try adjusting your filters and generate again.</div>
+          </div>
+        </div>
+      </div>
+
+            <div class="page" id="page-branches">
         <div class="card">
           <div class="card-header">
             <div class="card-title">Branch Management</div>
@@ -643,13 +784,14 @@ async function nav(page, el) {
   document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   if (el) el.classList.add('active');
-  const titles = {dashboard:'Dashboard',clients:'Client List',upload:'Upload Collection',claiming:'Claim Change',transactions:'Transactions',branches:'Branches',moc:'Mode of Change',users:'User Management'};
+  const titles = {dashboard:'Dashboard',clients:'Client List',upload:'Upload Collection',claiming:'Claim Change',transactions:'Transactions',reports:'Reports',branches:'Branches',moc:'Mode of Change',users:'User Management'};
   document.getElementById('topbarTitle').textContent = titles[page]||page;
   if (page==='dashboard')    await renderDashboard();
   if (page==='clients')      await loadClients();
   if (page==='upload')       await loadNBMaster();
   if (page==='claiming')     await loadClaimMOC();
   if (page==='transactions') await loadTransactions();
+  if (page==='reports')      await initReports();
   if (page==='branches')     await loadBranches();
   if (page==='moc')          await loadMOC();
   if (page==='users')        await loadUsers();
@@ -1279,6 +1421,247 @@ async function doResetPw() {
   } catch(e) { al.textContent='Error: '+e.message; al.style.display='block'; }
   loading(false);
 }
+
+// ============================================================
+// REPORTS MODULE
+// ============================================================
+let rptData = [];          // full dataset from Supabase
+let rptFiltered = [];      // after filters applied
+let rptClientMap = {};     // clientcode -> name lookup
+let rptCurrentSort = { col: 'date', order: 'asc' };
+
+async function initReports() {
+  // Populate Branch filter
+  if (!cachedBranches.length) cachedBranches = await db.select('branches','?order=name.asc');
+  const brSel = document.getElementById('rptBranch');
+  brSel.innerHTML = '<option value="">— All Branches —</option>'
+    + cachedBranches.map(b=>`<option value="${b.code}">${b.code} – ${b.name}</option>`).join('');
+
+  // Populate MOC filter
+  if (!cachedMOC.length) cachedMOC = await db.select('moc','?order=moc.asc');
+  const mocSel = document.getElementById('rptMOC');
+  mocSel.innerHTML = '<option value="">— All MOC —</option>'
+    + cachedMOC.map(m=>`<option value="${m.moc}">${m.moc} – ${m.description}</option>`).join('');
+
+  // Default date range: first day of current month → today
+  const now = new Date();
+  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0,10);
+  document.getElementById('rptDateFrom').value = firstDay;
+  document.getElementById('rptDateTo').value   = today();
+
+  // Hide results until generated
+  document.getElementById('rptSummary').style.display   = 'none';
+  document.getElementById('rptTableCard').style.display = 'none';
+  document.getElementById('rptEmpty').style.display     = 'none';
+}
+
+function resetReportFilters() {
+  const now = new Date();
+  document.getElementById('rptDateFrom').value  = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0,10);
+  document.getElementById('rptDateTo').value    = today();
+  document.getElementById('rptBranch').value    = '';
+  document.getElementById('rptMOC').value       = '';
+  document.getElementById('rptSortBy').value    = 'date';
+  document.getElementById('rptSortOrder').value = 'asc';
+  document.getElementById('rptGroupBy').value   = '';
+  document.getElementById('rptSummary').style.display   = 'none';
+  document.getElementById('rptTableCard').style.display = 'none';
+  document.getElementById('rptEmpty').style.display     = 'none';
+  rptData = []; rptFiltered = [];
+}
+
+async function generateReport() {
+  const dateFrom  = document.getElementById('rptDateFrom').value;
+  const dateTo    = document.getElementById('rptDateTo').value;
+  const branch    = document.getElementById('rptBranch').value;
+  const moc       = document.getElementById('rptMOC').value;
+  const sortBy    = document.getElementById('rptSortBy').value;
+  const sortOrder = document.getElementById('rptSortOrder').value;
+  const groupBy   = document.getElementById('rptGroupBy').value;
+
+  if (!dateFrom || !dateTo) { alert('Please set both Date From and Date To.'); return; }
+  if (dateFrom > dateTo)    { alert('Date From cannot be later than Date To.'); return; }
+
+  loading(true, 'Generating report...');
+
+  try {
+    // Build Supabase query — like VFP: SELECT * FROM changes WHERE date BETWEEN ...
+    let query = '?order='+sortBy+'.'+sortOrder;
+    query += '&date=gte.'+dateFrom;
+    query += '&date=lte.'+dateTo;
+    if (branch) query += '&branchcode=eq.'+encodeURIComponent(branch);
+
+    let rows = await db.select('changes', query);
+
+    // Load client names for lookup (batch)
+    const clients = await db.select('clients','?select=clientcode,name,moc');
+    rptClientMap = {};
+    clients.forEach(c => rptClientMap[c.clientcode] = { name: c.name, moc: c.moc });
+
+    // Attach client name + moc to each row
+    rows = rows.map(r => ({
+      ...r,
+      clientname: rptClientMap[r.clientcode]?.name || r.clientcode,
+      moc: rptClientMap[r.clientcode]?.moc || '—'
+    }));
+
+    // Client-side MOC filter (since moc is on clients table not changes)
+    if (moc) rows = rows.filter(r => r.moc === moc);
+
+    rptData     = rows;
+    rptFiltered = rows;
+    rptCurrentSort = { col: sortBy === 'branch' ? 'branchcode' : sortBy, order: sortOrder };
+
+    renderReportTable(groupBy, dateFrom, dateTo, branch, moc);
+  } catch(e) {
+    alert('Report error: ' + e.message);
+  }
+  loading(false);
+}
+
+function renderReportTable(groupBy, dateFrom, dateTo, branch, moc) {
+  const rows    = rptFiltered;
+  const groupEl = groupBy || document.getElementById('rptGroupBy').value;
+
+  // Summary stats
+  const total   = rows.reduce((a,r) => a + parseFloat(r.amount||0), 0);
+  const avg     = rows.length ? total / rows.length : 0;
+  const max     = rows.length ? Math.max(...rows.map(r=>parseFloat(r.amount||0))) : 0;
+
+  document.getElementById('rptTotalCount').textContent  = rows.length.toLocaleString();
+  document.getElementById('rptTotalAmount').textContent = peso(total);
+  document.getElementById('rptAvgAmount').textContent   = peso(avg);
+  document.getElementById('rptMaxAmount').textContent   = peso(max);
+
+  if (!rows.length) {
+    document.getElementById('rptSummary').style.display   = 'none';
+    document.getElementById('rptTableCard').style.display = 'none';
+    document.getElementById('rptEmpty').style.display     = 'block';
+    return;
+  }
+
+  document.getElementById('rptSummary').style.display   = 'grid';
+  document.getElementById('rptTableCard').style.display = 'block';
+  document.getElementById('rptEmpty').style.display     = 'none';
+
+  // Report title and params
+  const df = dateFrom || document.getElementById('rptDateFrom').value;
+  const dt = dateTo   || document.getElementById('rptDateTo').value;
+  const brLabel  = branch ? branch : 'All Branches';
+  const mocLabel = moc    ? moc    : 'All MOC';
+  const titleStr = 'Change Claimed Report';
+  const paramStr = `Period: ${df} to ${dt}  |  Branch: ${brLabel}  |  MOC: ${mocLabel}  |  ${rows.length} record(s)`;
+
+  document.getElementById('rptTableTitle').textContent   = titleStr;
+  document.getElementById('rptGeneratedAt').textContent  = 'Generated: ' + nowDT();
+  document.getElementById('rptPrintTitle').textContent   = titleStr;
+  document.getElementById('rptPrintParams').textContent  = paramStr;
+
+  // Update sort indicators
+  ['date','arnumber','clientcode','branchcode','moc','amount'].forEach(col => {
+    const el = document.getElementById('sort-'+col);
+    if (!el) return;
+    const active = rptCurrentSort.col === col;
+    el.textContent = active ? (rptCurrentSort.order === 'asc' ? ' ▲' : ' ▼') : '';
+    el.style.color = active ? 'var(--gold)' : '';
+  });
+
+  const tbody = document.getElementById('rptTableBody');
+  const tfoot = document.getElementById('rptTableFoot');
+  tbody.innerHTML = '';
+  tfoot.innerHTML = '';
+
+  if (groupEl) {
+    // GROUP BY rendering — like VFP TOTAL ON groupfield
+    const groups = {};
+    rows.forEach(r => {
+      const key = groupEl === 'branch' ? r.branchcode
+                : groupEl === 'moc'    ? r.moc
+                : groupEl === 'date'   ? r.date
+                : r.branchcode;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(r);
+    });
+
+    Object.keys(groups).sort().forEach(groupKey => {
+      const groupRows = groups[groupKey];
+      const groupTotal = groupRows.reduce((a,r) => a+parseFloat(r.amount||0), 0);
+
+      // Group header row
+      tbody.innerHTML += `
+        <tr>
+          <td colspan="8" style="background:var(--royal-dark);color:var(--gold-light);font-weight:700;font-size:12px;padding:8px 14px;letter-spacing:0.5px;">
+            ${groupEl.toUpperCase()}: ${groupKey} &nbsp;·&nbsp; ${groupRows.length} record(s) &nbsp;·&nbsp; Subtotal: ${peso(groupTotal)}
+          </td>
+        </tr>`;
+
+      // Data rows in group
+      groupRows.forEach(r => {
+        tbody.innerHTML += buildReportRow(r);
+      });
+
+      // Group subtotal row
+      tbody.innerHTML += `
+        <tr style="background:var(--gold-pale);">
+          <td colspan="6" style="padding:8px 14px;font-weight:700;font-size:12px;color:var(--royal-dark);">Subtotal — ${groupKey}</td>
+          <td style="padding:8px 14px;font-weight:700;font-size:13px;color:var(--success);text-align:right;">${peso(groupTotal)}</td>
+          <td></td>
+        </tr>`;
+    });
+  } else {
+    // No grouping — plain list
+    rows.forEach(r => { tbody.innerHTML += buildReportRow(r); });
+  }
+
+  // Grand total footer
+  tfoot.innerHTML = `
+    <tr style="background:var(--royal);color:var(--white);">
+      <td colspan="6" style="padding:11px 14px;font-weight:700;font-size:13px;">GRAND TOTAL — ${rows.length} Transaction(s)</td>
+      <td style="padding:11px 14px;font-weight:700;font-size:15px;text-align:right;color:var(--gold-light);">${peso(total)}</td>
+      <td></td>
+    </tr>`;
+}
+
+function buildReportRow(r) {
+  return `<tr>
+    <td>${r.date}</td>
+    <td><b>${r.arnumber}</b></td>
+    <td>${r.clientcode}</td>
+    <td>${r.clientname}</td>
+    <td>${r.branchcode}</td>
+    <td><span class="badge badge-info">${r.moc||'—'}</span></td>
+    <td style="text-align:right;font-weight:700;color:var(--success);">${peso(r.amount)}</td>
+    <td>${r.printedby}</td>
+  </tr>`;
+}
+
+function sortReportBy(col) {
+  // Toggle sort order if same column, else default asc
+  if (rptCurrentSort.col === col) {
+    rptCurrentSort.order = rptCurrentSort.order === 'asc' ? 'desc' : 'asc';
+  } else {
+    rptCurrentSort = { col, order: 'asc' };
+  }
+
+  rptFiltered.sort((a, b) => {
+    let va = a[col] ?? '';
+    let vb = b[col] ?? '';
+    if (col === 'amount') { va = parseFloat(va||0); vb = parseFloat(vb||0); }
+    else { va = String(va).toLowerCase(); vb = String(vb).toLowerCase(); }
+    if (va < vb) return rptCurrentSort.order === 'asc' ? -1 :  1;
+    if (va > vb) return rptCurrentSort.order === 'asc' ?  1 : -1;
+    return 0;
+  });
+  renderReportTable('', null, null, null, null);
+}
+
+function printReport() {
+  if (!rptFiltered.length) { alert('Generate a report first before printing.'); return; }
+  document.getElementById('rptPrintHeader').style.display = 'block';
+  window.print();
+  document.getElementById('rptPrintHeader').style.display = 'none';
+}
+
 
 // ============================================================
 setDate();
