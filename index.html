@@ -287,6 +287,7 @@
               <button class="btn btn-outline" onclick="downloadTemplate()">⬇ Download Template</button>
               <button class="btn btn-gold" onclick="document.getElementById('csvUpload').click()">📤 Upload CSV</button>
               <input type="file" id="csvUpload" accept=".csv" style="display:none" onchange="handleUpload(this)">
+              <button class="btn btn-danger" id="btnDownloadUnlocated" onclick="downloadUnlocated()" style="display:none;background:var(--danger);color:#fff;">⬇ Download Unlocated</button>
             </div>
           </div>
           <div class="alert alert-danger" id="uploadAlert"></div>
@@ -298,6 +299,7 @@
               <thead><tr><th>Batch No.</th><th>Client Code</th><th>Name</th><th>Branch</th><th>PN No.</th><th>Amount</th><th>Status</th></tr></thead>
               <tbody></tbody>
             </table>
+            <div id="uploadSummaryRow" style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;"></div>
           </div>
         </div>
         <div class="card">
@@ -575,7 +577,7 @@
           </div>
           <div class="tbl-wrap">
             <table id="userTable">
-              <thead><tr><th>Login Name</th><th>Full Name</th><th>Email</th><th>System Access</th><th>Admin</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Login Name</th><th>Full Name</th><th>Email</th><th>System Access</th><th>Upload Access</th><th>Admin</th><th>Actions</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -645,6 +647,7 @@
       <div class="form-group"><label class="fl">Password</label><input class="fi" type="password" id="uPass" placeholder="Leave blank to keep current"></div>
       <div class="form-group full"><label class="fl">Email Address</label><input class="fi" type="email" id="uEmail"></div>
       <div class="form-group"><label class="fl">System Access</label><select class="fi" id="uAccess"><option>All</option><option>Upload</option><option>Claim</option><option>Reports</option></select></div>
+      <div class="form-group"><label class="fl">Upload Records Access</label><select class="fi" id="uUploadAccess"><option value="All">All Branches</option><option value="Own Branch">Own Branch Only</option><option value="None">No Upload Access</option></select></div>
       <div class="form-group"><label class="fl">Administrator</label><select class="fi" id="uAdmin"><option value="0">No</option><option value="1">Yes</option></select></div>
     </div>
     <div style="margin-top:18px;display:flex;gap:8px;justify-content:flex-end">
@@ -866,6 +869,7 @@ async function openModal(id) {
     document.getElementById('userModalTitle').textContent = 'Add User';
     ['uLast','uFirst','uMiddle','uExt','uLogin','uPass','uEmail'].forEach(x=>document.getElementById(x).value='');
     document.getElementById('uAccess').value='All';
+    document.getElementById('uUploadAccess').value='All Branches';
     document.getElementById('uAdmin').value='0';
   }
   document.getElementById(id).classList.add('open');
@@ -1035,34 +1039,109 @@ async function handleUpload(input) {
   const file = input.files[0]; if (!file) return;
   const reader = new FileReader();
   reader.onload = async function(e) {
-    const lines = e.target.result.split('\n').filter(l=>l.trim());
-    const headers = lines[0].toLowerCase().split(',').map(h=>h.trim());
+    // Parse CSV — handle quoted fields (names with commas)
+    const lines = parseCSVLines(e.target.result);
+    if (lines.length < 2) { showAlert('uploadAlert','CSV file is empty or invalid.','danger'); return; }
+    const headers = lines[0].map(h=>h.toLowerCase().trim());
     const required = ['branchcode','clientcode','name','amount','pnno','batchno'];
     const missing = required.filter(r=>!headers.includes(r));
     if (missing.length) { showAlert('uploadAlert','Missing columns: '+missing.join(', '),'danger'); return; }
-    loading(true,'Uploading to cloud...');
-    let added=0, updated=0, errors=0, log=[];
-    const rows = lines.slice(1).filter(l=>l.trim()).map(l=>l.split(',').map(v=>v.trim()));
+
+    loading(true,'Validating branches...');
+
+    // Load valid branches for validation
+    const branches = await db.select('branches','?select=code');
+    const validBranchCodes = new Set(branches.map(b=>b.code.toUpperCase()));
+
+    // Load existing clients for accumulation
     const existingClients = await db.select('clients','?select=clientcode,change');
-    for (const vals of rows) {
-      if (vals.length < 6) continue;
-      const row = {branchcode:vals[0],clientcode:vals[1],name:vals[2],amount:parseFloat(vals[3])||0,pnno:vals[4],batchno:vals[5]};
+
+    let added=0, updated=0, errors=0;
+    let log=[];           // successful records
+    let unlocated=[];     // branch not found records
+
+    loading(true,'Uploading records...');
+
+    const dataRows = lines.slice(1).filter(r=>r.length>=6);
+    for (const vals of dataRows) {
+      const row = {
+        branchcode: vals[0]?.trim()||'',
+        clientcode: vals[1]?.trim()||'',
+        name:       vals[2]?.trim()||'',
+        amount:     parseFloat(vals[3])||0,
+        pnno:       vals[4]?.trim()||'',
+        batchno:    vals[5]?.trim()||''
+      };
+      if (!row.clientcode) continue;
+
+      // ── BRANCH VALIDATION ──────────────────────────────
+      // If branch code not found → add to unlocated list, skip saving
+      if (!validBranchCodes.has(row.branchcode.toUpperCase())) {
+        unlocated.push(row);
+        log.push({...row, status:'Branch Not Found'});
+        continue;
+      }
+
+      // ── MULTIPLE LOANS: Always accumulate amount ───────
+      // A client can have multiple loans — each upload adds to their balance
       try {
         const ex = existingClients.find(c=>c.clientcode===row.clientcode);
         if (ex) {
-          await db.update('clients',{change:parseFloat(ex.change||0)+row.amount},'?clientcode=eq.'+encodeURIComponent(row.clientcode));
-          updated++; log.push({...row,status:'Updated'});
+          // Existing client — ADD new loan amount to existing balance
+          const newBal = parseFloat(ex.change||0) + row.amount;
+          await db.update('clients',{change:newBal},'?clientcode=eq.'+encodeURIComponent(row.clientcode));
+          // Update our local cache so next iteration uses fresh balance
+          ex.change = newBal;
+          updated++; log.push({...row,status:'Accumulated'});
         } else {
-          await db.insert('clients',{branchcode:row.branchcode,clientcode:row.clientcode,name:row.name,change:row.amount,moc:'CASH',pnno:row.pnno});
+          // New client — create record
+          await db.insert('clients',{
+            branchcode:row.branchcode,
+            clientcode:row.clientcode,
+            name:row.name,
+            change:row.amount,
+            moc:'CASH',
+            pnno:row.pnno
+          });
+          existingClients.push({clientcode:row.clientcode,change:row.amount});
           added++; log.push({...row,status:'New'});
         }
-        const nb = await db.select('nbmaster','?clientcode=eq.'+encodeURIComponent(row.clientcode)+'&batchno=eq.'+encodeURIComponent(row.batchno));
-        if (!nb.length) await db.insert('nbmaster',{clientcode:row.clientcode,pnno:row.pnno,name:row.name,amount:row.amount,batchno:row.batchno});
-      } catch(err) { errors++; log.push({...row,status:'Error: '+err.message}); }
+        // ── NBMASTER: record every upload per batch ──────
+        const nb = await db.select('nbmaster',
+          '?clientcode=eq.'+encodeURIComponent(row.clientcode)+
+          '&batchno=eq.'+encodeURIComponent(row.batchno)+
+          '&pnno=eq.'+encodeURIComponent(row.pnno));
+        if (!nb.length) {
+          await db.insert('nbmaster',{
+            clientcode:row.clientcode,pnno:row.pnno,
+            name:row.name,amount:row.amount,batchno:row.batchno
+          });
+        }
+      } catch(err) {
+        errors++;
+        log.push({...row,status:'Error: '+err.message});
+      }
     }
+
     cachedClients=[];
-    showAlert('uploadOK',`Upload complete: ${added} new record(s), ${updated} balance(s) updated${errors?' ('+errors+' errors)':''}.`,'success');
-    if (updated) showAlert('uploadWarn',updated+' client(s) had duplicate entries — balance was accumulated.','warning');
+
+    // ── SHOW RESULTS ──────────────────────────────────────
+    const msg = `Upload complete: ${added} new client(s), ${updated} balance(s) accumulated` +
+      (unlocated.length ? `, ${unlocated.length} unlocated branch(es)` : '') +
+      (errors ? `, ${errors} error(s)` : '') + '.';
+    showAlert('uploadOK', msg, 'success');
+
+    if (unlocated.length) {
+      showAlert('uploadWarn',
+        `⚠ ${unlocated.length} record(s) were skipped — branch code not found in system. ` +
+        `Click "⬇ Download Unlocated" to get the Excel report.`, 'warning');
+      document.getElementById('btnDownloadUnlocated').style.display = 'inline-flex';
+      window._unlocatedRecords = unlocated;
+    } else {
+      document.getElementById('btnDownloadUnlocated').style.display = 'none';
+      window._unlocatedRecords = [];
+    }
+
     renderUploadLog(log);
     await loadNBMaster();
     await renderDashboard();
@@ -1071,12 +1150,84 @@ async function handleUpload(input) {
   reader.readAsText(file); input.value='';
 }
 
+// ── Parse CSV properly — handles quoted fields with commas ──
+function parseCSVLines(text) {
+  const results = [];
+  const lines = text.split(/\r?\n/);
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const row = [];
+    let cur = '', inQ = false;
+    for (let i=0; i<line.length; i++) {
+      const ch = line[i];
+      if (ch==='"') { inQ=!inQ; }
+      else if (ch===',' && !inQ) { row.push(cur); cur=''; }
+      else { cur+=ch; }
+    }
+    row.push(cur);
+    results.push(row);
+  }
+  return results;
+}
+
+// ── Download unlocated branches as CSV/Excel ──────────────
+function downloadUnlocated() {
+  const data = window._unlocatedRecords || [];
+  if (!data.length) { alert('No unlocated records to download.'); return; }
+  const headers = ['branchcode','clientcode','name','amount','pnno','batchno','reason'];
+  const csvRows = [headers.join(',')];
+  data.forEach(r => {
+    csvRows.push([
+      r.branchcode,
+      r.clientcode,
+      '"'+r.name+'"',
+      r.amount,
+      r.pnno,
+      r.batchno,
+      '"Branch code not found in system"'
+    ].join(','));
+  });
+  const csv = csvRows.join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'Unlocated_Branches_'+today()+'.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 function renderUploadLog(log) {
   const tbody = document.querySelector('#uploadTable tbody');
   tbody.innerHTML='';
   (log||[]).forEach(r=>{
-    tbody.innerHTML += `<tr><td>${r.batchno}</td><td>${r.clientcode}</td><td>${r.name}</td><td>${r.branchcode}</td><td>${r.pnno}</td><td style="font-weight:700">${peso(r.amount)}</td><td><span class="badge ${r.status==='New'?'badge-success':r.status==='Updated'?'badge-warning':'badge-danger'}">${r.status}</span></td></tr>`;
+    const badgeClass = r.status==='New'          ? 'badge-success'
+                     : r.status==='Accumulated'  ? 'badge-info'
+                     : r.status==='Branch Not Found' ? 'badge-danger'
+                     : r.status.startsWith('Error') ? 'badge-danger'
+                     : 'badge-warning';
+    tbody.innerHTML += `<tr>
+      <td>${r.batchno}</td>
+      <td><b>${r.clientcode}</b></td>
+      <td>${r.name}</td>
+      <td>${r.branchcode}</td>
+      <td>${r.pnno}</td>
+      <td style="font-weight:700;text-align:right">${peso(r.amount)}</td>
+      <td><span class="badge ${badgeClass}">${r.status}</span></td>
+    </tr>`;
   });
+  // Show count summary below table
+  const newC    = (log||[]).filter(r=>r.status==='New').length;
+  const accC    = (log||[]).filter(r=>r.status==='Accumulated').length;
+  const nobrC   = (log||[]).filter(r=>r.status==='Branch Not Found').length;
+  const errC    = (log||[]).filter(r=>r.status.startsWith('Error')).length;
+  const summary = document.getElementById('uploadSummaryRow');
+  if (summary) {
+    summary.innerHTML =
+      `<span class="badge badge-success">New: ${newC}</span> &nbsp;` +
+      `<span class="badge badge-info">Accumulated: ${accC}</span> &nbsp;` +
+      (nobrC ? `<span class="badge badge-danger">Branch Not Found: ${nobrC}</span> &nbsp;` : '') +
+      (errC  ? `<span class="badge badge-danger">Errors: ${errC}</span>` : '');
+  }
 }
 
 async function loadNBMaster() {
@@ -1387,15 +1538,20 @@ async function loadUsers() {
     const tbody = document.querySelector('#userTable tbody');
     tbody.innerHTML='';
     cachedUsersAll.forEach(u=>{
+      const uploadBadge = (u.uploadaccess==='None')         ? 'badge-danger'
+                        : (u.uploadaccess==='Own Branch')   ? 'badge-warning'
+                        : 'badge-success';
+      const uploadLabel = u.uploadaccess || 'All Branches';
       tbody.innerHTML += `<tr>
         <td><b>${u.loginname}</b></td>
         <td>${u.lastname}, ${u.firstname} ${u.middlename||''} ${u.extname||''}</td>
         <td>${u.email||'—'}</td>
         <td><span class="badge badge-info">${u.systemaccess}</span></td>
+        <td><span class="badge ${uploadBadge}">${uploadLabel}</span></td>
         <td><span class="badge ${u.administrator?'badge-warning':'badge-success'}">${u.administrator?'Admin':'Staff'}</span></td>
         <td style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn btn-outline btn-sm" onclick="editUser('${u.loginname.replace(/'/g,"\\'")}')">✏ Edit</button>
-          <button class="btn btn-primary btn-sm" onclick="openResetPw('${u.loginname.replace(/'/g,"\\'")}')">🔑 Reset PW</button>
+          <button class="btn btn-outline btn-sm" onclick="editUser('${u.loginname.replace(/'/g,"\'")}')">✏ Edit</button>
+          <button class="btn btn-primary btn-sm" onclick="openResetPw('${u.loginname.replace(/'/g,"\'")}')">🔑 Reset PW</button>
         </td>
       </tr>`;
     });
@@ -1415,6 +1571,7 @@ async function editUser(loginname) {
   document.getElementById('uPass').value='';
   document.getElementById('uEmail').value=u.email||'';
   document.getElementById('uAccess').value=u.systemaccess;
+  document.getElementById('uUploadAccess').value=u.uploadaccess||'All Branches';
   document.getElementById('uAdmin').value=String(u.administrator);
   document.getElementById('modalAddUser').classList.add('open');
 }
@@ -1430,6 +1587,7 @@ async function saveUser() {
     loginname:document.getElementById('uLogin').value.trim(),
     email:document.getElementById('uEmail').value.trim(),
     systemaccess:document.getElementById('uAccess').value,
+    uploadaccess:document.getElementById('uUploadAccess').value,
     administrator:parseInt(document.getElementById('uAdmin').value)
   };
   if (pw) obj.password = pw;
