@@ -1605,14 +1605,15 @@ async function handleBranchUpload(input) {
     const headers = lines[0].map(h => h.toLowerCase().trim());
 
     // Accept flexible column names
-    const codeIdx   = headers.findIndex(h => h.includes('branchcode') || h === 'code');
-    const nameIdx   = headers.findIndex(h => h.includes('branchname') || h.includes('name'));
-    const addrIdx   = headers.findIndex(h => h.includes('address') || h.includes('addr'));
-    const statusIdx = headers.findIndex(h => h.includes('status'));
+    // Find header columns — flexible matching
+    const codeIdx   = headers.findIndex(h => h==='branchcode'  || h==='code'       || h==='branch code');
+    const nameIdx   = headers.findIndex(h => h==='branchname'  || h==='name'       || h==='branch name' || h==='branch_name');
+    const addrIdx   = headers.findIndex(h => h==='address'     || h==='addr'       || h==='branch address');
+    const statusIdx = headers.findIndex(h => h==='status');
 
     if (codeIdx === -1 || nameIdx === -1) {
       showBranchAlert('branchUploadAlert',
-        'Missing required columns. File must have: branchcode (or code), branchname (or name).','danger');
+        `Missing required columns. Found: [${headers.join(', ')}]. File must have: branchcode, branchname.`,'danger');
       return;
     }
 
