@@ -187,19 +187,19 @@
       <div class="brand">NextBank</div>
       <div class="sub">FastCash LMS</div>
     </div>
-    <nav class="sidebar-nav">
+    <nav class="sidebar-nav" id="sidebarNav">
       <div class="nav-section">Main</div>
-      <div class="nav-item active" onclick="nav('dashboard',this)"><span class="icon">📊</span> Dashboard</div>
+      <div class="nav-item active" data-access="Dashboard" onclick="nav('dashboard',this)"><span class="icon">📊</span> Dashboard</div>
       <div class="nav-section">Operations</div>
-      <div class="nav-item" onclick="nav('clients',this)"><span class="icon">👥</span> Clients</div>
-      <div class="nav-item" onclick="nav('upload',this)"><span class="icon">📤</span> Upload Collection</div>
-      <div class="nav-item" onclick="nav('claiming',this)"><span class="icon">💰</span> Claim Change</div>
-      <div class="nav-item" onclick="nav('transactions',this)"><span class="icon">📋</span> Transactions</div>
-      <div class="nav-item" onclick="nav('reports',this)"><span class="icon">📈</span> Reports</div>
-      <div class="nav-section">Setup</div>
-      <div class="nav-item" onclick="nav('branches',this)"><span class="icon">🏦</span> Branches</div>
-      <div class="nav-item" onclick="nav('moc',this)"><span class="icon">🔄</span> Mode of Change</div>
-      <div class="nav-item" onclick="nav('users',this)"><span class="icon">🔑</span> User Management</div>
+      <div class="nav-item" data-access="Clients"      onclick="nav('clients',this)"><span class="icon">👥</span> Clients</div>
+      <div class="nav-item" data-access="Upload"       onclick="nav('upload',this)"><span class="icon">📤</span> Upload Collection</div>
+      <div class="nav-item" data-access="Claim"        onclick="nav('claiming',this)"><span class="icon">💰</span> Claim Change</div>
+      <div class="nav-item" data-access="Transactions" onclick="nav('transactions',this)"><span class="icon">📋</span> Transactions</div>
+      <div class="nav-item" data-access="Reports"      onclick="nav('reports',this)"><span class="icon">📈</span> Reports</div>
+      <div class="nav-section" data-access-section="Setup">Setup</div>
+      <div class="nav-item" data-access="Branches"     onclick="nav('branches',this)"><span class="icon">🏦</span> Branches</div>
+      <div class="nav-item" data-access="MOC"          onclick="nav('moc',this)"><span class="icon">🔄</span> Mode of Change</div>
+      <div class="nav-item" data-access="Users"        onclick="nav('users',this)"><span class="icon">🔑</span> User Management</div>
     </nav>
     <div class="sidebar-footer">
       <div class="user-chip">
@@ -653,7 +653,51 @@
       <div class="form-group"><label class="fl">Login Name</label><input class="fi" id="uLogin"></div>
       <div class="form-group"><label class="fl">Password</label><input class="fi" type="password" id="uPass" placeholder="Leave blank to keep current"></div>
       <div class="form-group full"><label class="fl">Email Address</label><input class="fi" type="email" id="uEmail"></div>
-      <div class="form-group"><label class="fl">System Access</label><select class="fi" id="uAccess"><option>All</option><option>Upload</option><option>Claim</option><option>Reports</option></select></div>
+      <div class="form-group full">
+        <label class="fl">System Access</label>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;padding:12px 14px;background:var(--gray-50);border:1.5px solid var(--gray-200);border-radius:7px;">
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;font-weight:600;color:var(--gray-800);">
+            <input type="checkbox" id="uAccAll"     value="All"     onchange="handleAccessAll(this)" style="width:16px;height:16px;accent-color:var(--royal);cursor:pointer;">
+            <span style="background:var(--info-bg);color:var(--info);padding:2px 10px;border-radius:10px;font-size:12px;font-weight:700;">All Modules</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;font-weight:600;color:var(--gray-800);">
+            <input type="checkbox" id="uAccDash"    value="Dashboard"    style="width:16px;height:16px;accent-color:var(--royal);cursor:pointer;">
+            <span style="background:#ecfdf5;color:#065f46;padding:2px 10px;border-radius:10px;font-size:12px;font-weight:700;">Dashboard</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;font-weight:600;color:var(--gray-800);">
+            <input type="checkbox" id="uAccClients" value="Clients"      style="width:16px;height:16px;accent-color:var(--royal);cursor:pointer;">
+            <span style="background:#ecfdf5;color:#065f46;padding:2px 10px;border-radius:10px;font-size:12px;font-weight:700;">Clients</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;font-weight:600;color:var(--gray-800);">
+            <input type="checkbox" id="uAccUpload"  value="Upload"       style="width:16px;height:16px;accent-color:var(--royal);cursor:pointer;">
+            <span style="background:#fffbeb;color:#92400e;padding:2px 10px;border-radius:10px;font-size:12px;font-weight:700;">Upload</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;font-weight:600;color:var(--gray-800);">
+            <input type="checkbox" id="uAccClaim"   value="Claim"        style="width:16px;height:16px;accent-color:var(--royal);cursor:pointer;">
+            <span style="background:#fffbeb;color:#92400e;padding:2px 10px;border-radius:10px;font-size:12px;font-weight:700;">Claim Change</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;font-weight:600;color:var(--gray-800);">
+            <input type="checkbox" id="uAccTx"      value="Transactions" style="width:16px;height:16px;accent-color:var(--royal);cursor:pointer;">
+            <span style="background:#fffbeb;color:#92400e;padding:2px 10px;border-radius:10px;font-size:12px;font-weight:700;">Transactions</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;font-weight:600;color:var(--gray-800);">
+            <input type="checkbox" id="uAccReports" value="Reports"      style="width:16px;height:16px;accent-color:var(--royal);cursor:pointer;">
+            <span style="background:#fef2f2;color:#991b1b;padding:2px 10px;border-radius:10px;font-size:12px;font-weight:700;">Reports</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;font-weight:600;color:var(--gray-800);">
+            <input type="checkbox" id="uAccBranch"  value="Branches"     style="width:16px;height:16px;accent-color:var(--royal);cursor:pointer;">
+            <span style="background:#eaf2f8;color:#0a1f5c;padding:2px 10px;border-radius:10px;font-size:12px;font-weight:700;">Branches</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;font-weight:600;color:var(--gray-800);">
+            <input type="checkbox" id="uAccMOC"     value="MOC"          style="width:16px;height:16px;accent-color:var(--royal);cursor:pointer;">
+            <span style="background:#eaf2f8;color:#0a1f5c;padding:2px 10px;border-radius:10px;font-size:12px;font-weight:700;">Mode of Change</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;font-weight:600;color:var(--gray-800);">
+            <input type="checkbox" id="uAccUsers"   value="Users"        style="width:16px;height:16px;accent-color:var(--royal);cursor:pointer;">
+            <span style="background:#eaf2f8;color:#0a1f5c;padding:2px 10px;border-radius:10px;font-size:12px;font-weight:700;">User Management</span>
+          </label>
+        </div>
+      </div>
       <div class="form-group"><label class="fl">Upload Records Access</label><select class="fi" id="uUploadAccess"><option value="All">All Branches</option><option value="Own Branch">Own Branch Only</option><option value="None">No Upload Access</option></select></div>
       <div class="form-group"><label class="fl">Administrator</label><select class="fi" id="uAdmin"><option value="0">No</option><option value="1">Yes</option></select></div>
     </div>
@@ -771,6 +815,28 @@ function showAlert(id, msg, type) {
   el.className = 'alert alert-' + (type||'success');
   setTimeout(() => { el.style.display='none'; }, 7000);
 }
+function showAccessDenied(page) {
+  // Show a brief access denied alert on the current page
+  const existing = document.getElementById('accessDeniedMsg');
+  if (existing) existing.remove();
+  const msg = document.createElement('div');
+  msg.id = 'accessDeniedMsg';
+  msg.style.cssText = [
+    'position:fixed','top:80px','left:50%','transform:translateX(-50%)',
+    'background:#fef2f2','border:2px solid #991b1b','border-radius:10px',
+    'padding:16px 28px','font-size:14px','font-weight:700','color:#991b1b',
+    'z-index:9999','box-shadow:0 4px 24px rgba(0,0,0,0.2)','text-align:center'
+  ].join(';');
+  const titles = {
+    dashboard:'Dashboard', clients:'Clients', upload:'Upload Collection',
+    claiming:'Claim Change', transactions:'Transactions', reports:'Reports',
+    branches:'Branches', moc:'Mode of Change', users:'User Management'
+  };
+  msg.innerHTML = `🚫 Access Denied<br><span style="font-size:12px;font-weight:400;margin-top:4px;display:block">You do not have permission to access <b>${titles[page]||page}</b>.<br>Contact your administrator.</span>`;
+  document.body.appendChild(msg);
+  setTimeout(() => { if (msg.parentNode) msg.remove(); }, 3500);
+}
+
 function setDate() {
   // Initial render
   updateClock();
@@ -817,6 +883,7 @@ async function doLogin() {
     document.getElementById('dbStatus').textContent = '⬤ Cloud Connected';
     document.getElementById('dbStatus').className = 'db-status db-online';
     setDate();
+    applyAccessControl();
     startSessionTimer();
     await renderDashboard();
   } catch(e) {
@@ -846,6 +913,12 @@ function doLogout() {
 // NAVIGATION
 // ============================================================
 async function nav(page, el) {
+  // ── ACCESS CONTROL CHECK ──────────────────────────────────
+  if (!canAccessPage(page)) {
+    // Show access denied message instead of navigating
+    showAccessDenied(page);
+    return;
+  }
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
@@ -878,7 +951,8 @@ async function openModal(id) {
   if (id==='modalAddUser') {
     document.getElementById('userModalTitle').textContent = 'Add User';
     ['uLast','uFirst','uMiddle','uExt','uLogin','uPass','uEmail'].forEach(x=>document.getElementById(x).value='');
-    document.getElementById('uAccess').value='All';
+    // Reset all access checkboxes — default to All checked
+    setAccessCheckboxes(['All']);
     document.getElementById('uUploadAccess').value='All Branches';
     document.getElementById('uAdmin').value='0';
   }
@@ -1821,6 +1895,136 @@ async function saveMOC() {
 }
 
 // ============================================================
+// ACCESS CONTROL — Hide/show nav items based on user permissions
+// ============================================================
+function applyAccessControl() {
+  const access  = (currentUser.systemaccess || 'All');
+  const isAdmin = !!currentUser.administrator;
+  const isAll   = access === 'All' || isAdmin;
+
+  // Parse allowed modules
+  const allowed = isAll
+    ? new Set(['Dashboard','Clients','Upload','Claim','Transactions','Reports','Branches','MOC','Users'])
+    : new Set(access.split(',').map(s => s.trim()));
+
+  // Always allow Dashboard
+  allowed.add('Dashboard');
+
+  // Show/hide each nav item
+  document.querySelectorAll('.nav-item[data-access]').forEach(el => {
+    const module = el.getAttribute('data-access');
+    const canSee = isAll || allowed.has(module);
+    el.style.display = canSee ? 'flex' : 'none';
+  });
+
+  // Show/hide Setup section header — only if at least one setup item is visible
+  const setupItems = ['Branches','MOC','Users'];
+  const setupVisible = setupItems.some(m => isAll || allowed.has(m));
+  const setupSection = document.querySelector('[data-access-section="Setup"]');
+  if (setupSection) setupSection.style.display = setupVisible ? '' : 'none';
+
+  // If non-admin tries to directly navigate to a restricted page — block it
+  window._allowedModules = allowed;
+  window._isAllAccess    = isAll;
+}
+
+function canAccessPage(page) {
+  if (!currentUser) return false;
+  if (currentUser.administrator) return true;
+  if (window._isAllAccess) return true;
+
+  // Map page names to access values
+  const pageMap = {
+    dashboard:    'Dashboard',
+    clients:      'Clients',
+    upload:       'Upload',
+    claiming:     'Claim',
+    transactions: 'Transactions',
+    reports:      'Reports',
+    branches:     'Branches',
+    moc:          'MOC',
+    users:        'Users'
+  };
+  const required = pageMap[page];
+  if (!required) return true;
+  return (window._allowedModules || new Set()).has(required);
+}
+
+// ============================================================
+// SYSTEM ACCESS HELPERS — Multi-checkbox support
+// ============================================================
+const ACCESS_IDS = [
+  { id:'uAccAll',     val:'All'         },
+  { id:'uAccDash',    val:'Dashboard'   },
+  { id:'uAccClients', val:'Clients'     },
+  { id:'uAccUpload',  val:'Upload'      },
+  { id:'uAccClaim',   val:'Claim'       },
+  { id:'uAccTx',      val:'Transactions'},
+  { id:'uAccReports', val:'Reports'     },
+  { id:'uAccBranch',  val:'Branches'    },
+  { id:'uAccMOC',     val:'MOC'         },
+  { id:'uAccUsers',   val:'Users'       }
+];
+
+function handleAccessAll(chk) {
+  // If "All Modules" is checked — check everything and disable others
+  // If unchecked — uncheck everything
+  ACCESS_IDS.forEach(a => {
+    const el = document.getElementById(a.id);
+    if (!el) return;
+    if (a.id === 'uAccAll') return;
+    el.checked  = chk.checked;
+    el.disabled = chk.checked;
+  });
+}
+
+function setAccessCheckboxes(values) {
+  const isAll = values.includes('All');
+  ACCESS_IDS.forEach(a => {
+    const el = document.getElementById(a.id);
+    if (!el) return;
+    el.checked  = isAll ? true : values.includes(a.val);
+    el.disabled = (isAll && a.id !== 'uAccAll');
+  });
+  const allChk = document.getElementById('uAccAll');
+  if (allChk) allChk.checked = isAll;
+}
+
+function getAccessValue() {
+  const allChk = document.getElementById('uAccAll');
+  if (allChk && allChk.checked) return 'All';
+  const selected = ACCESS_IDS
+    .filter(a => a.id !== 'uAccAll')
+    .filter(a => {
+      const el = document.getElementById(a.id);
+      return el && el.checked;
+    })
+    .map(a => a.val);
+  return selected.length ? selected.join(',') : 'All';
+}
+
+function renderAccessBadges(accessStr) {
+  if (!accessStr || accessStr === 'All') {
+    return '<span class="badge badge-info">All Modules</span>';
+  }
+  const colors = {
+    Dashboard:    'badge-success',
+    Clients:      'badge-success',
+    Upload:       'badge-warning',
+    Claim:        'badge-warning',
+    Transactions: 'badge-warning',
+    Reports:      'badge-danger',
+    Branches:     'badge-info',
+    MOC:          'badge-info',
+    Users:        'badge-info'
+  };
+  return accessStr.split(',').map(a => {
+    const cls = colors[a.trim()] || 'badge-info';
+    return `<span class="badge ${cls}" style="margin:1px 2px;display:inline-block">${a.trim()}</span>`;
+  }).join('');
+}
+
+// ============================================================
 // USERS
 // ============================================================
 let cachedUsersAll = [];
@@ -1839,7 +2043,7 @@ async function loadUsers() {
         <td><b>${u.loginname}</b></td>
         <td>${u.lastname}, ${u.firstname} ${u.middlename||''} ${u.extname||''}</td>
         <td>${u.email||'—'}</td>
-        <td><span class="badge badge-info">${u.systemaccess}</span></td>
+        <td style="max-width:200px">${renderAccessBadges(u.systemaccess)}</td>
         <td><span class="badge ${uploadBadge}">${uploadLabel}</span></td>
         <td><span class="badge ${u.administrator?'badge-warning':'badge-success'}">${u.administrator?'Admin':'Staff'}</span></td>
         <td style="display:flex;gap:6px;flex-wrap:wrap">
@@ -1863,7 +2067,8 @@ async function editUser(loginname) {
   document.getElementById('uLogin').value=u.loginname;
   document.getElementById('uPass').value='';
   document.getElementById('uEmail').value=u.email||'';
-  document.getElementById('uAccess').value=u.systemaccess;
+  // Parse stored comma-separated access values and check boxes
+  setAccessCheckboxes((u.systemaccess||'All').split(',').map(s=>s.trim()));
   document.getElementById('uUploadAccess').value=u.uploadaccess||'All Branches';
   document.getElementById('uAdmin').value=String(u.administrator);
   document.getElementById('modalAddUser').classList.add('open');
@@ -1879,7 +2084,7 @@ async function saveUser() {
     extname:document.getElementById('uExt').value.trim(),
     loginname:document.getElementById('uLogin').value.trim(),
     email:document.getElementById('uEmail').value.trim(),
-    systemaccess:document.getElementById('uAccess').value,
+    systemaccess:getAccessValue(),
     uploadaccess:document.getElementById('uUploadAccess').value,
     administrator:parseInt(document.getElementById('uAdmin').value)
   };
