@@ -540,9 +540,15 @@
             <div class="card-title">Branch Management</div>
             <div class="page-actions">
               <button class="btn btn-outline" onclick="downloadBranchTemplate()">⬇ Template</button>
+              <button class="btn btn-gold" onclick="document.getElementById('branchUpload').click()">📤 Upload Excel / CSV</button>
+              <input type="file" id="branchUpload" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleBranchUpload(this)">
               <button class="btn btn-primary" onclick="openModal('modalAddBranch')">+ Add Branch</button>
             </div>
           </div>
+          <div class="alert alert-danger" id="branchUploadAlert"></div>
+          <div class="alert alert-success" id="branchUploadOK"></div>
+          <div class="alert alert-warning" id="branchUploadWarn"></div>
+          <div id="branchUploadSummary" style="margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap;"></div>
           <div class="tbl-wrap">
             <table id="branchTable">
               <thead><tr><th>Branch Code</th><th>Branch Name</th><th>Address</th><th>Status</th><th>Actions</th></tr></thead>
@@ -1562,6 +1568,135 @@ async function saveBranch() {
     await loadBranches();
   } catch(e) { alert('Save error: '+e.message); }
   loading(false);
+}
+
+// ── Branch Upload Handler ─────────────────────────────────────
+async function handleBranchUpload(input) {
+  const file = input.files[0]; if (!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  const isXLSX = (ext==='xlsx'||ext==='xls');
+  const reader = new FileReader();
+
+  reader.onload = async function(e) {
+    let lines = [];
+
+    if (isXLSX) {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const wb   = XLSX.read(data, { type: 'array' });
+        const ws   = wb.Sheets[wb.SheetNames[0]];
+        const raw  = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        lines = raw
+          .filter(r => r.some(c => String(c).trim() !== ''))
+          .map(r => r.map(c => String(c).trim()));
+      } catch(err) {
+        showBranchAlert('branchUploadAlert','Could not read Excel file: '+err.message,'danger');
+        loading(false); return;
+      }
+    } else {
+      lines = parseCSVLines(e.target.result);
+    }
+
+    if (lines.length < 2) {
+      showBranchAlert('branchUploadAlert','File is empty or invalid.','danger');
+      return;
+    }
+
+    const headers = lines[0].map(h => h.toLowerCase().trim());
+
+    // Accept flexible column names
+    const codeIdx   = headers.findIndex(h => h.includes('branchcode') || h === 'code');
+    const nameIdx   = headers.findIndex(h => h.includes('branchname') || h.includes('name'));
+    const addrIdx   = headers.findIndex(h => h.includes('address') || h.includes('addr'));
+    const statusIdx = headers.findIndex(h => h.includes('status'));
+
+    if (codeIdx === -1 || nameIdx === -1) {
+      showBranchAlert('branchUploadAlert',
+        'Missing required columns. File must have: branchcode (or code), branchname (or name).','danger');
+      return;
+    }
+
+    loading(true, 'Uploading branches...');
+
+    // Load existing branches to check for duplicates
+    const existing = await db.select('branches','?select=code');
+    const existingCodes = new Set(existing.map(b => b.code.toUpperCase()));
+
+    let added=0, updated=0, skipped=0, errors=0;
+    const dataRows = lines.slice(1).filter(r => r.length >= 2);
+
+    for (const vals of dataRows) {
+      const code   = (vals[codeIdx]   || '').trim().toUpperCase();
+      const name   = (vals[nameIdx]   || '').trim();
+      const addr   = addrIdx >= 0   ? (vals[addrIdx]   || '').trim() : '';
+      const status = statusIdx >= 0 ? (vals[statusIdx] || 'Active').trim() : 'Active';
+
+      if (!code || !name) { skipped++; continue; }
+
+      try {
+        if (existingCodes.has(code)) {
+          // Update existing branch
+          await db.update('branches',
+            { name, address: addr, status },
+            '?code=eq.' + encodeURIComponent(code)
+          );
+          updated++;
+        } else {
+          // Insert new branch
+          await db.insert('branches', {
+            code, name, address: addr, status
+          });
+          existingCodes.add(code);
+          added++;
+        }
+      } catch(err) {
+        errors++;
+        console.error('Branch upload error:', code, err.message);
+      }
+    }
+
+    cachedBranches = [];
+
+    // ── Show results ─────────────────────────────────────────
+    const msg = `Branch upload complete: ${added} new, ${updated} updated` +
+      (skipped ? `, ${skipped} skipped (missing code/name)` : '') +
+      (errors  ? `, ${errors} error(s)` : '') + '.';
+
+    showBranchAlert('branchUploadOK', msg, 'success');
+
+    // Summary badges
+    const sumEl = document.getElementById('branchUploadSummary');
+    if (sumEl) {
+      sumEl.innerHTML =
+        `<span class="badge badge-success">New: ${added}</span>` +
+        `<span class="badge badge-info">Updated: ${updated}</span>` +
+        (skipped ? `<span class="badge badge-warning">Skipped: ${skipped}</span>` : '') +
+        (errors  ? `<span class="badge badge-danger">Errors: ${errors}</span>`   : '');
+    }
+
+    await loadBranches();
+    loading(false);
+  };
+
+  if (isXLSX) {
+    reader.readAsArrayBuffer(file);
+  } else {
+    reader.readAsText(file);
+  }
+  input.value = '';
+}
+
+function showBranchAlert(id, msg, type) {
+  ['branchUploadAlert','branchUploadOK','branchUploadWarn'].forEach(i => {
+    document.getElementById(i).style.display = 'none';
+  });
+  const el = document.getElementById(id);
+  if (el) {
+    el.textContent = msg;
+    el.className   = 'alert alert-' + type;
+    el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 8000);
+  }
 }
 
 // ============================================================
