@@ -584,7 +584,7 @@
           </div>
           <div class="tbl-wrap">
             <table id="userTable">
-              <thead><tr><th>Login Name</th><th>Full Name</th><th>Email</th><th>System Access</th><th>Upload Access</th><th>Admin</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Login Name</th><th>Full Name</th><th>Position</th><th>Email</th><th>System Access</th><th>Upload Access</th><th>Admin</th><th>Actions</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -653,6 +653,7 @@
       <div class="form-group"><label class="fl">Login Name</label><input class="fi" id="uLogin"></div>
       <div class="form-group"><label class="fl">Password</label><input class="fi" type="password" id="uPass" placeholder="Leave blank to keep current"></div>
       <div class="form-group full"><label class="fl">Email Address</label><input class="fi" type="email" id="uEmail"></div>
+      <div class="form-group full"><label class="fl">Position / Designation</label><input class="fi" id="uPosition" placeholder="e.g. Branch Manager, Loan Officer, Cashier"></div>
       <div class="form-group full">
         <label class="fl">System Access</label>
         <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;padding:12px 14px;background:var(--gray-50);border:1.5px solid var(--gray-200);border-radius:7px;">
@@ -877,7 +878,11 @@ async function doLogin() {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
     document.getElementById('sidebarName').textContent = currentUser.firstname + ' ' + currentUser.lastname;
-    document.getElementById('sidebarRole').textContent = currentUser.administrator ? 'System Admin' : 'Staff';
+    // Show position if set, otherwise show role
+    const roleDisplay = currentUser.position
+      ? currentUser.position
+      : (currentUser.administrator ? 'System Admin' : 'Staff');
+    document.getElementById('sidebarRole').textContent = roleDisplay;
     document.getElementById('sidebarAv').textContent = (currentUser.firstname[0]+currentUser.lastname[0]).toUpperCase();
     document.getElementById('wName').textContent = currentUser.firstname;
     document.getElementById('dbStatus').textContent = '⬤ Cloud Connected';
@@ -950,7 +955,7 @@ async function openModal(id) {
   if (id==='modalAddMOC') { document.getElementById('mocCode').value=''; document.getElementById('mocDesc').value=''; }
   if (id==='modalAddUser') {
     document.getElementById('userModalTitle').textContent = 'Add User';
-    ['uLast','uFirst','uMiddle','uExt','uLogin','uPass','uEmail'].forEach(x=>document.getElementById(x).value='');
+    ['uLast','uFirst','uMiddle','uExt','uLogin','uPass','uEmail','uPosition'].forEach(x=>document.getElementById(x).value='');
     // Reset all access checkboxes — default to All checked
     setAccessCheckboxes(['All']);
     document.getElementById('uUploadAccess').value='All Branches';
@@ -2043,6 +2048,7 @@ async function loadUsers() {
       tbody.innerHTML += `<tr>
         <td><b>${u.loginname}</b></td>
         <td>${u.lastname}, ${u.firstname} ${u.middlename||''} ${u.extname||''}</td>
+        <td><span style="font-size:12px;color:var(--royal-dark);font-weight:600">${u.position||'—'}</span></td>
         <td>${u.email||'—'}</td>
         <td style="max-width:200px">${renderAccessBadges(u.systemaccess)}</td>
         <td><span class="badge ${uploadBadge}">${uploadLabel}</span></td>
@@ -2068,6 +2074,7 @@ async function editUser(loginname) {
   document.getElementById('uLogin').value=u.loginname;
   document.getElementById('uPass').value='';
   document.getElementById('uEmail').value=u.email||'';
+  document.getElementById('uPosition').value=u.position||'';
   // Parse stored comma-separated access values and check boxes
   setAccessCheckboxes((u.systemaccess||'All').split(',').map(s=>s.trim()));
   document.getElementById('uUploadAccess').value=u.uploadaccess||'All Branches';
@@ -2085,6 +2092,7 @@ async function saveUser() {
     extname:document.getElementById('uExt').value.trim(),
     loginname:document.getElementById('uLogin').value.trim(),
     email:document.getElementById('uEmail').value.trim(),
+    position:document.getElementById('uPosition').value.trim(),
     systemaccess:getAccessValue(),
     uploadaccess:document.getElementById('uUploadAccess').value,
     administrator:parseInt(document.getElementById('uAdmin').value)
