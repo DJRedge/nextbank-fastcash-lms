@@ -816,6 +816,25 @@ function showAlert(id, msg, type) {
   el.className = 'alert alert-' + (type||'success');
   setTimeout(() => { el.style.display='none'; }, 7000);
 }
+function forceNavDashboard() {
+  // Reset ALL pages — deactivate everything
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+
+  // Activate Dashboard page and nav item
+  const dashPage = document.getElementById('page-dashboard');
+  if (dashPage) dashPage.classList.add('active');
+
+  const dashNav = document.querySelector('.nav-item[data-access="Dashboard"]');
+  if (dashNav) dashNav.classList.add('active');
+
+  // Set topbar title
+  document.getElementById('topbarTitle').textContent = 'Dashboard';
+
+  // Clear any URL hash — prevent direct module linking
+  history.replaceState(null, '', window.location.pathname);
+}
+
 function showAccessDenied(page) {
   // Show a brief access denied alert on the current page
   const existing = document.getElementById('accessDeniedMsg');
@@ -833,9 +852,17 @@ function showAccessDenied(page) {
     claiming:'Claim Change', transactions:'Transactions', reports:'Reports',
     branches:'Branches', moc:'Mode of Change', users:'User Management'
   };
-  msg.innerHTML = `🚫 Access Denied<br><span style="font-size:12px;font-weight:400;margin-top:4px;display:block">You do not have permission to access <b>${titles[page]||page}</b>.<br>Contact your administrator.</span>`;
+  const moduleName = titles[page] || page;
+  msg.innerHTML = `🚫 Access Denied<br>
+    <span style="font-size:12px;font-weight:400;margin-top:6px;display:block;line-height:1.6">
+      You do not have permission to access <b>${moduleName}</b>.<br>
+      Please contact your system administrator.<br>
+      <span style="font-size:11px;color:#c0392b;opacity:.8">Redirecting to Dashboard...</span>
+    </span>`;
   document.body.appendChild(msg);
-  setTimeout(() => { if (msg.parentNode) msg.remove(); }, 3500);
+  // Log the attempt for admin awareness
+  console.warn('[SECURITY] Access denied:', currentUser?.loginname, '→', page, new Date().toLocaleString());
+  setTimeout(() => { if (msg.parentNode) msg.remove(); }, 4000);
 }
 
 function setDate() {
@@ -843,6 +870,57 @@ function setDate() {
   updateClock();
   // Tick every second — live clock
   setInterval(updateClock, 1000);
+}
+
+// ── SECURITY: Block URL hash manipulation ─────────────────
+// Prevent users from typing #users, #branches etc in the URL bar
+window.addEventListener('hashchange', function(e) {
+  e.preventDefault();
+  if (!currentUser) return;
+  // Extract page from hash e.g. #users → users
+  const hash = (window.location.hash || '').replace('#','').toLowerCase().trim();
+  if (hash && hash !== 'dashboard') {
+    if (!canAccessPage(hash)) {
+      // Blocked — clear hash and go to dashboard
+      history.replaceState(null, '', window.location.pathname);
+      forceNavDashboard();
+      showAccessDenied(hash);
+      return;
+    }
+    // Allowed — navigate
+    const navEl = document.querySelector(`.nav-item[data-access="${capitalize(hash)}"]`);
+    nav(hash, navEl);
+  }
+});
+
+// ── SECURITY: Block browser back/forward to restricted page ─
+window.addEventListener('popstate', function(e) {
+  if (!currentUser) return;
+  history.replaceState(null, '', window.location.pathname);
+  forceNavDashboard();
+});
+
+// ── SECURITY: Override window.nav to check access first ────
+// This blocks console hacks like: nav('users', null)
+const _originalNav = nav;
+window.secureNav = async function(page, el) {
+  if (!currentUser) return;
+  if (!canAccessPage(page)) {
+    showAccessDenied(page);
+    forceNavDashboard();
+    return;
+  }
+  await _originalNav(page, el);
+};
+
+function capitalize(str) {
+  if (!str) return '';
+  const map = {
+    'dashboard':'Dashboard','clients':'Clients','upload':'Upload',
+    'claiming':'Claim','transactions':'Transactions','reports':'Reports',
+    'branches':'Branches','moc':'MOC','users':'Users'
+  };
+  return map[str.toLowerCase()] || str;
 }
 
 function updateClock() {
@@ -890,6 +968,8 @@ async function doLogin() {
     setDate();
     applyAccessControl();
     startSessionTimer();
+    // Always land on Dashboard after login — reset all pages first
+    forceNavDashboard();
     await renderDashboard();
   } catch(e) {
     errEl.textContent = 'Connection error: ' + e.message; errEl.style.display='block';
@@ -902,6 +982,17 @@ function doLogout() {
   currentUser = null;
   // Reset all caches on logout
   cachedClients=[]; cachedBranches=[]; cachedMOC=[]; cachedTx=[]; cachedUsersAll=[];
+  window._allowedModules = new Set();
+  window._isAllAccess    = false;
+  // Clear URL — prevent back button access to restricted pages
+  history.replaceState(null, '', window.location.pathname);
+  // Reset all pages back to Dashboard for next login
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+  const dp = document.getElementById('page-dashboard');
+  if (dp) dp.classList.add('active');
+  const dn = document.querySelector('.nav-item[data-access="Dashboard"]');
+  if (dn) dn.classList.add('active');
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
   // Reset login error style back to default
@@ -918,15 +1009,26 @@ function doLogout() {
 // NAVIGATION
 // ============================================================
 async function nav(page, el) {
-  // ── ACCESS CONTROL CHECK ──────────────────────────────────
-  if (!canAccessPage(page)) {
-    // Show access denied message instead of navigating
-    showAccessDenied(page);
+  // ── SECURITY: Must be logged in ──────────────────────────
+  if (!currentUser) {
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
     return;
   }
+
+  // ── ACCESS CONTROL CHECK ──────────────────────────────────
+  if (!canAccessPage(page)) {
+    showAccessDenied(page);
+    // Force back to dashboard if blocked
+    forceNavDashboard();
+    return;
+  }
+
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
-  document.getElementById('page-'+page).classList.add('active');
+  const pageEl = document.getElementById('page-'+page);
+  if (!pageEl) { forceNavDashboard(); return; } // page doesn't exist
+  pageEl.classList.add('active');
   if (el) el.classList.add('active');
   const titles = {dashboard:'Dashboard',clients:'Client List',upload:'Upload Collection',claiming:'Claim Change',transactions:'Transactions',reports:'Reports',branches:'Branches',moc:'Mode of Change',users:'User Management'};
   document.getElementById('topbarTitle').textContent = titles[page]||page;
