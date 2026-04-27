@@ -231,6 +231,8 @@ textarea.fi{min-height:80px;resize:vertical}
         <button class="btn btn-gold" onclick="document.getElementById('csvUpload').click()">&#128228; Upload Excel / CSV</button>
         <input type="file" id="csvUpload" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleUpload(this)">
         <button class="btn btn-danger" id="btnDownloadUnlocated" onclick="downloadUnlocated()" style="display:none">&#8595; Download Unlocated</button>
+        <button class="btn btn-outline" id="btnUploadPrint" onclick="printUploadSummary()" style="display:none">&#128424; Print Summary</button>
+        <button class="btn btn-primary" id="btnUploadExcel" onclick="downloadUploadSummaryExcel()" style="display:none">&#128202; Export Excel</button>
       </div>
     </div>
     <div class="alert alert-danger" id="uploadAlert"></div>
@@ -240,6 +242,38 @@ textarea.fi{min-height:80px;resize:vertical}
     <div class="tbl-wrap">
       <table id="uploadTable"><thead><tr><th>Batch No.</th><th>Client Code</th><th>Name</th><th>Branch</th><th>PN No.</th><th>Amount</th><th>Status</th></tr></thead><tbody></tbody></table>
       <div id="uploadSummaryRow" style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap"></div>
+    </div>
+  </div>
+
+  <!-- UPLOAD SUMMARY PRINTABLE CARD -->
+  <div class="card" id="uploadSummaryCard" style="display:none">
+    <div class="card-header">
+      <div class="card-title">Upload Summary Report</div>
+      <div style="font-size:12px;color:var(--gray-400)" id="uploadSummaryGenAt"></div>
+    </div>
+    <!-- Print header -->
+    <div id="uploadPrintHeader" style="display:none;text-align:center;margin-bottom:16px">
+      <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--royal-dark)">NextBank-FastCash LMS</div>
+      <div style="font-size:12px;color:var(--gray-600)">GSIS &middot; PVAO &middot; SSS &mdash; Change Claiming System</div>
+      <div style="font-size:14px;font-weight:700;color:var(--royal-dark);margin-top:8px">Collection Upload Summary Report</div>
+      <div style="font-size:11px;color:var(--gray-400)" id="uploadPrintParams"></div>
+      <hr style="margin:10px 0;border:none;border-top:2px solid var(--gold)">
+    </div>
+    <!-- Summary stats -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px" id="uploadStatCards"></div>
+    <!-- Detail table -->
+    <div class="tbl-wrap">
+      <table id="uploadSummaryTable">
+        <thead><tr><th>Batch No.</th><th>Client Code</th><th>Name</th><th>Branch</th><th>PN No.</th><th style="text-align:right">Amount</th><th>Status</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <!-- Grand total -->
+    <div id="uploadGrandTotal" style="margin-top:12px;padding:12px 16px;background:var(--royal);color:var(--white);border-radius:8px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-weight:700;font-size:14px">GRAND TOTAL</span>
+      <span style="font-weight:800;font-size:18px;color:var(--gold)" id="uploadGrandAmt"></span>
+    </div>
+    <div style="margin-top:12px;font-size:11px;color:var(--gray-400);text-align:right" id="uploadFootNote"></div>
     </div>
   </div>
   <div class="card">
@@ -360,11 +394,36 @@ textarea.fi{min-height:80px;resize:vertical}
         <button class="btn btn-gold" onclick="document.getElementById('branchUpload').click()">&#128228; Upload Excel / CSV</button>
         <input type="file" id="branchUpload" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleBranchUpload(this)">
         <button class="btn btn-primary" onclick="openModal('modalAddBranch')">+ Add Branch</button>
+        <button class="btn btn-outline" id="btnBranchPrint" onclick="printBranchSummary()" style="display:none">&#128424; Print Summary</button>
+        <button class="btn btn-primary" id="btnBranchExcel" onclick="downloadBranchSummaryExcel()" style="display:none">&#128202; Export Excel</button>
       </div>
     </div>
     <div class="alert alert-danger" id="branchUploadAlert"></div>
     <div class="alert alert-success" id="branchUploadOK"></div>
     <div id="branchUploadSummary" style="margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap"></div>
+    </div>
+  </div>
+
+  <!-- BRANCH SUMMARY PRINTABLE CARD -->
+  <div class="card" id="branchSummaryCard" style="display:none">
+    <div class="card-header">
+      <div class="card-title">Branch Upload Summary Report</div>
+      <div style="font-size:12px;color:var(--gray-400)" id="branchSummaryGenAt"></div>
+    </div>
+    <div id="branchPrintHeader" style="display:none;text-align:center;margin-bottom:16px">
+      <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--royal-dark)">NextBank-FastCash LMS</div>
+      <div style="font-size:12px;color:var(--gray-600)">GSIS &middot; PVAO &middot; SSS &mdash; Change Claiming System</div>
+      <div style="font-size:14px;font-weight:700;color:var(--royal-dark);margin-top:8px">Branch Upload Summary Report</div>
+      <div style="font-size:11px;color:var(--gray-400)" id="branchPrintParams"></div>
+      <hr style="margin:10px 0;border:none;border-top:2px solid var(--gold)">
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px" id="branchStatCards"></div>
+    <div class="tbl-wrap">
+      <table id="branchSummaryTable">
+        <thead><tr><th>Branch Code</th><th>Branch Name</th><th>Address</th><th>Status</th><th>Result</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
     <div class="tbl-wrap"><table id="branchTable"><thead><tr><th>Branch Code</th><th>Branch Name</th><th>Address</th><th>Status</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
   </div>
 </div>
@@ -756,10 +815,80 @@ async function handleUpload(input){
   isXLSX?reader.readAsArrayBuffer(file):reader.readAsText(file);input.value='';
 }
 function renderUploadLog(log){
+  // Detail table
   const tbody=document.querySelector('#uploadTable tbody');tbody.innerHTML='';
   (log||[]).forEach(r=>{const bc=r.status==='New'?'badge-success':r.status==='Accumulated'?'badge-info':r.status==='Branch Not Found'?'badge-danger':'badge-warning';tbody.innerHTML+=`<tr><td>${r.batchno}</td><td><b>${r.clientcode}</b></td><td>${r.name}</td><td>${r.branchcode}</td><td>${r.pnno}</td><td style="font-weight:700;text-align:right">${peso(r.amount)}</td><td><span class="badge ${bc}">${r.status}</span></td></tr>`;});
-  const newC=(log||[]).filter(r=>r.status==='New').length,accC=(log||[]).filter(r=>r.status==='Accumulated').length,nobrC=(log||[]).filter(r=>r.status==='Branch Not Found').length;
-  const su=document.getElementById('uploadSummaryRow');if(su)su.innerHTML=`<span class="badge badge-success">New: ${newC}</span><span class="badge badge-info">Accumulated: ${accC}</span>${nobrC?`<span class="badge badge-danger">Branch Not Found: ${nobrC}</span>`:''}`; 
+  // Counts and amounts
+  const newC=(log||[]).filter(r=>r.status==='New').length;
+  const accC=(log||[]).filter(r=>r.status==='Accumulated').length;
+  const nobrC=(log||[]).filter(r=>r.status==='Branch Not Found').length;
+  const totalR=(log||[]).filter(r=>r.status!=='Branch Not Found').length;
+  const totalAmt=(log||[]).filter(r=>r.status!=='Branch Not Found').reduce((a,r)=>a+parseFloat(r.amount||0),0);
+  const newAmt=(log||[]).filter(r=>r.status==='New').reduce((a,r)=>a+parseFloat(r.amount||0),0);
+  const accAmt=(log||[]).filter(r=>r.status==='Accumulated').reduce((a,r)=>a+parseFloat(r.amount||0),0);
+  const su=document.getElementById('uploadSummaryRow');
+  if(su)su.innerHTML=`<span class="badge badge-success">New: ${newC}</span><span class="badge badge-info">Accumulated: ${accC}</span>${nobrC?`<span class="badge badge-danger">Branch Not Found: ${nobrC}</span>`:''}`;
+  // Store for print/excel
+  window._uploadLog=log;
+  window._uploadStats={newC,accC,nobrC,totalR,totalAmt,newAmt,accAmt,genAt:nowDT()};
+  // Populate summary card
+  if(log.length>0){
+    document.getElementById('uploadSummaryCard').style.display='block';
+    document.getElementById('uploadSummaryGenAt').textContent='Generated: '+nowDT();
+    document.getElementById('uploadStatCards').innerHTML=`
+      <div style="background:var(--success-bg);border-radius:8px;padding:14px;border-left:4px solid var(--success)"><div style="font-size:11px;color:var(--success);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:6px">New Clients</div><div style="font-size:22px;font-weight:800;color:var(--success)">${newC.toLocaleString('en-PH')}</div><div style="font-size:12px;color:var(--success);margin-top:4px">${peso(newAmt)}</div></div>
+      <div style="background:var(--info-bg);border-radius:8px;padding:14px;border-left:4px solid var(--info)"><div style="font-size:11px;color:var(--info);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:6px">Accumulated</div><div style="font-size:22px;font-weight:800;color:var(--info)">${accC.toLocaleString('en-PH')}</div><div style="font-size:12px;color:var(--info);margin-top:4px">${peso(accAmt)}</div></div>
+      <div style="background:var(--danger-bg);border-radius:8px;padding:14px;border-left:4px solid var(--danger)"><div style="font-size:11px;color:var(--danger);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:6px">Branch Not Found</div><div style="font-size:22px;font-weight:800;color:var(--danger)">${nobrC.toLocaleString('en-PH')}</div><div style="font-size:12px;color:var(--danger);margin-top:4px">Skipped records</div></div>
+      <div style="background:var(--gold-pale);border-radius:8px;padding:14px;border-left:4px solid var(--gold)"><div style="font-size:11px;color:var(--royal-dark);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:6px">Total Processed</div><div style="font-size:22px;font-weight:800;color:var(--royal-dark)">${totalR.toLocaleString('en-PH')}</div><div style="font-size:12px;color:var(--royal-dark);margin-top:4px">${peso(totalAmt)}</div></div>`;
+    const stbody=document.querySelector('#uploadSummaryTable tbody');stbody.innerHTML='';
+    (log||[]).forEach(r=>{const bc=r.status==='New'?'badge-success':r.status==='Accumulated'?'badge-info':r.status==='Branch Not Found'?'badge-danger':'badge-warning';stbody.innerHTML+=`<tr><td>${r.batchno}</td><td><b>${r.clientcode}</b></td><td>${r.name}</td><td>${r.branchcode}</td><td>${r.pnno}</td><td style="text-align:right;font-weight:700">${peso(r.amount)}</td><td><span class="badge ${bc}">${r.status}</span></td></tr>`;});
+    document.getElementById('uploadGrandAmt').textContent=peso(totalAmt);
+    document.getElementById('uploadFootNote').textContent=`Total records: ${log.length} | New: ${newC} | Accumulated: ${accC} | Skipped: ${nobrC} | Generated: ${nowDT()}`;
+    document.getElementById('uploadPrintParams').textContent=`Total: ${log.length} records | New: ${newC} | Accumulated: ${accC} | Unlocated: ${nobrC} | Total Amount: ${peso(totalAmt)}`;
+    document.getElementById('btnUploadPrint').style.display='inline-flex';
+    document.getElementById('btnUploadExcel').style.display='inline-flex';
+  }
+}
+
+function printUploadSummary(){
+  document.getElementById('uploadPrintHeader').style.display='block';
+  window.print();
+  document.getElementById('uploadPrintHeader').style.display='none';
+}
+
+function downloadUploadSummaryExcel(){
+  const log=window._uploadLog||[],stats=window._uploadStats||{};
+  if(!log.length){alert('No upload data to export.');return;}
+  const wb=XLSX.utils.book_new();
+  // Sheet 1: Summary
+  const ws1=XLSX.utils.aoa_to_sheet([
+    ['NextBank-FastCash LMS - Collection Upload Summary Report'],
+    ['GSIS · PVAO · SSS — Change Claiming System'],
+    ['Generated:',stats.genAt||nowDT()],
+    [],
+    ['UPLOAD SUMMARY'],
+    ['Category','Count','Total Amount'],
+    ['New Clients',stats.newC||0,stats.newAmt||0],
+    ['Accumulated (Multiple Loans)',stats.accC||0,stats.accAmt||0],
+    ['Branch Not Found (Skipped)',stats.nobrC||0,0],
+    ['TOTAL PROCESSED',stats.totalR||0,stats.totalAmt||0],
+  ]);
+  ws1['!cols']=[{wch:36},{wch:12},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,ws1,'Summary');
+  // Sheet 2: All detail records
+  const ws2=XLSX.utils.aoa_to_sheet([['Batch No.','Client Code','Name','Branch','PN No.','Amount','Status'],...log.map(r=>[r.batchno,r.clientcode,r.name,r.branchcode,r.pnno,parseFloat(r.amount)||0,r.status])]);
+  ws2['!cols']=[{wch:16},{wch:22},{wch:32},{wch:10},{wch:20},{wch:14},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,ws2,'Detail Records');
+  // Sheet 3: New clients only
+  const newRows=log.filter(r=>r.status==='New');
+  if(newRows.length){const ws3=XLSX.utils.aoa_to_sheet([['Batch No.','Client Code','Name','Branch','PN No.','Amount'],...newRows.map(r=>[r.batchno,r.clientcode,r.name,r.branchcode,r.pnno,parseFloat(r.amount)||0])]);ws3['!cols']=[{wch:16},{wch:22},{wch:32},{wch:10},{wch:20},{wch:14}];XLSX.utils.book_append_sheet(wb,ws3,'New Clients');}
+  // Sheet 4: Accumulated clients
+  const accRows=log.filter(r=>r.status==='Accumulated');
+  if(accRows.length){const ws4=XLSX.utils.aoa_to_sheet([['Batch No.','Client Code','Name','Branch','PN No.','Amount Added'],...accRows.map(r=>[r.batchno,r.clientcode,r.name,r.branchcode,r.pnno,parseFloat(r.amount)||0])]);ws4['!cols']=[{wch:16},{wch:22},{wch:32},{wch:10},{wch:20},{wch:14}];XLSX.utils.book_append_sheet(wb,ws4,'Accumulated');}
+  // Sheet 5: Unlocated
+  const ul=window._unlocatedRecords||[];
+  if(ul.length){const ws5=XLSX.utils.aoa_to_sheet([['Branch Code','Client Code','Name','Amount','PN No.','Batch No.','Reason'],...ul.map(r=>[r.branchcode,r.clientcode,r.name,parseFloat(r.amount)||0,r.pnno,r.batchno,'Branch code not found'])]);ws5['!cols']=[{wch:14},{wch:22},{wch:32},{wch:14},{wch:20},{wch:16},{wch:30}];XLSX.utils.book_append_sheet(wb,ws5,'Unlocated Branches');}
+  XLSX.writeFile(wb,'Upload_Summary_'+today()+'.xls',{bookType:'xls'});
 }
 async function loadNBMaster(){loading(true,'Loading NBMaster...');try{const rows=await db.select('nbmaster','?order=id.desc&limit=500');const tbody=document.querySelector('#nbTable tbody');tbody.innerHTML='';rows.forEach(r=>{tbody.innerHTML+=`<tr><td>${r.clientcode}</td><td>${r.name}</td><td>${r.pnno}</td><td>${r.batchno}</td><td style="font-weight:700">${peso(r.amount)}</td></tr>`;}); }catch(e){alert('NBMaster error: '+e.message);}loading(false);}
 
@@ -798,12 +927,67 @@ async function handleBranchUpload(input){
     }catch(err){console.error('Branch upload error:',err.message);}
     cachedBranches=[];
     showBranchAlert('branchUploadOK',`Branch upload: ${added} new, ${updated} updated${skipped?', '+skipped+' skipped':''}. `,'success');
-    const su=document.getElementById('branchUploadSummary');if(su)su.innerHTML=`<span class="badge badge-success">New: ${added}</span><span class="badge badge-info">Updated: ${updated}</span>`;
+    const su=document.getElementById('branchUploadSummary');if(su)su.innerHTML=`<span class="badge badge-success">New: ${added}</span><span class="badge badge-info">Updated: ${updated}</span>${skipped?`<span class="badge badge-warning">Skipped: ${skipped}</span>`:''}`;
+    // Store for print/excel
+    window._branchUploadData={toInsert,toUpdate,added,updated,skipped,genAt:nowDT()};
+    // Populate branch summary card
+    if(added>0||updated>0){
+      document.getElementById('branchSummaryCard').style.display='block';
+      document.getElementById('branchSummaryGenAt').textContent='Generated: '+nowDT();
+      document.getElementById('branchPrintParams').textContent=`New: ${added} | Updated: ${updated} | Skipped: ${skipped} | Total: ${added+updated}`;
+      document.getElementById('branchStatCards').innerHTML=`
+        <div style="background:var(--success-bg);border-radius:8px;padding:14px;border-left:4px solid var(--success)"><div style="font-size:11px;color:var(--success);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:6px">New Branches</div><div style="font-size:22px;font-weight:800;color:var(--success)">${added}</div></div>
+        <div style="background:var(--info-bg);border-radius:8px;padding:14px;border-left:4px solid var(--info)"><div style="font-size:11px;color:var(--info);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:6px">Updated</div><div style="font-size:22px;font-weight:800;color:var(--info)">${updated}</div></div>
+        <div style="background:var(--gold-pale);border-radius:8px;padding:14px;border-left:4px solid var(--gold)"><div style="font-size:11px;color:var(--royal-dark);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:6px">Total Branches</div><div style="font-size:22px;font-weight:800;color:var(--royal-dark)">${added+updated}</div></div>`;
+      const bstbody=document.querySelector('#branchSummaryTable tbody');bstbody.innerHTML='';
+      toInsert.forEach(b=>bstbody.innerHTML+=`<tr><td><b>${b.code}</b></td><td>${b.name}</td><td>${b.address||'—'}</td><td><span class="badge badge-success">${b.status}</span></td><td><span class="badge badge-success">New</span></td></tr>`);
+      toUpdate.forEach(b=>bstbody.innerHTML+=`<tr><td><b>${b.code}</b></td><td>${b.name}</td><td>${b.address||'—'}</td><td><span class="badge badge-success">${b.status}</span></td><td><span class="badge badge-info">Updated</span></td></tr>`);
+      document.getElementById('btnBranchPrint').style.display='inline-flex';
+      document.getElementById('btnBranchExcel').style.display='inline-flex';
+    }
     await loadBranches();loading(false);
   };
   isXLSX?reader.readAsArrayBuffer(file):reader.readAsText(file);input.value='';
 }
 function showBranchAlert(id,msg,type){['branchUploadAlert','branchUploadOK'].forEach(i=>{const el=document.getElementById(i);if(el)el.style.display='none';});const el=document.getElementById(id);if(el){el.textContent=msg;el.className='alert alert-'+type;el.style.display='block';setTimeout(()=>el.style.display='none',8000);}}
+
+function printBranchSummary(){
+  document.getElementById('branchPrintHeader').style.display='block';
+  window.print();
+  document.getElementById('branchPrintHeader').style.display='none';
+}
+
+function downloadBranchSummaryExcel(){
+  const data=window._branchUploadData||{};
+  const toInsert=data.toInsert||[],toUpdate=data.toUpdate||[];
+  if(!toInsert.length&&!toUpdate.length){alert('No branch data to export.');return;}
+  const wb=XLSX.utils.book_new();
+  // Summary sheet
+  const ws1=XLSX.utils.aoa_to_sheet([
+    ['NextBank-FastCash LMS - Branch Upload Summary Report'],
+    ['GSIS · PVAO · SSS — Change Claiming System'],
+    ['Generated:',data.genAt||nowDT()],
+    [],
+    ['BRANCH UPLOAD SUMMARY'],
+    ['Category','Count'],
+    ['New Branches Added',data.added||0],
+    ['Existing Branches Updated',data.updated||0],
+    ['Skipped (no code)',data.skipped||0],
+    ['TOTAL PROCESSED',(data.added||0)+(data.updated||0)],
+  ]);
+  ws1['!cols']=[{wch:36},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,ws1,'Summary');
+  // All branches sheet
+  const allRows=[...toInsert.map(b=>[b.code,b.name,b.address||'',b.status,'New']),...toUpdate.map(b=>[b.code,b.name,b.address||'',b.status,'Updated'])];
+  const ws2=XLSX.utils.aoa_to_sheet([['Branch Code','Branch Name','Address','Status','Result'],...allRows]);
+  ws2['!cols']=[{wch:14},{wch:36},{wch:40},{wch:10},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,ws2,'All Branches');
+  // New only
+  if(toInsert.length){const ws3=XLSX.utils.aoa_to_sheet([['Branch Code','Branch Name','Address','Status'],...toInsert.map(b=>[b.code,b.name,b.address||'',b.status])]);ws3['!cols']=[{wch:14},{wch:36},{wch:40},{wch:10}];XLSX.utils.book_append_sheet(wb,ws3,'New Branches');}
+  // Updated only
+  if(toUpdate.length){const ws4=XLSX.utils.aoa_to_sheet([['Branch Code','Branch Name','Address','Status'],...toUpdate.map(b=>[b.code,b.name,b.address||'',b.status])]);ws4['!cols']=[{wch:14},{wch:36},{wch:40},{wch:10}];XLSX.utils.book_append_sheet(wb,ws4,'Updated Branches');}
+  XLSX.writeFile(wb,'Branch_Upload_Summary_'+today()+'.xls',{bookType:'xls'});
+}
 
 // CLAIMING
 async function loadClaimMOC(){cachedMOC=await db.select('moc','?order=moc.asc');document.getElementById('claimMOC').innerHTML=cachedMOC.map(m=>`<option value="${m.moc}">${m.moc} \u2013 ${m.description}</option>`).join('');}
