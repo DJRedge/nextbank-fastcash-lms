@@ -243,7 +243,6 @@ textarea.fi{min-height:80px;resize:vertical}
     <div class="tbl-wrap">
       <table id="uploadTable"><thead><tr><th>Batch No.</th><th>Client Code</th><th>Name</th><th>Branch</th><th>PN No.</th><th>Amount</th><th>Status</th></tr></thead><tbody></tbody></table>
       <div id="uploadSummaryRow" style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap"></div>
-    </div>
   </div>
 
   <!-- UPLOAD SUMMARY PRINTABLE CARD -->
@@ -275,7 +274,6 @@ textarea.fi{min-height:80px;resize:vertical}
       <span style="font-weight:800;font-size:18px;color:var(--gold)" id="uploadGrandAmt"></span>
     </div>
     <div style="margin-top:12px;font-size:11px;color:var(--gray-400);text-align:right" id="uploadFootNote"></div>
-    </div>
   </div>
   <div class="card">
     <div class="card-header"><div class="card-title">NBMaster Records</div><button class="btn btn-outline" onclick="loadNBMaster()">&#8635; Refresh</button></div>
@@ -402,7 +400,6 @@ textarea.fi{min-height:80px;resize:vertical}
     <div class="alert alert-danger" id="branchUploadAlert"></div>
     <div class="alert alert-success" id="branchUploadOK"></div>
     <div id="branchUploadSummary" style="margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap"></div>
-    </div>
   </div>
 
   <!-- BRANCH SUMMARY PRINTABLE CARD -->
@@ -425,6 +422,11 @@ textarea.fi{min-height:80px;resize:vertical}
         <tbody></tbody>
       </table>
     </div>
+  </div>
+
+  <!-- BRANCH LIST TABLE -->
+  <div class="card">
+    <div class="card-header"><div class="card-title">Branch List</div></div>
     <div class="tbl-wrap"><table id="branchTable"><thead><tr><th>Branch Code</th><th>Branch Name</th><th>Address</th><th>Status</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
   </div>
 </div>
@@ -451,7 +453,10 @@ textarea.fi{min-height:80px;resize:vertical}
   </div>
 </div>
 
-    </div></div></div>
+    </div><!-- /.content -->
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
 
 <!-- MODALS -->
 <div class="modal-bg" id="modalViewClient">
