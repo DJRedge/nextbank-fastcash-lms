@@ -771,45 +771,60 @@ async function handleUpload(input){
 }
 
 function showUploadReport(){
-  const log=_uploadLog;if(!log.length)return;
-  const newC=log.filter(r=>r.status==='New').length;
-  const accC=log.filter(r=>r.status==='Accumulated').length;
-  const nobrC=log.filter(r=>r.status==='Branch Not Found').length;
-  const totalR=log.filter(r=>r.status!=='Branch Not Found').length;
-  const totalAmt=log.filter(r=>r.status!=='Branch Not Found').reduce((a,r)=>a+parseFloat(r.amount||0),0);
-  const newAmt=log.filter(r=>r.status==='New').reduce((a,r)=>a+parseFloat(r.amount||0),0);
-  const accAmt=log.filter(r=>r.status==='Accumulated').reduce((a,r)=>a+parseFloat(r.amount||0),0);
-  document.getElementById('uploadReportContent').innerHTML=`
-    <div id="uploadReportPrintArea">
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
-        <div style="background:var(--success-bg);border-radius:8px;padding:12px;border-left:4px solid var(--success)"><div style="font-size:10px;color:var(--success);text-transform:uppercase;font-weight:700;margin-bottom:4px">New Clients</div><div style="font-size:20px;font-weight:800;color:var(--success)">${newC.toLocaleString('en-PH')}</div><div style="font-size:11px;color:var(--success);margin-top:2px">${peso(newAmt)}</div></div>
-        <div style="background:var(--info-bg);border-radius:8px;padding:12px;border-left:4px solid var(--info)"><div style="font-size:10px;color:var(--info);text-transform:uppercase;font-weight:700;margin-bottom:4px">Accumulated</div><div style="font-size:20px;font-weight:800;color:var(--info)">${accC.toLocaleString('en-PH')}</div><div style="font-size:11px;color:var(--info);margin-top:2px">${peso(accAmt)}</div></div>
-        <div style="background:var(--danger-bg);border-radius:8px;padding:12px;border-left:4px solid var(--danger)"><div style="font-size:10px;color:var(--danger);text-transform:uppercase;font-weight:700;margin-bottom:4px">Branch Not Found</div><div style="font-size:20px;font-weight:800;color:var(--danger)">${nobrC.toLocaleString('en-PH')}</div><div style="font-size:11px;color:var(--danger);margin-top:2px">Skipped</div></div>
-        <div style="background:var(--gold-pale);border-radius:8px;padding:12px;border-left:4px solid var(--gold)"><div style="font-size:10px;color:var(--royal-dark);text-transform:uppercase;font-weight:700;margin-bottom:4px">Total Processed</div><div style="font-size:20px;font-weight:800;color:var(--royal-dark)">${totalR.toLocaleString('en-PH')}</div><div style="font-size:11px;color:var(--royal-dark);margin-top:2px">${peso(totalAmt)}</div></div>
-      </div>
-      <div style="max-height:320px;overflow-y:auto">
-        <table style="width:100%;border-collapse:collapse;font-size:12px">
-          <thead><tr><th style="background:var(--gold-pale);color:var(--gray-600);padding:8px 10px;text-align:left;border-bottom:2px solid var(--gold);font-size:10px;text-transform:uppercase">Batch</th><th style="background:var(--gold-pale);color:var(--gray-600);padding:8px 10px;text-align:left;border-bottom:2px solid var(--gold);font-size:10px;text-transform:uppercase">Client Code</th><th style="background:var(--gold-pale);color:var(--gray-600);padding:8px 10px;text-align:left;border-bottom:2px solid var(--gold);font-size:10px;text-transform:uppercase">Name</th><th style="background:var(--gold-pale);color:var(--gray-600);padding:8px 10px;text-align:left;border-bottom:2px solid var(--gold);font-size:10px;text-transform:uppercase">Branch</th><th style="background:var(--gold-pale);color:var(--gray-600);padding:8px 10px;text-align:right;border-bottom:2px solid var(--gold);font-size:10px;text-transform:uppercase">Amount</th><th style="background:var(--gold-pale);color:var(--gray-600);padding:8px 10px;text-align:left;border-bottom:2px solid var(--gold);font-size:10px;text-transform:uppercase">Status</th></tr></thead>
-          <tbody>${log.map(r=>{const bc=r.status==='New'?'badge-success':r.status==='Accumulated'?'badge-info':r.status==='Branch Not Found'?'badge-danger':'badge-warning';return`<tr><td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)">${r.batchno}</td><td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)"><b>${r.clientcode}</b></td><td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)">${r.name}</td><td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)">${r.branchcode}</td><td style="padding:7px 10px;border-bottom:1px solid var(--gray-100);text-align:right;font-weight:700">${peso(r.amount)}</td><td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)"><span class="badge ${bc}">${r.status}</span></td></tr>`;})).join('')}</tbody>
-          <tfoot><tr><td colspan="4" style="padding:10px;background:var(--royal);color:var(--white);font-weight:700;font-size:13px">GRAND TOTAL</td><td style="padding:10px;background:var(--royal);color:var(--gold);font-weight:800;font-size:14px;text-align:right">${peso(totalAmt)}</td><td style="background:var(--royal)"></td></tr></tfoot>
-        </table>
-      </div>
-      <div style="margin-top:10px;font-size:11px;color:var(--gray-400);text-align:right">Generated: ${nowDT()} | By: ${currentUser?.loginname}</div>
-    </div>`;
+  var log=_uploadLog;if(!log.length)return;
+  var newC=log.filter(function(r){return r.status==='New';}).length;
+  var accC=log.filter(function(r){return r.status==='Accumulated';}).length;
+  var nobrC=log.filter(function(r){return r.status==='Branch Not Found';}).length;
+  var totalR=log.filter(function(r){return r.status!=='Branch Not Found';}).length;
+  var totalAmt=log.filter(function(r){return r.status!=='Branch Not Found';}).reduce(function(a,r){return a+parseFloat(r.amount||0);},0);
+  var newAmt=log.filter(function(r){return r.status==='New';}).reduce(function(a,r){return a+parseFloat(r.amount||0);},0);
+  var accAmt=log.filter(function(r){return r.status==='Accumulated';}).reduce(function(a,r){return a+parseFloat(r.amount||0);},0);
+
+  var rows='';
+  log.forEach(function(r){
+    var bc=r.status==='New'?'badge-success':r.status==='Accumulated'?'badge-info':r.status==='Branch Not Found'?'badge-danger':'badge-warning';
+    rows+='<tr>'+
+      '<td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)">'+r.batchno+'</td>'+
+      '<td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)"><b>'+r.clientcode+'</b></td>'+
+      '<td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)">'+r.name+'</td>'+
+      '<td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)">'+r.branchcode+'</td>'+
+      '<td style="padding:7px 10px;border-bottom:1px solid var(--gray-100);text-align:right;font-weight:700">'+peso(r.amount)+'</td>'+
+      '<td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)"><span class="badge '+bc+'">'+r.status+'</span></td>'+
+      '</tr>';
+  });
+
+  var html=
+    '<div id="uploadReportPrintArea">'+
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">'+
+      '<div style="background:var(--success-bg);border-radius:8px;padding:12px;border-left:4px solid var(--success)"><div style="font-size:10px;color:var(--success);text-transform:uppercase;font-weight:700;margin-bottom:4px">New Clients</div><div style="font-size:20px;font-weight:800;color:var(--success)">'+newC.toLocaleString('en-PH')+'</div><div style="font-size:11px;color:var(--success);margin-top:2px">'+peso(newAmt)+'</div></div>'+
+      '<div style="background:var(--info-bg);border-radius:8px;padding:12px;border-left:4px solid var(--info)"><div style="font-size:10px;color:var(--info);text-transform:uppercase;font-weight:700;margin-bottom:4px">Accumulated</div><div style="font-size:20px;font-weight:800;color:var(--info)">'+accC.toLocaleString('en-PH')+'</div><div style="font-size:11px;color:var(--info);margin-top:2px">'+peso(accAmt)+'</div></div>'+
+      '<div style="background:var(--danger-bg);border-radius:8px;padding:12px;border-left:4px solid var(--danger)"><div style="font-size:10px;color:var(--danger);text-transform:uppercase;font-weight:700;margin-bottom:4px">Branch Not Found</div><div style="font-size:20px;font-weight:800;color:var(--danger)">'+nobrC.toLocaleString('en-PH')+'</div><div style="font-size:11px;color:var(--danger);margin-top:2px">Skipped</div></div>'+
+      '<div style="background:var(--gold-pale);border-radius:8px;padding:12px;border-left:4px solid var(--gold)"><div style="font-size:10px;color:var(--royal-dark);text-transform:uppercase;font-weight:700;margin-bottom:4px">Total Processed</div><div style="font-size:20px;font-weight:800;color:var(--royal-dark)">'+totalR.toLocaleString('en-PH')+'</div><div style="font-size:11px;color:var(--royal-dark);margin-top:2px">'+peso(totalAmt)+'</div></div>'+
+    '</div>'+
+    '<div style="max-height:320px;overflow-y:auto">'+
+    '<table style="width:100%;border-collapse:collapse;font-size:12px">'+
+    '<thead><tr>'+
+      '<th style="background:var(--gold-pale);color:var(--gray-600);padding:8px 10px;text-align:left;border-bottom:2px solid var(--gold);font-size:10px;text-transform:uppercase">Batch</th>'+
+      '<th style="background:var(--gold-pale);color:var(--gray-600);padding:8px 10px;text-align:left;border-bottom:2px solid var(--gold);font-size:10px;text-transform:uppercase">Client Code</th>'+
+      '<th style="background:var(--gold-pale);color:var(--gray-600);padding:8px 10px;text-align:left;border-bottom:2px solid var(--gold);font-size:10px;text-transform:uppercase">Name</th>'+
+      '<th style="background:var(--gold-pale);color:var(--gray-600);padding:8px 10px;text-align:left;border-bottom:2px solid var(--gold);font-size:10px;text-transform:uppercase">Branch</th>'+
+      '<th style="background:var(--gold-pale);color:var(--gray-600);padding:8px 10px;text-align:right;border-bottom:2px solid var(--gold);font-size:10px;text-transform:uppercase">Amount</th>'+
+      '<th style="background:var(--gold-pale);color:var(--gray-600);padding:8px 10px;text-align:left;border-bottom:2px solid var(--gold);font-size:10px;text-transform:uppercase">Status</th>'+
+    '</tr></thead>'+
+    '<tbody>'+rows+'</tbody>'+
+    '<tfoot><tr>'+
+      '<td colspan="4" style="padding:10px;background:var(--royal);color:var(--white);font-weight:700;font-size:13px">GRAND TOTAL</td>'+
+      '<td style="padding:10px;background:var(--royal);color:var(--gold);font-weight:800;font-size:14px;text-align:right">'+peso(totalAmt)+'</td>'+
+      '<td style="background:var(--royal)"></td>'+
+    '</tr></tfoot>'+
+    '</table></div>'+
+    '<div style="margin-top:10px;font-size:11px;color:var(--gray-400);text-align:right">Generated: '+nowDT()+' | By: '+(currentUser?currentUser.loginname:'')+'</div>'+
+    '</div>';
+
+  document.getElementById('uploadReportContent').innerHTML=html;
   document.getElementById('modalUploadReport').classList.add('open');
 }
 
-function printUploadReport(){
-  const area=document.getElementById('uploadReportPrintArea');
-  const w=window.open('','_blank','width=900,height=700');
-  w.document.write('<html><head><title>Upload Report</title><style>body{font-family:Nunito,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{padding:8px 10px;border:1px solid #ddd;font-size:12px}.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700}</style></head><body>');
-  w.document.write('<h2 style="color:#061240;font-family:serif">NextBank-FastCash LMS</h2>');
-  w.document.write('<p style="color:#666">GSIS &middot; PVAO &middot; SSS &mdash; Collection Upload Report</p>');
-  w.document.write('<p style="color:#666">Generated: '+nowDT()+'</p><hr>');
-  w.document.write(area.innerHTML);
-  w.document.write('</body></html>');
-  w.document.close();w.print();
-}
 
 function downloadUploadReportExcel(){
   const log=_uploadLog;if(!log.length){alert('No data.');return;}
@@ -879,25 +894,52 @@ async function handleBranchUpload(input){
 }
 
 function showBranchReport(){
-  const d=_branchLog;if(!d||(!d.toInsert?.length&&!d.toUpdate?.length))return;
-  const all=[...d.toInsert.map(b=>{return{...b,result:'New'}}), ...d.toUpdate.map(b=>{return{...b,result:'Updated'}})];
-  document.getElementById('branchReportContent').innerHTML=`
-    <div id="branchReportPrintArea">
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
-        <div style="background:var(--success-bg);border-radius:8px;padding:12px;border-left:4px solid var(--success)"><div style="font-size:10px;color:var(--success);text-transform:uppercase;font-weight:700;margin-bottom:4px">New Branches</div><div style="font-size:22px;font-weight:800;color:var(--success)">${d.added}</div></div>
-        <div style="background:var(--info-bg);border-radius:8px;padding:12px;border-left:4px solid var(--info)"><div style="font-size:10px;color:var(--info);text-transform:uppercase;font-weight:700;margin-bottom:4px">Updated</div><div style="font-size:22px;font-weight:800;color:var(--info)">${d.updated}</div></div>
-        <div style="background:var(--gold-pale);border-radius:8px;padding:12px;border-left:4px solid var(--gold)"><div style="font-size:10px;color:var(--royal-dark);text-transform:uppercase;font-weight:700;margin-bottom:4px">Total</div><div style="font-size:22px;font-weight:800;color:var(--royal-dark)">${d.added+d.updated}</div></div>
-      </div>
-      <div style="max-height:320px;overflow-y:auto">
-        <table style="width:100%;border-collapse:collapse;font-size:12px">
-          <thead><tr><th style="background:var(--gold-pale);color:var(--gray-600);padding:8px 10px;text-align:left;border-bottom:2px solid var(--gold);font-size:10px;text-transform:uppercase">Branch Code</th><th style="background:var(--gold-pale);color:var(--gray-600);padding:8px 10px;text-align:left;border-bottom:2px solid var(--gold);font-size:10px;text-transform:uppercase">Branch Name</th><th style="background:var(--gold-pale);color:var(--gray-600);padding:8px 10px;text-align:left;border-bottom:2px solid var(--gold);font-size:10px;text-transform:uppercase">Address</th><th style="background:var(--gold-pale);color:var(--gray-600);padding:8px 10px;text-align:left;border-bottom:2px solid var(--gold);font-size:10px;text-transform:uppercase">Status</th><th style="background:var(--gold-pale);color:var(--gray-600);padding:8px 10px;text-align:left;border-bottom:2px solid var(--gold);font-size:10px;text-transform:uppercase">Result</th></tr></thead>
-          <tbody>${all.map(b=>`<tr><td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)"><b>${b.code}</b></td><td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)">${b.name}</td><td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)">${b.address||'\u2014'}</td><td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)"><span class="badge badge-success">${b.status}</span></td><td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)"><span class="badge ${b.result==='New'?'badge-success':'badge-info'}">${b.result}</span></td></tr>`).join('')}</tbody>
-        </table>
-      </div>
-      <div style="margin-top:10px;font-size:11px;color:var(--gray-400);text-align:right">Generated: ${d.genAt} | By: ${currentUser?.loginname}</div>
-    </div>`;
+  var d=_branchLog;if(!d||(!d.toInsert.length&&!d.toUpdate.length))return;
+  var rows='';
+  d.toInsert.forEach(function(b){
+    rows+='<tr>'+
+      '<td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)"><b>'+b.code+'</b></td>'+
+      '<td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)">'+b.name+'</td>'+
+      '<td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)">'+(b.address||'—')+'</td>'+
+      '<td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)"><span class="badge badge-success">'+b.status+'</span></td>'+
+      '<td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)"><span class="badge badge-success">New</span></td>'+
+      '</tr>';
+  });
+  d.toUpdate.forEach(function(b){
+    rows+='<tr>'+
+      '<td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)"><b>'+b.code+'</b></td>'+
+      '<td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)">'+b.name+'</td>'+
+      '<td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)">'+(b.address||'—')+'</td>'+
+      '<td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)"><span class="badge badge-success">'+b.status+'</span></td>'+
+      '<td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)"><span class="badge badge-info">Updated</span></td>'+
+      '</tr>';
+  });
+
+  var html=
+    '<div id="branchReportPrintArea">'+
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">'+
+      '<div style="background:var(--success-bg);border-radius:8px;padding:12px;border-left:4px solid var(--success)"><div style="font-size:10px;color:var(--success);text-transform:uppercase;font-weight:700;margin-bottom:4px">New Branches</div><div style="font-size:22px;font-weight:800;color:var(--success)">'+d.added+'</div></div>'+
+      '<div style="background:var(--info-bg);border-radius:8px;padding:12px;border-left:4px solid var(--info)"><div style="font-size:10px;color:var(--info);text-transform:uppercase;font-weight:700;margin-bottom:4px">Updated</div><div style="font-size:22px;font-weight:800;color:var(--info)">'+d.updated+'</div></div>'+
+      '<div style="background:var(--gold-pale);border-radius:8px;padding:12px;border-left:4px solid var(--gold)"><div style="font-size:10px;color:var(--royal-dark);text-transform:uppercase;font-weight:700;margin-bottom:4px">Total</div><div style="font-size:22px;font-weight:800;color:var(--royal-dark)">'+(d.added+d.updated)+'</div></div>'+
+    '</div>'+
+    '<div style="max-height:320px;overflow-y:auto">'+
+    '<table style="width:100%;border-collapse:collapse;font-size:12px">'+
+    '<thead><tr>'+
+      '<th style="background:var(--gold-pale);color:var(--gray-600);padding:8px 10px;text-align:left;border-bottom:2px solid var(--gold);font-size:10px;text-transform:uppercase">Branch Code</th>'+
+      '<th style="background:var(--gold-pale);color:var(--gray-600);padding:8px 10px;text-align:left;border-bottom:2px solid var(--gold);font-size:10px;text-transform:uppercase">Branch Name</th>'+
+      '<th style="background:var(--gold-pale);color:var(--gray-600);padding:8px 10px;text-align:left;border-bottom:2px solid var(--gold);font-size:10px;text-transform:uppercase">Address</th>'+
+      '<th style="background:var(--gold-pale);color:var(--gray-600);padding:8px 10px;text-align:left;border-bottom:2px solid var(--gold);font-size:10px;text-transform:uppercase">Status</th>'+
+      '<th style="background:var(--gold-pale);color:var(--gray-600);padding:8px 10px;text-align:left;border-bottom:2px solid var(--gold);font-size:10px;text-transform:uppercase">Result</th>'+
+    '</tr></thead>'+
+    '<tbody>'+rows+'</tbody>'+
+    '</table></div>'+
+    '<div style="margin-top:10px;font-size:11px;color:var(--gray-400);text-align:right">Generated: '+d.genAt+' | By: '+(currentUser?currentUser.loginname:'')+'</div>'+
+    '</div>';
+
+  document.getElementById('branchReportContent').innerHTML=html;
   document.getElementById('modalBranchReport').classList.add('open');
 }
+
 
 function printBranchReport(){
   const area=document.getElementById('branchReportPrintArea');
