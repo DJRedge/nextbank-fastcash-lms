@@ -116,7 +116,41 @@ textarea.fi{min-height:80px;resize:vertical}
 .welcome-text p{font-size:13.5px;opacity:.75}
 .welcome-icon{font-size:52px;opacity:.35}
 .page-actions{display:flex;gap:8px;flex-wrap:wrap}
-@media print{.sidebar,.topbar,#loadingOverlay,.page-actions,.btn{display:none!important}.main{margin-left:0}#rptPrintHeader{display:block!important}}
+@media print{
+  @page{
+    size: 8.5in 5.5in landscape;
+    margin: 0.35in 0.4in;
+  }
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  body{font-family:'Nunito',sans-serif;font-size:9pt;color:#000;background:#fff!important}
+  .sidebar,.topbar,#loadingOverlay,.page-actions,.btn,
+  .modal-bg,.welcome-banner,.stat-grid,.search-bar,
+  #rptSummary,#page-dashboard,#page-clients,#page-upload,
+  #page-claiming,#page-transactions,#page-branches,
+  #page-moc,#page-users,.card-header .page-actions{display:none!important}
+  .main{margin-left:0!important}
+  .content{padding:0!important}
+  .page.active{display:block!important}
+  #rptPrintHeader{display:block!important;margin-bottom:8pt}
+  #rptTableCard{display:block!important;box-shadow:none!important;border:none!important;padding:0!important;margin:0!important}
+  .card{box-shadow:none!important;border:none!important;padding:0!important;margin:0!important}
+  .card-header{margin-bottom:6pt!important;padding:0!important}
+  .card-title{font-size:11pt!important;font-weight:700!important;color:#061240!important}
+  #rptGeneratedAt{font-size:8pt!important}
+  table{width:100%!important;border-collapse:collapse!important;font-size:7.5pt!important;page-break-inside:auto}
+  thead{display:table-header-group}
+  tr{page-break-inside:avoid}
+  th{background:#061240!important;color:#fff!important;padding:4pt 5pt!important;text-align:left!important;font-size:7pt!important;letter-spacing:0!important;border:1pt solid #061240!important}
+  th.amt{text-align:right!important}
+  td{padding:3.5pt 5pt!important;border-bottom:0.5pt solid #ddd!important;font-size:7.5pt!important}
+  td.amt{text-align:right!important;font-weight:700!important}
+  tfoot tr td{background:#061240!important;color:#fff!important;font-weight:700!important;font-size:8pt!important;padding:4pt 5pt!important}
+  .badge{background:#eee!important;color:#000!important;padding:1pt 4pt!important;border-radius:3pt!important;font-size:7pt!important}
+  #rptPrintHeader img{max-width:280pt!important;height:auto!important}
+  #rptPrintHeader hr{border:none!important;border-top:1pt solid #f5c518!important;margin:4pt 0!important}
+  #rptPrintHeader div{color:#333!important}
+  #rptTableFoot td{color:#fff!important}
+}
 @media(max-width:900px){.stat-grid{grid-template-columns:1fr 1fr}}
 </style>
 </head>
@@ -281,6 +315,7 @@ textarea.fi{min-height:80px;resize:vertical}
       <div class="page-actions">
         <button class="btn btn-outline" onclick="resetReportFilters()">&#8635; Reset</button>
         <button class="btn btn-gold" onclick="generateReport()">&#128269; Generate</button>
+        <button class="btn btn-outline" id="btnRptExcel" onclick="exportReportExcel()" style="display:none;border-color:var(--success);color:var(--success)">&#128202; Export Excel</button>
         <button class="btn btn-primary" onclick="printReport()">&#128424; Print</button>
       </div>
     </div>
@@ -675,7 +710,7 @@ async function renderDashboard(){
     document.getElementById('dsh-today').textContent=changes.filter(c=>c.date===today()).length.toLocaleString('en-PH');
     document.getElementById('dsh-claimed').textContent=peso(changes.reduce((a,c)=>a+parseFloat(c.amount||0),0));
     const tbody=document.querySelector('#dsh-table tbody');tbody.innerHTML='';
-    changes.forEach(c=>{const cl=clients.find(x=>x.clientcode===c.clientcode)||{};tbody.innerHTML+=`<tr><td>${c.arnumber}</td><td>${cl.name||c.clientcode}</td><td>${c.branchcode}</td><td style="color:var(--success);font-weight:700">${peso(c.amount)}</td><td>${c.date}</td><td>${c.printedby}</td></tr>`;});
+    changes.forEach(c=>{const cl=clients.find(x=>x.clientcode===c.clientcode)||{};tbody.innerHTML+=`<tr><td>${c.arnumber}</td><td>${cl.name||c.clientcode}</td><td>${c.branchcode}</td><td class="amt" style="color:var(--success)">${peso(c.amount)}</td><td>${c.date}</td><td>${c.printedby}</td></tr>`;});
   }catch(e){console.error(e);}
   loading(false);
 }
@@ -697,7 +732,7 @@ function filterClients(){
   const q=document.getElementById('clientSearch').value.toLowerCase(),by=document.getElementById('clientSearchBy').value;
   const tbody=document.querySelector('#clientTable tbody');tbody.innerHTML='';
   cachedClients.filter(c=>{const v=(by==='name'?c.name:by==='clientcode'?c.clientcode:c.pnno||'').toLowerCase();return!q||v.includes(q);}).forEach(c=>{
-    tbody.innerHTML+=`<tr><td><b>${c.clientcode}</b></td><td>${c.name}</td><td>${c.branchcode}</td><td>${c.pnno||'\u2014'}</td><td style="color:var(--success);font-weight:700">${peso(c.change)}</td><td><span class="badge badge-info">${c.moc||'\u2014'}</span></td><td><button class="btn btn-gold btn-sm" onclick="viewClient('${c.clientcode.replace(/'/g,"\'")}')">&#128065; View</button></td></tr>`;
+    tbody.innerHTML+=`<tr><td><b>${c.clientcode}</b></td><td>${c.name}</td><td>${c.branchcode}</td><td>${c.pnno||'\u2014'}</td><td style="color:var(--success);font-weight:700;text-align:right">${peso(c.change)}</td><td><span class="badge badge-info">${c.moc||'\u2014'}</span></td><td><button class="btn btn-gold btn-sm" onclick="viewClient('${c.clientcode.replace(/'/g,"\'")}')">&#128065; View</button></td></tr>`;
   });
 }
 async function viewClient(code){
@@ -851,7 +886,7 @@ function downloadUploadReportExcel(){
 }
 
 async function loadNBMaster(){
-  try{const rows=await db.select('nbmaster','?order=id.desc&limit=500');const tbody=document.querySelector('#nbTable tbody');tbody.innerHTML='';rows.forEach(r=>{tbody.innerHTML+=`<tr><td>${r.clientcode}</td><td>${r.name}</td><td>${r.pnno}</td><td>${r.batchno}</td><td style="font-weight:700">${peso(r.amount)}</td></tr>`;}); }catch(e){console.error(e);}
+  try{const rows=await db.select('nbmaster','?order=id.desc&limit=500');const tbody=document.querySelector('#nbTable tbody');tbody.innerHTML='';rows.forEach(r=>{tbody.innerHTML+=`<tr><td>${r.clientcode}</td><td>${r.name}</td><td>${r.pnno}</td><td>${r.batchno}</td><td style="font-weight:700;text-align:right">${peso(r.amount)}</td></tr>`;}); }catch(e){console.error(e);}
 }
 
 /* BRANCH UPLOAD */
@@ -977,7 +1012,7 @@ async function searchClaimClients(){
     try{let qr='?order=name.asc&limit=20';if(by==='name')qr+='&name=ilike.*'+encodeURIComponent(q)+'*';else if(by==='clientcode')qr+='&clientcode=ilike.*'+encodeURIComponent(q)+'*';else qr+='&pnno=ilike.*'+encodeURIComponent(q)+'*';
       const rows=await db.select('clients',qr);
       if(!rows.length){box.innerHTML='<div style="padding:12px 16px;color:var(--gray-400);font-size:13px">No clients found.</div>';box.style.display='block';return;}
-      box.innerHTML=rows.map(c=>`<div onclick="selectClaimClient('${c.clientcode.replace(/'/g,"\\'")}')" style="padding:11px 16px;cursor:pointer;border-bottom:1px solid var(--gray-100);display:flex;justify-content:space-between;align-items:center;font-size:13px;transition:background .15s" onmouseover="this.style.background='var(--gold-pale)'" onmouseout="this.style.background='var(--white)'"><div><div style="font-weight:700;color:var(--royal-dark)">${c.name}</div><div style="font-size:11.5px;color:var(--gray-400);margin-top:2px">${c.clientcode} &middot; PN: ${c.pnno||'\u2014'} &middot; ${c.branchcode}</div></div><div style="font-weight:700;color:var(--success);white-space:nowrap;margin-left:12px">${peso(c.change)}</div></div>`).join('');
+      box.innerHTML=rows.map(c=>`<div onclick="selectClaimClient('${c.clientcode.replace(/'/g,"\\'")}')" style="padding:11px 16px;cursor:pointer;border-bottom:1px solid var(--gray-100);display:flex;justify-content:space-between;align-items:center;font-size:13px;transition:background .15s" onmouseover="this.style.background='var(--gold-pale)'" onmouseout="this.style.background='var(--white)'"><div><div style="font-weight:700;color:var(--royal-dark)">${c.name}</div><div style="font-size:11.5px;color:var(--gray-400);margin-top:2px">${c.clientcode} &middot; PN: ${c.pnno||'\u2014'} &middot; ${c.branchcode}</div></div><div style="font-weight:700;color:var(--success);white-space:nowrap;margin-left:12px;text-align:right">${peso(c.change)}</div></div>`).join('');
       box.style.display='block';
     }catch(e){console.error(e);}
   },350);
@@ -1004,7 +1039,7 @@ function showReceipt(tx,cl){
 
 /* TRANSACTIONS */
 async function loadTransactions(){loading(true,'Loading transactions...');try{cachedTx=await db.select('changes','?order=id.desc&limit=1000');}catch(e){alert('Error: '+e.message);}loading(false);filterTransactions();}
-function filterTransactions(){const q=(document.getElementById('txSearch')||{value:''}).value.toLowerCase();const tbody=document.querySelector('#txTable tbody');tbody.innerHTML='';cachedTx.filter(c=>!q||c.arnumber.toLowerCase().includes(q)||c.clientcode.toLowerCase().includes(q)||c.branchcode.toLowerCase().includes(q)).forEach(c=>{tbody.innerHTML+=`<tr><td><b>${c.arnumber}</b></td><td>${c.date}</td><td>${c.clientcode}</td><td>${c.branchcode}</td><td style="color:var(--success);font-weight:700">${peso(c.amount)}</td><td>${c.remarks||'\u2014'}</td><td>${c.printedby}</td><td><button class="btn btn-outline btn-sm" onclick="showReceiptById(${c.id})">&#128424; Receipt</button></td></tr>`;});}
+function filterTransactions(){const q=(document.getElementById('txSearch')||{value:''}).value.toLowerCase();const tbody=document.querySelector('#txTable tbody');tbody.innerHTML='';cachedTx.filter(c=>!q||c.arnumber.toLowerCase().includes(q)||c.clientcode.toLowerCase().includes(q)||c.branchcode.toLowerCase().includes(q)).forEach(c=>{tbody.innerHTML+=`<tr><td><b>${c.arnumber}</b></td><td>${c.date}</td><td>${c.clientcode}</td><td>${c.branchcode}</td><td style="color:var(--success);font-weight:700;text-align:right">${peso(c.amount)}</td><td>${c.remarks||'\u2014'}</td><td>${c.printedby}</td><td><button class="btn btn-outline btn-sm" onclick="showReceiptById(${c.id})">&#128424; Receipt</button></td></tr>`;});}
 async function showReceiptById(id){loading(true,'Loading...');try{const txRows=await db.select('changes','?id=eq.'+id);const tx=txRows[0];if(!tx){loading(false);return;}const clRows=await db.select('clients','?clientcode=eq.'+encodeURIComponent(tx.clientcode));const cl=clRows[0]||{name:tx.clientcode,clientcode:tx.clientcode,branchcode:tx.branchcode,moc:'\u2014',change:0};showReceipt(tx,cl);}catch(e){alert('Error: '+e.message);}loading(false);}
 
 /* REPORTS */
@@ -1016,7 +1051,7 @@ async function initReports(){
   const now=new Date();document.getElementById('rptDateFrom').value=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);document.getElementById('rptDateTo').value=today();
   document.getElementById('rptSummary').style.display='none';document.getElementById('rptTableCard').style.display='none';document.getElementById('rptEmpty').style.display='none';
 }
-function resetReportFilters(){const now=new Date();document.getElementById('rptDateFrom').value=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);document.getElementById('rptDateTo').value=today();['rptBranch','rptMOC'].forEach(id=>document.getElementById(id).value='');document.getElementById('rptSortBy').value='date';document.getElementById('rptSortOrder').value='asc';document.getElementById('rptGroupBy').value='';document.getElementById('rptSummary').style.display='none';document.getElementById('rptTableCard').style.display='none';document.getElementById('rptEmpty').style.display='none';rptData=[];rptFiltered=[];}
+function resetReportFilters(){const now=new Date();document.getElementById('rptDateFrom').value=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);document.getElementById('rptDateTo').value=today();['rptBranch','rptMOC'].forEach(id=>document.getElementById(id).value='');document.getElementById('rptSortBy').value='date';document.getElementById('rptSortOrder').value='asc';document.getElementById('rptGroupBy').value='';document.getElementById('rptSummary').style.display='none';document.getElementById('rptTableCard').style.display='none';document.getElementById('rptEmpty').style.display='none';document.getElementById('btnRptExcel').style.display='none';rptData=[];rptFiltered=[];}
 async function generateReport(){
   const df=document.getElementById('rptDateFrom').value,dt=document.getElementById('rptDateTo').value,branch=document.getElementById('rptBranch').value,moc=document.getElementById('rptMOC').value,sortBy=document.getElementById('rptSortBy').value,sortOrder=document.getElementById('rptSortOrder').value,groupBy=document.getElementById('rptGroupBy').value;
   if(!df||!dt){alert('Set both dates.');return;}if(df>dt){alert('Date From cannot be after Date To.');return;}
@@ -1035,18 +1070,95 @@ function renderReportTable(groupBy,df,dt,branch,moc){
   document.getElementById('rptTotalCount').textContent=rows.length.toLocaleString('en-PH');document.getElementById('rptTotalAmount').textContent=peso(total);document.getElementById('rptAvgAmount').textContent=peso(avg);document.getElementById('rptMaxAmount').textContent=peso(max);
   if(!rows.length){document.getElementById('rptSummary').style.display='none';document.getElementById('rptTableCard').style.display='none';document.getElementById('rptEmpty').style.display='block';return;}
   document.getElementById('rptSummary').style.display='grid';document.getElementById('rptTableCard').style.display='block';document.getElementById('rptEmpty').style.display='none';
+  document.getElementById('btnRptExcel').style.display='inline-flex';
   document.getElementById('rptTableTitle').textContent='Change Claimed Report';document.getElementById('rptGeneratedAt').textContent='Generated: '+nowDT();
   document.getElementById('rptPrintTitle').textContent='Change Claimed Report';document.getElementById('rptPrintParams').textContent=`Period: ${df} to ${dt} | Branch: ${branch||'All'} | MOC: ${moc||'All'} | ${rows.length} record(s)`;
   ['date','arnumber','clientcode','branchcode','moc','amount'].forEach(col=>{const el=document.getElementById('sort-'+col);if(!el)return;const active=rptCurrentSort.col===col;el.textContent=active?(rptCurrentSort.order==='asc'?' \u25b2':' \u25bc'):'';el.style.color=active?'var(--gold)':'';}); 
   const tbody=document.getElementById('rptTableBody'),tfoot=document.getElementById('rptTableFoot');tbody.innerHTML='';tfoot.innerHTML='';
   const gEl=groupBy||document.getElementById('rptGroupBy').value;
-  if(gEl){const groups={};rows.forEach(r=>{const key=gEl==='branch'?r.branchcode:gEl==='moc'?r.moc:r.date;if(!groups[key])groups[key]=[];groups[key].push(r);});Object.keys(groups).sort().forEach(gk=>{const gr=groups[gk],gt=gr.reduce((a,r)=>a+parseFloat(r.amount||0),0);tbody.innerHTML+=`<tr><td colspan="8" style="background:var(--royal-dark);color:var(--gold-light);font-weight:700;font-size:12px;padding:8px 14px">${gEl.toUpperCase()}: ${gk} &middot; ${gr.length} record(s) &middot; Subtotal: ${peso(gt)}</td></tr>`;gr.forEach(r=>tbody.innerHTML+=buildReportRow(r));tbody.innerHTML+=`<tr style="background:var(--gold-pale)"><td colspan="6" style="padding:8px 14px;font-weight:700;font-size:12px">Subtotal \u2014 ${gk}</td><td style="padding:8px 14px;font-weight:700;font-size:13px;color:var(--success);text-align:right">${peso(gt)}</td><td></td></tr>`;}); }
+  if(gEl){const groups={};rows.forEach(r=>{const key=gEl==='branch'?r.branchcode:gEl==='moc'?r.moc:r.date;if(!groups[key])groups[key]=[];groups[key].push(r);});Object.keys(groups).sort().forEach(gk=>{const gr=groups[gk],gt=gr.reduce((a,r)=>a+parseFloat(r.amount||0),0);tbody.innerHTML+=`<tr><td colspan="8" style="background:var(--royal-dark);color:var(--gold-light);font-weight:700;font-size:12px;padding:8px 14px">${gEl.toUpperCase()}: ${gk} &middot; ${gr.length} record(s) &middot; Subtotal: <b>${peso(gt)}</b></td></tr>`;gr.forEach(r=>tbody.innerHTML+=buildReportRow(r));tbody.innerHTML+=`<tr style="background:var(--gold-pale)"><td colspan="6" style="padding:8px 14px;font-weight:700;font-size:12px">Subtotal \u2014 ${gk}</td><td style="padding:8px 14px;font-weight:700;font-size:13px;color:var(--success);text-align:right">${peso(gt)}</td><td></td></tr>`;}); }
   else rows.forEach(r=>tbody.innerHTML+=buildReportRow(r));
   tfoot.innerHTML=`<tr style="background:var(--royal);color:var(--white)"><td colspan="6" style="padding:11px 14px;font-weight:700;font-size:13px">GRAND TOTAL \u2014 ${rows.length} Transaction(s)</td><td style="padding:11px 14px;font-weight:700;font-size:15px;text-align:right;color:var(--gold)">${peso(total)}</td><td></td></tr>`;
 }
 function buildReportRow(r){return`<tr><td>${r.date}</td><td><b>${r.arnumber}</b></td><td>${r.clientcode}</td><td>${r.clientname}</td><td>${r.branchcode}</td><td><span class="badge badge-info">${r.moc||'\u2014'}</span></td><td style="text-align:right;font-weight:700;color:var(--success)">${peso(r.amount)}</td><td>${r.printedby}</td></tr>`;}
 function sortReportBy(col){if(rptCurrentSort.col===col)rptCurrentSort.order=rptCurrentSort.order==='asc'?'desc':'asc';else rptCurrentSort={col,order:'asc'};rptFiltered.sort((a,b)=>{let va=a[col]??'',vb=b[col]??'';if(col==='amount'){va=parseFloat(va||0);vb=parseFloat(vb||0)}else{va=String(va).toLowerCase();vb=String(vb).toLowerCase()}if(va<vb)return rptCurrentSort.order==='asc'?-1:1;if(va>vb)return rptCurrentSort.order==='asc'?1:-1;return 0;});renderReportTable('',null,null,null,null);}
 function printReport(){if(!rptFiltered.length){alert('Generate a report first.');return;}document.getElementById('rptPrintHeader').style.display='block';window.print();document.getElementById('rptPrintHeader').style.display='none';}
+
+function exportReportExcel(){
+  if(!rptFiltered.length){alert('Generate a report first.');return;}
+  var rows=rptFiltered;
+  var total=rows.reduce(function(a,r){return a+parseFloat(r.amount||0);},0);
+
+  var wb=XLSX.utils.book_new();
+
+  // ── Sheet 1: Summary ─────────────────────────────────────────────
+  var df=document.getElementById('rptDateFrom').value;
+  var dt=document.getElementById('rptDateTo').value;
+  var branch=document.getElementById('rptBranch').value||'All Branches';
+  var moc=document.getElementById('rptMOC').value||'All';
+  var avg=rows.length?total/rows.length:0;
+  var max=rows.length?Math.max.apply(null,rows.map(function(r){return parseFloat(r.amount||0);})):0;
+
+  var ws1=XLSX.utils.aoa_to_sheet([
+    ['NextBank-FastCash LMS - Change Claimed Report'],
+    ['GSIS · PVAO · SSS — Change Claiming System'],
+    ['Generated:',nowDT(),'By:',currentUser?currentUser.loginname:''],
+    [],
+    ['REPORT FILTERS'],
+    ['Period From:',df],
+    ['Period To:',dt],
+    ['Branch:',branch],
+    ['Mode of Change:',moc],
+    [],
+    ['SUMMARY'],
+    ['Total Transactions',rows.length],
+    ['Total Amount Claimed',total],
+    ['Average per Transaction',avg],
+    ['Highest Single Claim',max],
+  ]);
+  ws1['!cols']=[{wch:28},{wch:20},{wch:14},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,ws1,'Summary');
+
+  // ── Sheet 2: All Records ─────────────────────────────────────────
+  var headers=['Date','AR No.','Client Code','Client Name','Branch','MOC','Amount','Printed By'];
+  var dataRows=rows.map(function(r){
+    return[r.date,r.arnumber,r.clientcode,r.clientname,r.branchcode,r.moc,parseFloat(r.amount||0),r.printedby];
+  });
+  dataRows.push(['','','','','','GRAND TOTAL',total,'']);
+  var ws2=XLSX.utils.aoa_to_sheet([headers].concat(dataRows));
+  ws2['!cols']=[{wch:12},{wch:16},{wch:22},{wch:32},{wch:12},{wch:10},{wch:16},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,ws2,'All Records');
+
+  // ── Sheet 3: Per Branch ───────────────────────────────────────────
+  var branchGroups={};
+  rows.forEach(function(r){if(!branchGroups[r.branchcode])branchGroups[r.branchcode]=[];branchGroups[r.branchcode].push(r);});
+  var branchRows=[['Branch Code','No. of Claims','Total Amount']];
+  Object.keys(branchGroups).sort().forEach(function(k){
+    var g=branchGroups[k];
+    var gt=g.reduce(function(a,r){return a+parseFloat(r.amount||0);},0);
+    branchRows.push([k,g.length,gt]);
+  });
+  branchRows.push(['TOTAL',rows.length,total]);
+  var ws3=XLSX.utils.aoa_to_sheet(branchRows);
+  ws3['!cols']=[{wch:14},{wch:14},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,ws3,'Per Branch');
+
+  // ── Sheet 4: Per MOC ─────────────────────────────────────────────
+  var mocGroups={};
+  rows.forEach(function(r){if(!mocGroups[r.moc])mocGroups[r.moc]=[];mocGroups[r.moc].push(r);});
+  var mocRows=[['Mode of Change','No. of Claims','Total Amount']];
+  Object.keys(mocGroups).sort().forEach(function(k){
+    var g=mocGroups[k];
+    var gt=g.reduce(function(a,r){return a+parseFloat(r.amount||0);},0);
+    mocRows.push([k,g.length,gt]);
+  });
+  mocRows.push(['TOTAL',rows.length,total]);
+  var ws4=XLSX.utils.aoa_to_sheet(mocRows);
+  ws4['!cols']=[{wch:20},{wch:14},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,ws4,'Per MOC');
+
+  XLSX.writeFile(wb,'Change_Claimed_Report_'+df+'_to_'+dt+'.xls',{bookType:'xls'});
+}
 
 /* BRANCHES */
 async function loadBranches(){loading(true,'Loading branches...');try{cachedBranches=await db.select('branches','?order=name.asc');const tbody=document.querySelector('#branchTable tbody');tbody.innerHTML='';cachedBranches.forEach(b=>{tbody.innerHTML+=`<tr><td><b>${b.code}</b></td><td>${b.name}</td><td>${b.address||'\u2014'}</td><td><span class="badge ${b.status==='Active'?'badge-success':'badge-danger'}">${b.status}</span></td><td><button class="btn btn-outline btn-sm" onclick="editBranch('${b.code.replace(/'/g,"\'")}')">&#9999; Edit</button></td></tr>`;});}catch(e){alert('Error: '+e.message);}loading(false);}
