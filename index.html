@@ -51,7 +51,7 @@ body{font-family:'Nunito',sans-serif;background:var(--gray-50);color:var(--gray-
 .db-status{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:700}
 .db-online{background:var(--gold-pale);color:var(--royal-dark);border:1px solid var(--gold)}
 .db-offline{background:var(--danger-bg);color:var(--danger)}
-.clock-box{display:flex;align-items:center;background:var(--gold-pale);border:1.5px solid var(--gold);border-radius:8px;padding:5px 14px}
+.clock-box{display:flex;align-items:center;gap:10px;background:var(--royal-dark);border:1.5px solid var(--gold);border-radius:8px;padding:6px 16px}
 .content{flex:1;padding:28px}
 .card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px 24px;margin-bottom:22px;border-top:2px solid var(--gold)}
 .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px}
@@ -206,8 +206,10 @@ textarea.fi{min-height:80px;resize:vertical}
         <div class="topbar-badge">GSIS &middot; PVAO &middot; SSS</div>
         <div class="clock-box">
           <div style="display:flex;flex-direction:column;align-items:flex-end;line-height:1.3">
-            <span id="liveClock" style="font-size:15px;font-weight:800;color:var(--royal-dark);font-family:'Playfair Display',serif;letter-spacing:.5px"></span>
-            <span id="liveDate" style="font-size:10.5px;color:var(--gray-600);font-weight:600"></span>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;line-height:1.2">
+              <span id="liveClock" style="font-family:'Nunito',sans-serif;font-size:17px;font-weight:800;color:var(--gold);letter-spacing:1.5px;font-variant-numeric:tabular-nums"></span>
+              <span id="liveDate" style="font-family:'Nunito',sans-serif;font-size:10px;color:rgba(255,255,255,0.75);font-weight:600;letter-spacing:0.3px"></span>
+            </div>
           </div>
         </div>
       </div>
