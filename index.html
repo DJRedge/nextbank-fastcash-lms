@@ -66,6 +66,8 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
 th{background:var(--gold-pale);color:var(--gray-600);font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;padding:11px 14px;text-align:left;border-bottom:2px solid var(--gold)}
 td{padding:11px 14px;border-bottom:1px solid var(--gray-100);color:var(--gray-800);vertical-align:middle}
 tr:hover td{background:#fffbeb}
+td.amt{text-align:right;font-weight:700}
+th.amt{text-align:right}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:7px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all .2s}
 .btn-primary{background:var(--royal);color:var(--gold)}
 .btn-primary:hover{background:var(--royal-dark)}
@@ -192,7 +194,7 @@ textarea.fi{min-height:80px;resize:vertical}
   </div>
   <div class="card">
     <div class="card-header"><div class="card-title">Recent Transactions</div></div>
-    <div class="tbl-wrap"><table id="dsh-table"><thead><tr><th>AR No.</th><th>Client</th><th>Branch</th><th>Amount</th><th>Date</th><th>Printed By</th></tr></thead><tbody></tbody></table></div>
+    <div class="tbl-wrap"><table id="dsh-table"><thead><tr><th>AR No.</th><th>Client</th><th>Branch</th><th class="amt">Amount</th><th>Date</th><th>Printed By</th></tr></thead><tbody></tbody></table></div>
   </div>
 </div>
 
@@ -205,7 +207,7 @@ textarea.fi{min-height:80px;resize:vertical}
       <input class="search-input" id="clientSearch" placeholder="Search clients..." oninput="serverSearchClients()">
       <button class="btn btn-outline" onclick="loadClients()">&#8635; Refresh</button>
     </div>
-    <div class="tbl-wrap"><table id="clientTable"><thead><tr><th>Client Code</th><th>Name</th><th>Branch</th><th>PN No.</th><th>Change Bal.</th><th>MOC</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+    <div class="tbl-wrap"><table id="clientTable"><thead><tr><th>Client Code</th><th>Name</th><th>Branch</th><th>PN No.</th><th class="amt">Change Bal.</th><th>MOC</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
   </div>
 </div>
 
@@ -225,11 +227,11 @@ textarea.fi{min-height:80px;resize:vertical}
     <div class="alert alert-success" id="uploadOK"></div>
     <div class="alert alert-warning" id="uploadWarn"></div>
     <p style="font-size:13px;color:var(--gray-400);margin-bottom:18px">Upload <b>Excel (.xlsx/.xls)</b> or <b>CSV</b>. Required columns: <b>branchcode, clientcode, name, amount, pnno, batchno</b>. Multiple loans per client accumulated automatically.</p>
-    <div class="tbl-wrap"><table id="uploadTable"><thead><tr><th>Batch No.</th><th>Client Code</th><th>Name</th><th>Branch</th><th>PN No.</th><th>Amount</th><th>Status</th></tr></thead><tbody></tbody></table></div>
+    <div class="tbl-wrap"><table id="uploadTable"><thead><tr><th>Batch No.</th><th>Client Code</th><th>Name</th><th>Branch</th><th>PN No.</th><th class="amt">Amount</th><th>Status</th></tr></thead><tbody></tbody></table></div>
   </div>
   <div class="card">
     <div class="card-header"><div class="card-title">NBMaster Records</div><button class="btn btn-outline" onclick="loadNBMaster()">&#8635; Refresh</button></div>
-    <div class="tbl-wrap"><table id="nbTable"><thead><tr><th>Client Code</th><th>Name</th><th>PN No.</th><th>Batch No.</th><th>Amount</th></tr></thead><tbody></tbody></table></div>
+    <div class="tbl-wrap"><table id="nbTable"><thead><tr><th>Client Code</th><th>Name</th><th>PN No.</th><th>Batch No.</th><th class="amt">Amount</th></tr></thead><tbody></tbody></table></div>
   </div>
 </div>
 
@@ -266,7 +268,7 @@ textarea.fi{min-height:80px;resize:vertical}
   <div class="card">
     <div class="card-header"><div class="card-title">All Transactions</div><button class="btn btn-outline" onclick="loadTransactions()">&#8635; Refresh</button></div>
     <div class="search-bar"><input class="search-input" id="txSearch" placeholder="Search by AR No., client code, branch..." oninput="filterTransactions()"></div>
-    <div class="tbl-wrap"><table id="txTable"><thead><tr><th>AR No.</th><th>Date</th><th>Client Code</th><th>Branch</th><th>Amount</th><th>Remarks</th><th>Printed By</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+    <div class="tbl-wrap"><table id="txTable"><thead><tr><th>AR No.</th><th>Date</th><th>Client Code</th><th>Branch</th><th class="amt">Amount</th><th>Remarks</th><th>Printed By</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
   </div>
 </div>
 
@@ -788,7 +790,7 @@ function showUploadReport(){
       '<td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)"><b>'+r.clientcode+'</b></td>'+
       '<td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)">'+r.name+'</td>'+
       '<td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)">'+r.branchcode+'</td>'+
-      '<td style="padding:7px 10px;border-bottom:1px solid var(--gray-100);text-align:right;font-weight:700">'+peso(r.amount)+'</td>'+
+      '<td style="padding:7px 10px;border-bottom:1px solid var(--gray-100);text-align:right;font-weight:700;color:var(--success)">'+peso(r.amount)+'</td>'+
       '<td style="padding:7px 10px;border-bottom:1px solid var(--gray-100)"><span class="badge '+bc+'">'+r.status+'</span></td>'+
       '</tr>';
   });
