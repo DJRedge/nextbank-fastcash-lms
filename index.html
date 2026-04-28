@@ -510,7 +510,7 @@ textarea.fi{min-height:80px;resize:vertical}
     <div id="receiptContent"></div>
     <div style="margin-top:18px;display:flex;gap:8px;justify-content:flex-end">
       <button class="btn btn-outline" onclick="closeModal('modalReceipt')">Close</button>
-      <button class="btn btn-primary" onclick="window.print()">&#128424; Print Receipt</button>
+      <button class="btn btn-primary" onclick="printReceipt()">&#128424; Print Receipt</button>
     </div>
   </div>
 </div>
@@ -1065,6 +1065,39 @@ async function processClaim(){
 function showReceipt(tx,cl){
   document.getElementById('receiptContent').innerHTML=`<div class="receipt"><div class="receipt-title">NextBank-FastCash LMS</div><div class="receipt-sub">GSIS &middot; PVAO &middot; SSS &mdash; Change Claiming System</div><div class="receipt-arn">Acknowledgement No.: <b>${tx.arnumber}</b></div><div class="receipt-amount">${peso(tx.amount)}</div><div style="border-top:1px solid var(--gray-200);padding-top:12px"><div class="receipt-row"><span>Client Code</span><b>${cl.clientcode}</b></div><div class="receipt-row"><span>Name</span><b>${cl.name}</b></div><div class="receipt-row"><span>Branch</span><b>${tx.branchcode}</b></div><div class="receipt-row"><span>Mode of Change</span><b>${tx.moc||cl.moc||'\u2014'}</b></div><div class="receipt-row"><span>Date / Time</span><b>${tx.printeddatetime}</b></div><div class="receipt-row"><span>Remaining Balance</span><b style="color:var(--success)">${peso(cl.change)}</b></div>${tx.remarks?'<div class="receipt-row"><span>Remarks</span><b>'+tx.remarks+'</b></div>':''  }<div class="receipt-row"><span>Printed By</span><b>${tx.printedby}</b></div></div><div style="text-align:center;margin-top:12px;font-size:11px;color:var(--gray-400)">This serves as your official acknowledgement receipt.</div></div>`;
   document.getElementById('modalReceipt').classList.add('open');
+}
+
+function printReceipt(){
+  var content = document.getElementById('receiptContent').innerHTML;
+  var w = window.open('','_blank','width=400,height=600');
+  w.document.write(`<!DOCTYPE html>
+<html>
+<head>
+<title>Acknowledgement Receipt</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  @page { size: 3.5in 5.5in portrait; margin: 0.25in; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  body { font-family: 'Nunito', sans-serif; font-size: 11pt; color: #1a1a2e; background: #fff; }
+  .receipt { border: 2px dashed #f5c518; border-radius: 8px; padding: 18px; }
+  .receipt-title { text-align: center; font-family: 'Playfair Display', serif; color: #061240; font-size: 14pt; font-weight: 800; margin-bottom: 3px; }
+  .receipt-sub { text-align: center; font-size: 9pt; color: #666; margin-bottom: 12px; }
+  .receipt-arn { text-align: center; font-size: 9pt; color: #666; margin-bottom: 8px; }
+  .receipt-amount { text-align: center; font-size: 24pt; font-weight: 800; color: #061240; margin: 12px 0; padding: 10px; background: #fffbeb; border-radius: 6px; border: 1.5px solid #f5c518; }
+  .receipt-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dotted #ddd; font-size: 10pt; }
+  .receipt-row:last-child { border-bottom: none; }
+  .receipt-row span { color: #666; }
+  .receipt-row b { color: #061240; text-align: right; max-width: 60%; }
+  .footer-note { text-align: center; margin-top: 12px; font-size: 8.5pt; color: #999; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 9pt; font-weight: 700; background: #ecfdf5; color: #065f46; }
+</style>
+</head>
+<body>
+  \${content}
+  <script>window.onload=function(){window.print();window.onafterprint=function(){window.close();};};<\/script>
+</body>
+</html>`);
+  w.document.close();
 }
 
 /* TRANSACTIONS */
