@@ -573,6 +573,19 @@ let _uploadLog=[],_branchLog=[],_unlocatedRecords=[];
 
 function peso(n){return '\u20b1'+parseFloat(n||0).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2})}
 function today(){return new Date().toISOString().slice(0,10)}
+function fmtDate(d){
+  if(!d)return '—';
+  var dt=new Date(d+'T00:00:00');
+  return dt.toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'});
+}
+function fmtDateExcel(d){
+  if(!d)return '';
+  var dt=new Date(d+'T00:00:00');
+  var mm=String(dt.getMonth()+1).padStart(2,'0');
+  var dd=String(dt.getDate()).padStart(2,'0');
+  var yyyy=dt.getFullYear();
+  return mm+'/'+dd+'/'+yyyy;
+}
 function nowDT(){return new Date().toLocaleString('en-PH',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}
 function pad(n,l){return String(n).padStart(l||4,'0')}
 function loading(s,msg){document.getElementById('loadingOverlay').style.display=s?'flex':'none';if(msg)document.getElementById('loadingMsg').textContent=msg;}
@@ -710,7 +723,7 @@ async function renderDashboard(){
     document.getElementById('dsh-today').textContent=changes.filter(c=>c.date===today()).length.toLocaleString('en-PH');
     document.getElementById('dsh-claimed').textContent=peso(changes.reduce((a,c)=>a+parseFloat(c.amount||0),0));
     const tbody=document.querySelector('#dsh-table tbody');tbody.innerHTML='';
-    changes.forEach(c=>{const cl=clients.find(x=>x.clientcode===c.clientcode)||{};tbody.innerHTML+=`<tr><td>${c.arnumber}</td><td>${cl.name||c.clientcode}</td><td>${c.branchcode}</td><td class="amt" style="color:var(--success)">${peso(c.amount)}</td><td>${c.date}</td><td>${c.printedby}</td></tr>`;});
+    changes.forEach(c=>{const cl=clients.find(x=>x.clientcode===c.clientcode)||{};tbody.innerHTML+=`<tr><td>${c.arnumber}</td><td>${cl.name||c.clientcode}</td><td>${c.branchcode}</td><td class="amt" style="color:var(--success)">${peso(c.amount)}</td><td>${fmtDate(c.date)}</td><td>${c.printedby}</td></tr>`;});
   }catch(e){console.error(e);}
   loading(false);
 }
@@ -749,7 +762,7 @@ async function viewClient(code){
   document.getElementById('modalViewClient').classList.add('open');
   try{const txRows=await db.select('changes','?clientcode=eq.'+encodeURIComponent(code)+'&order=id.desc&limit=5');const txEl=document.getElementById('viewClientTx');
     if(!txRows.length)txEl.innerHTML='<span style="color:var(--gray-400);font-style:italic">No claims on record.</span>';
-    else txEl.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr><th style="text-align:left;padding:6px 8px;background:var(--gray-50);border-bottom:1px solid var(--gray-200);font-size:11px;text-transform:uppercase">AR No.</th><th style="text-align:left;padding:6px 8px;background:var(--gray-50);border-bottom:1px solid var(--gray-200);font-size:11px;text-transform:uppercase">Date</th><th style="text-align:right;padding:6px 8px;background:var(--gray-50);border-bottom:1px solid var(--gray-200);font-size:11px;text-transform:uppercase">Amount</th><th style="text-align:left;padding:6px 8px;background:var(--gray-50);border-bottom:1px solid var(--gray-200);font-size:11px;text-transform:uppercase">By</th></tr></thead><tbody>'+txRows.map(t=>`<tr><td style="padding:6px 8px;border-bottom:1px solid var(--gray-100);font-weight:700">${t.arnumber}</td><td style="padding:6px 8px;border-bottom:1px solid var(--gray-100)">${t.date}</td><td style="padding:6px 8px;border-bottom:1px solid var(--gray-100);text-align:right;color:var(--success);font-weight:700">${peso(t.amount)}</td><td style="padding:6px 8px;border-bottom:1px solid var(--gray-100)">${t.printedby}</td></tr>`).join('')+'</tbody></table>';
+    else txEl.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr><th style="text-align:left;padding:6px 8px;background:var(--gray-50);border-bottom:1px solid var(--gray-200);font-size:11px;text-transform:uppercase">AR No.</th><th style="text-align:left;padding:6px 8px;background:var(--gray-50);border-bottom:1px solid var(--gray-200);font-size:11px;text-transform:uppercase">Date</th><th style="text-align:right;padding:6px 8px;background:var(--gray-50);border-bottom:1px solid var(--gray-200);font-size:11px;text-transform:uppercase">Amount</th><th style="text-align:left;padding:6px 8px;background:var(--gray-50);border-bottom:1px solid var(--gray-200);font-size:11px;text-transform:uppercase">By</th></tr></thead><tbody>'+txRows.map(t=>`<tr><td style="padding:6px 8px;border-bottom:1px solid var(--gray-100);font-weight:700">${t.arnumber}</td><td style="padding:6px 8px;border-bottom:1px solid var(--gray-100)">${fmtDate(t.date)}</td><td style="padding:6px 8px;border-bottom:1px solid var(--gray-100);text-align:right;color:var(--success);font-weight:700">${peso(t.amount)}</td><td style="padding:6px 8px;border-bottom:1px solid var(--gray-100)">${t.printedby}</td></tr>`).join('')+'</tbody></table>';
   }catch(e){const txEl=document.getElementById('viewClientTx');if(txEl)txEl.innerHTML='<span style="color:var(--danger)">Error loading.</span>';}
 }
 
@@ -1039,7 +1052,7 @@ function showReceipt(tx,cl){
 
 /* TRANSACTIONS */
 async function loadTransactions(){loading(true,'Loading transactions...');try{cachedTx=await db.select('changes','?order=id.desc&limit=1000');}catch(e){alert('Error: '+e.message);}loading(false);filterTransactions();}
-function filterTransactions(){const q=(document.getElementById('txSearch')||{value:''}).value.toLowerCase();const tbody=document.querySelector('#txTable tbody');tbody.innerHTML='';cachedTx.filter(c=>!q||c.arnumber.toLowerCase().includes(q)||c.clientcode.toLowerCase().includes(q)||c.branchcode.toLowerCase().includes(q)).forEach(c=>{tbody.innerHTML+=`<tr><td><b>${c.arnumber}</b></td><td>${c.date}</td><td>${c.clientcode}</td><td>${c.branchcode}</td><td style="color:var(--success);font-weight:700;text-align:right">${peso(c.amount)}</td><td>${c.remarks||'\u2014'}</td><td>${c.printedby}</td><td><button class="btn btn-outline btn-sm" onclick="showReceiptById(${c.id})">&#128424; Receipt</button></td></tr>`;});}
+function filterTransactions(){const q=(document.getElementById('txSearch')||{value:''}).value.toLowerCase();const tbody=document.querySelector('#txTable tbody');tbody.innerHTML='';cachedTx.filter(c=>!q||c.arnumber.toLowerCase().includes(q)||c.clientcode.toLowerCase().includes(q)||c.branchcode.toLowerCase().includes(q)).forEach(c=>{tbody.innerHTML+=`<tr><td><b>${c.arnumber}</b></td><td>${fmtDate(c.date)}</td><td>${c.clientcode}</td><td>${c.branchcode}</td><td style="color:var(--success);font-weight:700;text-align:right">${peso(c.amount)}</td><td>${c.remarks||'\u2014'}</td><td>${c.printedby}</td><td><button class="btn btn-outline btn-sm" onclick="showReceiptById(${c.id})">&#128424; Receipt</button></td></tr>`;});}
 async function showReceiptById(id){loading(true,'Loading...');try{const txRows=await db.select('changes','?id=eq.'+id);const tx=txRows[0];if(!tx){loading(false);return;}const clRows=await db.select('clients','?clientcode=eq.'+encodeURIComponent(tx.clientcode));const cl=clRows[0]||{name:tx.clientcode,clientcode:tx.clientcode,branchcode:tx.branchcode,moc:'\u2014',change:0};showReceipt(tx,cl);}catch(e){alert('Error: '+e.message);}loading(false);}
 
 /* REPORTS */
@@ -1076,11 +1089,11 @@ function renderReportTable(groupBy,df,dt,branch,moc){
   ['date','arnumber','clientcode','branchcode','moc','amount'].forEach(col=>{const el=document.getElementById('sort-'+col);if(!el)return;const active=rptCurrentSort.col===col;el.textContent=active?(rptCurrentSort.order==='asc'?' \u25b2':' \u25bc'):'';el.style.color=active?'var(--gold)':'';}); 
   const tbody=document.getElementById('rptTableBody'),tfoot=document.getElementById('rptTableFoot');tbody.innerHTML='';tfoot.innerHTML='';
   const gEl=groupBy||document.getElementById('rptGroupBy').value;
-  if(gEl){const groups={};rows.forEach(r=>{const key=gEl==='branch'?r.branchcode:gEl==='moc'?r.moc:r.date;if(!groups[key])groups[key]=[];groups[key].push(r);});Object.keys(groups).sort().forEach(gk=>{const gr=groups[gk],gt=gr.reduce((a,r)=>a+parseFloat(r.amount||0),0);tbody.innerHTML+=`<tr><td colspan="8" style="background:var(--royal-dark);color:var(--gold-light);font-weight:700;font-size:12px;padding:8px 14px">${gEl.toUpperCase()}: ${gk} &middot; ${gr.length} record(s) &middot; Subtotal: <b>${peso(gt)}</b></td></tr>`;gr.forEach(r=>tbody.innerHTML+=buildReportRow(r));tbody.innerHTML+=`<tr style="background:var(--gold-pale)"><td colspan="6" style="padding:8px 14px;font-weight:700;font-size:12px">Subtotal \u2014 ${gk}</td><td style="padding:8px 14px;font-weight:700;font-size:13px;color:var(--success);text-align:right">${peso(gt)}</td><td></td></tr>`;}); }
+  if(gEl){const groups={};rows.forEach(r=>{const key=gEl==='branch'?r.branchcode:gEl==='moc'?r.moc:fmtDate(r.date);if(!groups[key])groups[key]=[];groups[key].push(r);});Object.keys(groups).sort().forEach(gk=>{const gr=groups[gk],gt=gr.reduce((a,r)=>a+parseFloat(r.amount||0),0);tbody.innerHTML+=`<tr><td colspan="8" style="background:var(--royal-dark);color:var(--gold-light);font-weight:700;font-size:12px;padding:8px 14px">${gEl.toUpperCase()}: ${gk} &middot; ${gr.length} record(s) &middot; Subtotal: <b>${peso(gt)}</b></td></tr>`;gr.forEach(r=>tbody.innerHTML+=buildReportRow(r));tbody.innerHTML+=`<tr style="background:var(--gold-pale)"><td colspan="6" style="padding:8px 14px;font-weight:700;font-size:12px">Subtotal \u2014 ${gk}</td><td style="padding:8px 14px;font-weight:700;font-size:13px;color:var(--success);text-align:right">${peso(gt)}</td><td></td></tr>`;}); }
   else rows.forEach(r=>tbody.innerHTML+=buildReportRow(r));
   tfoot.innerHTML=`<tr style="background:var(--royal);color:var(--white)"><td colspan="6" style="padding:11px 14px;font-weight:700;font-size:13px">GRAND TOTAL \u2014 ${rows.length} Transaction(s)</td><td style="padding:11px 14px;font-weight:700;font-size:15px;text-align:right;color:var(--gold)">${peso(total)}</td><td></td></tr>`;
 }
-function buildReportRow(r){return`<tr><td>${r.date}</td><td><b>${r.arnumber}</b></td><td>${r.clientcode}</td><td>${r.clientname}</td><td>${r.branchcode}</td><td><span class="badge badge-info">${r.moc||'\u2014'}</span></td><td style="text-align:right;font-weight:700;color:var(--success)">${peso(r.amount)}</td><td>${r.printedby}</td></tr>`;}
+function buildReportRow(r){return`<tr><td>${fmtDate(r.date)}</td><td><b>${r.arnumber}</b></td><td>${r.clientcode}</td><td>${r.clientname}</td><td>${r.branchcode}</td><td><span class="badge badge-info">${r.moc||'\u2014'}</span></td><td style="text-align:right;font-weight:700;color:var(--success)">${peso(r.amount)}</td><td>${r.printedby}</td></tr>`;}
 function sortReportBy(col){if(rptCurrentSort.col===col)rptCurrentSort.order=rptCurrentSort.order==='asc'?'desc':'asc';else rptCurrentSort={col,order:'asc'};rptFiltered.sort((a,b)=>{let va=a[col]??'',vb=b[col]??'';if(col==='amount'){va=parseFloat(va||0);vb=parseFloat(vb||0)}else{va=String(va).toLowerCase();vb=String(vb).toLowerCase()}if(va<vb)return rptCurrentSort.order==='asc'?-1:1;if(va>vb)return rptCurrentSort.order==='asc'?1:-1;return 0;});renderReportTable('',null,null,null,null);}
 function printReport(){if(!rptFiltered.length){alert('Generate a report first.');return;}document.getElementById('rptPrintHeader').style.display='block';window.print();document.getElementById('rptPrintHeader').style.display='none';}
 
@@ -1105,8 +1118,8 @@ function exportReportExcel(){
     ['Generated:',nowDT(),'By:',currentUser?currentUser.loginname:''],
     [],
     ['REPORT FILTERS'],
-    ['Period From:',df],
-    ['Period To:',dt],
+    ['Period From:',fmtDateExcel(df)],
+    ['Period To:',fmtDateExcel(dt)],
     ['Branch:',branch],
     ['Mode of Change:',moc],
     [],
@@ -1122,7 +1135,7 @@ function exportReportExcel(){
   // ── Sheet 2: All Records ─────────────────────────────────────────
   var headers=['Date','AR No.','Client Code','Client Name','Branch','MOC','Amount','Printed By'];
   var dataRows=rows.map(function(r){
-    return[r.date,r.arnumber,r.clientcode,r.clientname,r.branchcode,r.moc,parseFloat(r.amount||0),r.printedby];
+    return[fmtDateExcel(r.date),r.arnumber,r.clientcode,r.clientname,r.branchcode,r.moc,parseFloat(r.amount||0),r.printedby];
   });
   dataRows.push(['','','','','','GRAND TOTAL',total,'']);
   var ws2=XLSX.utils.aoa_to_sheet([headers].concat(dataRows));
