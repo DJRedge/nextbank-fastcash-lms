@@ -418,7 +418,8 @@ textarea.fi{min-height:80px;resize:vertical}
       <button class="modal-close" onclick="closeModal('modalViewClient')">&#10005;</button>
     </div>
     <div id="viewClientContent"></div>
-    <div style="padding:16px 24px;border-top:1px solid var(--gray-200);display:flex;justify-content:flex-end">
+    <div style="padding:16px 24px;border-top:1px solid var(--gray-200);display:flex;justify-content:space-between;align-items:center">
+      <button class="btn btn-primary" id="btnModalClaim" onclick="claimFromModal()">&#128179; Claim Change</button>
       <button class="btn btn-outline" onclick="closeModal('modalViewClient')">Close</button>
     </div>
   </div>
@@ -744,13 +745,30 @@ function filterClients(){
   const q=document.getElementById('clientSearch').value.toLowerCase(),by=document.getElementById('clientSearchBy').value;
   const tbody=document.querySelector('#clientTable tbody');tbody.innerHTML='';
   cachedClients.filter(c=>{const v=(by==='name'?c.name:by==='clientcode'?c.clientcode:c.pnno||'').toLowerCase();return!q||v.includes(q);}).forEach(c=>{
-    tbody.innerHTML+=`<tr><td><b>${c.clientcode}</b></td><td>${c.name}</td><td>${c.branchcode}</td><td>${c.pnno||'\u2014'}</td><td style="color:var(--success);font-weight:700;text-align:right">${peso(c.change)}</td><td><span class="badge badge-info">${c.moc||'\u2014'}</span></td><td><button class="btn btn-gold btn-sm" onclick="viewClient('${c.clientcode.replace(/'/g,"\'")}')">&#128065; View</button></td></tr>`;
+    tbody.innerHTML+=`<tr><td><b>${c.clientcode}</b></td><td>${c.name}</td><td>${c.branchcode}</td><td>${c.pnno||'\u2014'}</td><td style="color:var(--success);font-weight:700;text-align:right">${peso(c.change)}</td><td><span class="badge badge-info">${c.moc||'\u2014'}</span></td><td style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-gold btn-sm" onclick="viewClient('${c.clientcode.replace(/'/g,"\'")}')">&#128065; View</button><button class="btn btn-primary btn-sm" onclick="claimFromClient('${c.clientcode.replace(/'/g,"\'")}')">&#128179; Claim</button></td></tr>`;
   });
 }
+async function claimFromClient(code){
+  // Navigate to Claim Change page and pre-load the client
+  if(!canAccessPage('claiming')){showAccessDenied('claiming');return;}
+  closeModal('modalViewClient');
+  // Navigate to claiming page
+  const el=document.querySelector('.nav-item[data-access="Claim"]');
+  await nav('claiming',el);
+  // Pre-load the client
+  await selectClaimClient(code);
+}
+
+function claimFromModal(){
+  // Get the current client code shown in the modal
+  const code=document.getElementById('viewClientCode')?.textContent||'';
+  if(code) claimFromClient(code);
+}
+
 async function viewClient(code){
   const c=cachedClients.find(x=>x.clientcode===code);if(!c)return;
   document.getElementById('viewClientContent').innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
-    <div style="padding:12px 16px;background:var(--gray-50);border-bottom:1px solid var(--gray-100)"><div style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Client Code</div><div style="font-size:15px;font-weight:700;color:var(--royal-dark)">${c.clientcode}</div></div>
+    <div style="padding:12px 16px;background:var(--gray-50);border-bottom:1px solid var(--gray-100)"><div style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Client Code</div><div id="viewClientCode" style="font-size:15px;font-weight:700;color:var(--royal-dark)">${c.clientcode}</div></div>
     <div style="padding:12px 16px;background:var(--gray-50);border-bottom:1px solid var(--gray-100);border-left:1px solid var(--gray-100)"><div style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Branch</div><div style="font-size:15px;font-weight:700;color:var(--royal-dark)">${c.branchcode}</div></div>
     <div style="padding:12px 16px;grid-column:1/-1;border-bottom:1px solid var(--gray-100)"><div style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Full Name</div><div style="font-size:15px;font-weight:700;color:var(--royal-dark)">${c.name}</div></div>
     <div style="padding:12px 16px;border-bottom:1px solid var(--gray-100)"><div style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">PN No.</div><div style="font-size:14px">${c.pnno||'\u2014'}</div></div>
