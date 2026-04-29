@@ -572,7 +572,28 @@ let rptData=[],rptFiltered=[],rptClientMap={},rptCurrentSort={col:'date',order:'
 let _uploadLog=[],_branchLog=[],_unlocatedRecords=[];
 
 function peso(n){return '\u20b1'+parseFloat(n||0).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2})}
+// XSS protection — strip HTML tags from any user-supplied string before display
+function sanitize(str){
+  if(!str) return '';
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
 function today(){return new Date().toISOString().slice(0,10)}
+
+// SHA-256 password hashing using built-in Web Crypto API
+// No external library needed — works in all modern browsers
+async function hashPassword(plain){
+  if(!plain) return '';
+  const encoder = new TextEncoder();
+  const data = encoder.encode(plain);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
+}
 function fmtDate(d){
   if(!d)return '—';
   var dt=new Date(d+'T00:00:00');
@@ -632,14 +653,48 @@ window.addEventListener('hashchange',e=>{e.preventDefault();if(!currentUser)retu
 window.addEventListener('popstate',()=>{if(!currentUser)return;history.replaceState(null,'',window.location.pathname);forceNavDashboard();});
 
 /* AUTH */
+// Brute force lockout tracker
+var _loginAttempts={};
+function isLockedOut(u){
+  var rec=_loginAttempts[u];
+  if(!rec) return false;
+  if(rec.count>=5){
+    var elapsed=(Date.now()-rec.time)/1000/60;
+    if(elapsed<15) return true;
+    // Reset after 15 minutes
+    delete _loginAttempts[u];
+  }
+  return false;
+}
+function recordFailedAttempt(u){
+  if(!_loginAttempts[u]) _loginAttempts[u]={count:0,time:Date.now()};
+  _loginAttempts[u].count++;
+  _loginAttempts[u].time=Date.now();
+}
+function clearAttempts(u){ delete _loginAttempts[u]; }
+
 async function doLogin(){
   const u=document.getElementById('loginUser').value.trim(),p=document.getElementById('loginPass').value.trim();
   const errEl=document.getElementById('loginErr');errEl.style.display='none';
   if(!u||!p){errEl.textContent='Enter username and password.';errEl.style.display='block';return;}
+  // Brute force check
+  if(isLockedOut(u)){
+    errEl.textContent='Account temporarily locked after 5 failed attempts. Try again in 15 minutes.';
+    errEl.style.display='block';return;
+  }
   loading(true,'Signing in...');
   try{
-    const rows=await db.select('users','?loginname=eq.'+encodeURIComponent(u)+'&password=eq.'+encodeURIComponent(p));
-    if(!rows.length){errEl.textContent='Invalid username or password.';errEl.style.display='block';loading(false);return;}
+    // Hash password with SHA-256 before comparing — never send plain text
+    const hashed = await hashPassword(p);
+    const rows=await db.select('users','?loginname=eq.'+encodeURIComponent(u)+'&password=eq.'+encodeURIComponent(hashed));
+    if(!rows.length){
+      recordFailedAttempt(u);
+      var rec=_loginAttempts[u];
+      var remaining = rec ? Math.max(0, 5-rec.count) : 5;
+      errEl.textContent='Invalid username or password.' + (remaining>0 ? ' ('+remaining+' attempt(s) remaining)' : ' Account locked for 15 minutes.');
+      errEl.style.display='block';loading(false);return;
+    }
+    clearAttempts(u); // Reset on successful login
     currentUser=rows[0];
     document.getElementById('loginScreen').style.display='none';document.getElementById('app').style.display='flex';
     document.getElementById('sidebarName').textContent=currentUser.firstname+' '+currentUser.lastname;
@@ -723,7 +778,7 @@ async function renderDashboard(){
     document.getElementById('dsh-today').textContent=changes.filter(c=>c.date===today()).length.toLocaleString('en-PH');
     document.getElementById('dsh-claimed').textContent=peso(changes.reduce((a,c)=>a+parseFloat(c.amount||0),0));
     const tbody=document.querySelector('#dsh-table tbody');tbody.innerHTML='';
-    changes.forEach(c=>{const cl=clients.find(x=>x.clientcode===c.clientcode)||{};tbody.innerHTML+=`<tr><td>${c.arnumber}</td><td>${cl.name||c.clientcode}</td><td>${c.branchcode}</td><td class="amt" style="color:var(--success)">${peso(c.amount)}</td><td>${fmtDate(c.date)}</td><td>${c.printedby}</td></tr>`;});
+    changes.forEach(c=>{const cl=clients.find(x=>x.clientcode===c.clientcode)||{};tbody.innerHTML+=`<tr><td>${sanitize(c.arnumber)}</td><td>${sanitize(cl.name||c.clientcode)}</td><td>${sanitize(c.branchcode)}</td><td class="amt" style="color:var(--success)">${peso(c.amount)}</td><td>${fmtDate(c.date)}</td><td>${c.printedby}</td></tr>`;});
   }catch(e){console.error(e);}
   loading(false);
 }
@@ -745,7 +800,7 @@ function filterClients(){
   const q=document.getElementById('clientSearch').value.toLowerCase(),by=document.getElementById('clientSearchBy').value;
   const tbody=document.querySelector('#clientTable tbody');tbody.innerHTML='';
   cachedClients.filter(c=>{const v=(by==='name'?c.name:by==='clientcode'?c.clientcode:c.pnno||'').toLowerCase();return!q||v.includes(q);}).forEach(c=>{
-    tbody.innerHTML+=`<tr><td><b>${c.clientcode}</b></td><td>${c.name}</td><td>${c.branchcode}</td><td>${c.pnno||'\u2014'}</td><td style="color:var(--success);font-weight:700;text-align:right">${peso(c.change)}</td><td><span class="badge badge-info">${c.moc||'\u2014'}</span></td><td style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-gold btn-sm" onclick="viewClient('${c.clientcode.replace(/'/g,"\'")}')">&#128065; View</button><button class="btn btn-primary btn-sm" onclick="claimFromClient('${c.clientcode.replace(/'/g,"\'")}')">&#128179; Claim</button></td></tr>`;
+    tbody.innerHTML+=`<tr><td><b>${sanitize(c.clientcode)}</b></td><td>${sanitize(c.name)}</td><td>${sanitize(c.branchcode)}</td><td>${sanitize(c.pnno)||'\u2014'}</td><td style="color:var(--success);font-weight:700;text-align:right">${peso(c.change)}</td><td><span class="badge badge-info">${c.moc||'\u2014'}</span></td><td style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-gold btn-sm" onclick="viewClient('${c.clientcode.replace(/'/g,"\'")}')">&#128065; View</button><button class="btn btn-primary btn-sm" onclick="claimFromClient('${c.clientcode.replace(/'/g,"\'")}')">&#128179; Claim</button></td></tr>`;
   });
 }
 async function claimFromClient(code){
@@ -829,7 +884,7 @@ async function handleUpload(input){
     else document.getElementById('btnDownloadUnlocated').style.display='none';
     // Show upload log table
     const tbody=document.querySelector('#uploadTable tbody');tbody.innerHTML='';
-    log.forEach(r=>{const bc=r.status==='New'?'badge-success':r.status==='Accumulated'?'badge-info':r.status==='Branch Not Found'?'badge-danger':'badge-warning';tbody.innerHTML+=`<tr><td>${r.batchno}</td><td><b>${r.clientcode}</b></td><td>${r.name}</td><td>${r.branchcode}</td><td>${r.pnno}</td><td style="font-weight:700;text-align:right">${peso(r.amount)}</td><td><span class="badge ${bc}">${r.status}</span></td></tr>`;});
+    log.forEach(r=>{const bc=r.status==='New'?'badge-success':r.status==='Accumulated'?'badge-info':r.status==='Branch Not Found'?'badge-danger':'badge-warning';tbody.innerHTML+=`<tr><td>${sanitize(r.batchno)}</td><td><b>${sanitize(r.clientcode)}</b></td><td>${sanitize(r.name)}</td><td>${sanitize(r.branchcode)}</td><td>${r.pnno}</td><td style="font-weight:700;text-align:right">${peso(r.amount)}</td><td><span class="badge ${bc}">${r.status}</span></td></tr>`;});
     await loadNBMaster();await renderDashboard();loading(false);
     // Auto-open upload report
     showUploadReport();
@@ -1124,7 +1179,7 @@ function printReceipt(){
 
 /* TRANSACTIONS */
 async function loadTransactions(){loading(true,'Loading transactions...');try{cachedTx=await db.select('changes','?order=id.desc&limit=1000');}catch(e){alert('Error: '+e.message);}loading(false);filterTransactions();}
-function filterTransactions(){const q=(document.getElementById('txSearch')||{value:''}).value.toLowerCase();const tbody=document.querySelector('#txTable tbody');tbody.innerHTML='';cachedTx.filter(c=>!q||c.arnumber.toLowerCase().includes(q)||c.clientcode.toLowerCase().includes(q)||c.branchcode.toLowerCase().includes(q)).forEach(c=>{tbody.innerHTML+=`<tr><td><b>${c.arnumber}</b></td><td>${fmtDate(c.date)}</td><td>${c.clientcode}</td><td>${c.branchcode}</td><td style="color:var(--success);font-weight:700;text-align:right">${peso(c.amount)}</td><td>${c.remarks||'\u2014'}</td><td>${c.printedby}</td><td><button class="btn btn-outline btn-sm" onclick="showReceiptById(${c.id})">&#128424; Receipt</button></td></tr>`;});}
+function filterTransactions(){const q=(document.getElementById('txSearch')||{value:''}).value.toLowerCase();const tbody=document.querySelector('#txTable tbody');tbody.innerHTML='';cachedTx.filter(c=>!q||c.arnumber.toLowerCase().includes(q)||c.clientcode.toLowerCase().includes(q)||c.branchcode.toLowerCase().includes(q)).forEach(c=>{tbody.innerHTML+=`<tr><td><b>${sanitize(c.arnumber)}</b></td><td>${fmtDate(c.date)}</td><td>${sanitize(c.clientcode)}</td><td>${sanitize(c.branchcode)}</td><td style="color:var(--success);font-weight:700;text-align:right">${peso(c.amount)}</td><td>${sanitize(c.remarks)||'\u2014'}</td><td>${sanitize(c.printedby)}</td><td><button class="btn btn-outline btn-sm" onclick="showReceiptById(${c.id})">&#128424; Receipt</button></td></tr>`;});}
 async function showReceiptById(id){loading(true,'Loading...');try{const txRows=await db.select('changes','?id=eq.'+id);const tx=txRows[0];if(!tx){loading(false);return;}const clRows=await db.select('clients','?clientcode=eq.'+encodeURIComponent(tx.clientcode));const cl=clRows[0]||{name:tx.clientcode,clientcode:tx.clientcode,branchcode:tx.branchcode,moc:'\u2014',change:0};showReceipt(tx,cl);}catch(e){alert('Error: '+e.message);}loading(false);}
 
 /* REPORTS */
@@ -1165,7 +1220,7 @@ function renderReportTable(groupBy,df,dt,branch,moc){
   else rows.forEach(r=>tbody.innerHTML+=buildReportRow(r));
   tfoot.innerHTML=`<tr style="background:var(--royal);color:var(--white)"><td colspan="6" style="padding:11px 14px;font-weight:700;font-size:13px">GRAND TOTAL \u2014 ${rows.length} Transaction(s)</td><td style="padding:11px 14px;font-weight:700;font-size:15px;text-align:right;color:var(--gold)">${peso(total)}</td><td></td></tr>`;
 }
-function buildReportRow(r){return`<tr><td>${fmtDate(r.date)}</td><td><b>${r.arnumber}</b></td><td>${r.clientcode}</td><td>${r.clientname}</td><td>${r.branchcode}</td><td><span class="badge badge-info">${r.moc||'\u2014'}</span></td><td style="text-align:right;font-weight:700;color:var(--success)">${peso(r.amount)}</td><td>${r.printedby}</td></tr>`;}
+function buildReportRow(r){return`<tr><td>${fmtDate(r.date)}</td><td><b>${sanitize(r.arnumber)}</b></td><td>${sanitize(r.clientcode)}</td><td>${sanitize(r.clientname)}</td><td>${sanitize(r.branchcode)}</td><td><span class="badge badge-info">${r.moc||'\u2014'}</span></td><td style="text-align:right;font-weight:700;color:var(--success)">${peso(r.amount)}</td><td>${r.printedby}</td></tr>`;}
 function sortReportBy(col){if(rptCurrentSort.col===col)rptCurrentSort.order=rptCurrentSort.order==='asc'?'desc':'asc';else rptCurrentSort={col,order:'asc'};rptFiltered.sort((a,b)=>{let va=a[col]??'',vb=b[col]??'';if(col==='amount'){va=parseFloat(va||0);vb=parseFloat(vb||0)}else{va=String(va).toLowerCase();vb=String(vb).toLowerCase()}if(va<vb)return rptCurrentSort.order==='asc'?-1:1;if(va>vb)return rptCurrentSort.order==='asc'?1:-1;return 0;});renderReportTable('',null,null,null,null);}
 function printReport(){if(!rptFiltered.length){alert('Generate a report first.');return;}document.getElementById('rptPrintHeader').style.display='block';window.print();document.getElementById('rptPrintHeader').style.display='none';}
 
@@ -1246,7 +1301,7 @@ function exportReportExcel(){
 }
 
 /* BRANCHES */
-async function loadBranches(){loading(true,'Loading branches...');try{cachedBranches=await db.select('branches','?order=name.asc');const tbody=document.querySelector('#branchTable tbody');tbody.innerHTML='';cachedBranches.forEach(b=>{tbody.innerHTML+=`<tr><td><b>${b.code}</b></td><td>${b.name}</td><td>${b.address||'\u2014'}</td><td><span class="badge ${b.status==='Active'?'badge-success':'badge-danger'}">${b.status}</span></td><td><button class="btn btn-outline btn-sm" onclick="editBranch('${b.code.replace(/'/g,"\'")}')">&#9999; Edit</button></td></tr>`;});}catch(e){alert('Error: '+e.message);}loading(false);}
+async function loadBranches(){loading(true,'Loading branches...');try{cachedBranches=await db.select('branches','?order=name.asc');const tbody=document.querySelector('#branchTable tbody');tbody.innerHTML='';cachedBranches.forEach(b=>{tbody.innerHTML+=`<tr><td><b>${sanitize(b.code)}</b></td><td>${sanitize(b.name)}</td><td>${sanitize(b.address)||'\u2014'}</td><td><span class="badge ${b.status==='Active'?'badge-success':'badge-danger'}">${b.status}</span></td><td><button class="btn btn-outline btn-sm" onclick="editBranch('${b.code.replace(/'/g,"\'")}')">&#9999; Edit</button></td></tr>`;});}catch(e){alert('Error: '+e.message);}loading(false);}
 async function editBranch(code){const b=cachedBranches.find(x=>x.code===code);if(!b)return;editKey['modalAddBranch']=code;document.getElementById('branchModalTitle').textContent='Edit Branch';document.getElementById('bCode').value=b.code;document.getElementById('bName').value=b.name;document.getElementById('bAddr').value=b.address||'';document.getElementById('bStatus').value=b.status;document.getElementById('modalAddBranch').classList.add('open');}
 async function saveBranch(){const obj={code:document.getElementById('bCode').value.trim(),name:document.getElementById('bName').value.trim(),address:document.getElementById('bAddr').value.trim(),status:document.getElementById('bStatus').value};if(!obj.code||!obj.name){alert('Code and Name required.');return;}loading(true,'Saving...');try{if(editKey['modalAddBranch'])await db.update('branches',{name:obj.name,address:obj.address,status:obj.status},'?code=eq.'+encodeURIComponent(obj.code));else await db.insert('branches',obj);cachedBranches=[];closeModal('modalAddBranch');await loadBranches();}catch(e){alert('Save error: '+e.message);}loading(false);}
 
@@ -1258,9 +1313,42 @@ async function saveMOC(){const obj={moc:document.getElementById('mocCode').value
 /* USERS */
 async function loadUsers(){loading(true,'Loading users...');try{cachedUsersAll=await db.select('users','?order=lastname.asc');const tbody=document.querySelector('#userTable tbody');tbody.innerHTML='';cachedUsersAll.forEach(u=>{const uB=u.uploadaccess==='None'?'badge-danger':u.uploadaccess==='Own Branch'?'badge-warning':'badge-success';tbody.innerHTML+=`<tr><td><b>${u.loginname}</b></td><td>${u.lastname}, ${u.firstname} ${u.middlename||''} ${u.extname||''}</td><td><span style="font-size:12px;color:var(--royal-dark);font-weight:600">${u.position||'\u2014'}</span></td><td>${u.email||'\u2014'}</td><td style="max-width:200px">${renderAccessBadges(u.systemaccess)}</td><td><span class="badge ${uB}">${u.uploadaccess||'All Branches'}</span></td><td><span class="badge ${u.administrator?'badge-warning':'badge-success'}">${u.administrator?'Admin':'Staff'}</span></td><td style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-outline btn-sm" onclick="editUser('${u.loginname.replace(/'/g,"\'")}')">&#9999; Edit</button><button class="btn btn-primary btn-sm" onclick="openResetPw('${u.loginname.replace(/'/g,"\'")}')">&#128273; Reset PW</button></td></tr>`;});}catch(e){alert('Error: '+e.message);}loading(false);}
 async function editUser(ln){const u=cachedUsersAll.find(x=>x.loginname===ln);if(!u)return;editKey['modalAddUser']=ln;document.getElementById('userModalTitle').textContent='Edit User';document.getElementById('uLast').value=u.lastname;document.getElementById('uFirst').value=u.firstname;document.getElementById('uMiddle').value=u.middlename||'';document.getElementById('uExt').value=u.extname||'';document.getElementById('uLogin').value=u.loginname;document.getElementById('uPass').value='';document.getElementById('uEmail').value=u.email||'';document.getElementById('uPosition').value=u.position||'';setAccessCheckboxes((u.systemaccess||'All').split(',').map(s=>s.trim()));document.getElementById('uUploadAccess').value=u.uploadaccess||'All Branches';document.getElementById('uAdmin').value=String(u.administrator);document.getElementById('modalAddUser').classList.add('open');}
-async function saveUser(){const isEdit=editKey['modalAddUser'],pw=document.getElementById('uPass').value;const obj={lastname:document.getElementById('uLast').value.trim(),firstname:document.getElementById('uFirst').value.trim(),middlename:document.getElementById('uMiddle').value.trim(),extname:document.getElementById('uExt').value.trim(),loginname:document.getElementById('uLogin').value.trim(),email:document.getElementById('uEmail').value.trim(),position:document.getElementById('uPosition').value.trim(),systemaccess:getAccessValue(),uploadaccess:document.getElementById('uUploadAccess').value,administrator:parseInt(document.getElementById('uAdmin').value)};if(pw)obj.password=pw;if(!obj.loginname||!obj.lastname){alert('Login Name and Last Name required.');return;}loading(true,'Saving...');try{if(isEdit)await db.update('users',obj,'?loginname=eq.'+encodeURIComponent(isEdit));else{if(!pw){alert('Password required.');loading(false);return;}obj.password=pw;obj.code='U'+Date.now();await db.insert('users',obj);}cachedUsersAll=[];closeModal('modalAddUser');await loadUsers();}catch(e){alert('Save error: '+e.message);}loading(false);}
+async function saveUser(){
+  const isEdit=editKey['modalAddUser'],pw=document.getElementById('uPass').value;
+  const obj={lastname:document.getElementById('uLast').value.trim(),firstname:document.getElementById('uFirst').value.trim(),middlename:document.getElementById('uMiddle').value.trim(),extname:document.getElementById('uExt').value.trim(),loginname:document.getElementById('uLogin').value.trim(),email:document.getElementById('uEmail').value.trim(),position:document.getElementById('uPosition').value.trim(),systemaccess:getAccessValue(),uploadaccess:document.getElementById('uUploadAccess').value,administrator:parseInt(document.getElementById('uAdmin').value)};
+  // Hash password before saving
+  if(pw) obj.password = await hashPassword(pw);
+  if(!obj.loginname||!obj.lastname){alert('Login Name and Last Name required.');return;}
+  loading(true,'Saving...');
+  try{
+    if(isEdit) await db.update('users',obj,'?loginname=eq.'+encodeURIComponent(isEdit));
+    else{
+      if(!pw){alert('Password required.');loading(false);return;}
+      obj.code='U'+Date.now();
+      await db.insert('users',obj);
+    }
+    cachedUsersAll=[];closeModal('modalAddUser');await loadUsers();
+  }catch(e){alert('Save error: '+e.message);}
+  loading(false);
+}
 function openResetPw(ln){document.getElementById('rpUser').value=ln;document.getElementById('rpPass').value='';document.getElementById('rpConfirm').value='';document.getElementById('rpAlert').style.display='none';document.getElementById('modalResetPw').classList.add('open');}
-async function doResetPw(){const login=document.getElementById('rpUser').value,p1=document.getElementById('rpPass').value,p2=document.getElementById('rpConfirm').value,al=document.getElementById('rpAlert');if(!p1){al.textContent='Enter a new password.';al.style.display='block';return;}if(p1!==p2){al.textContent='Passwords do not match.';al.style.display='block';return;}loading(true,'Resetting...');try{await db.update('users',{password:p1},'?loginname=eq.'+encodeURIComponent(login));closeModal('modalResetPw');alert('Password reset successfully for: '+login);}catch(e){al.textContent='Error: '+e.message;al.style.display='block';}loading(false);}
+async function doResetPw(){
+  const login=document.getElementById('rpUser').value,
+        p1=document.getElementById('rpPass').value,
+        p2=document.getElementById('rpConfirm').value,
+        al=document.getElementById('rpAlert');
+  if(!p1){al.textContent='Enter a new password.';al.style.display='block';return;}
+  if(p1!==p2){al.textContent='Passwords do not match.';al.style.display='block';return;}
+  loading(true,'Resetting...');
+  try{
+    // Hash before saving
+    const hashed = await hashPassword(p1);
+    await db.update('users',{password:hashed},'?loginname=eq.'+encodeURIComponent(login));
+    closeModal('modalResetPw');
+    alert('Password reset successfully for: '+login);
+  }catch(e){al.textContent='Error: '+e.message;al.style.display='block';}
+  loading(false);
+}
 
 /* AUTO LOGOUT */
 const SESSION_TIMEOUT=5*60*1000,WARNING_BEFORE=1*60*1000,COUNTDOWN_SECS=60;
