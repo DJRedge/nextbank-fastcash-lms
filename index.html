@@ -912,9 +912,9 @@ async function processClaim(){
 }
 function showReceipt(tx,cl){
   var remarksHtml=tx.remarks?'<div class="receipt-row"><span>Remarks</span><b>'+sanitize(tx.remarks)+'</b></div>':'';
-  var bannerSrc=document.getElementById('IMG_BANNER')?document.getElementById('IMG_BANNER').src:'';
+  var hasBanner=!!document.getElementById('IMG_BANNER');
   var html='<div class="receipt">';
-  if(bannerSrc)html+='<div style="text-align:center;margin-bottom:8px"><img src="'+bannerSrc+'" style="max-width:210px;width:100%;height:auto;border-radius:4px" alt="FastCash"></div>';
+  if(hasBanner)html+='<div style="text-align:center;margin-bottom:8px"><img id="receiptBannerImg" style="max-width:210px;width:100%;height:auto;border-radius:4px" alt="FastCash"></div>';
   html+='<div class="receipt-sub">GSIS - PVAO - SSS -- Change Claiming System</div>';
   html+='<div class="receipt-arn">Acknowledgement No.: <b>'+sanitize(tx.arnumber)+'</b></div>';
   html+='<div class="receipt-amount">'+peso(tx.amount)+'</div>';
@@ -929,6 +929,10 @@ function showReceipt(tx,cl){
   html+='<div class="receipt-row"><span>Printed By</span><b>'+sanitize(tx.printedby)+'</b></div>';
   html+='</div><div style="text-align:center;margin-top:12px;font-size:11px;color:var(--gray-400)">This serves as your official acknowledgement receipt.</div></div>';
   document.getElementById('receiptContent').innerHTML=html;
+  // Set banner src via DOM - avoids browser treating string as URL
+  var rbi=document.getElementById('receiptBannerImg');
+  var bimg=document.getElementById('IMG_BANNER');
+  if(rbi&&bimg)rbi.src=bimg.src;
   document.getElementById('modalReceipt').classList.add('open');
 }
 function printReceipt(){
