@@ -208,7 +208,7 @@ textarea.fi{min-height:80px;resize:vertical}
 <!-- DASHBOARD -->
 <div class="page active" id="page-dashboard">
   <div class="welcome-banner">
-    <div class="welcome-text"><h2>Welcome back, <span id="wName">Administrator</span>!</h2><p>NextBank-FastCash -- Live data powered by Supabase cloud.</p></div>
+    <div class="welcome-text"><h2>Welcome back, <span id="wName">Administrator</span>!</h2><p>NextBank-FastCash Change Claiming System -- Live Data</p></div>
     <div class="welcome-icon">&#127974;</div>
   </div>
   <div class="stat-grid">
@@ -781,7 +781,7 @@ function printUploadReport(){
   doc.write('<!DOCTYPE html><html><head><title>Upload Report</title><style>'+css+'</style></head><body>');
   doc.write('<h2 style="color:#061240">NextBank-FastCash LMS</h2><p style="color:#666">Collection Upload Report - Generated: '+nowDT()+'</p><hr>');
   doc.write(area.innerHTML);
-  doc.write('</body></html>');
+  doc.write('<\/body><\/html>');
   doc.close();
   setTimeout(function(){try{iframe.contentWindow.focus();iframe.contentWindow.print();}catch(e){}},500);
 }
@@ -863,7 +863,7 @@ function printBranchReport(){
   doc.open();
   doc.write('<!DOCTYPE html><html><head><title>Branch Upload Report</title><style>'+css+'</style></head><body>');
   doc.write('<h2 style="color:#061240">NextBank-FastCash LMS</h2><p style="color:#666">Branch Upload Report - Generated: '+nowDT()+'</p><hr>');
-  doc.write(area.innerHTML);doc.write('</body></html>');doc.close();
+  doc.write(area.innerHTML);doc.write('<\/body><\/html>');doc.close();
   setTimeout(function(){try{iframe.contentWindow.focus();iframe.contentWindow.print();}catch(e){}},500);
 }
 function downloadBranchReportExcel(){
@@ -939,7 +939,7 @@ function printReceipt(){
   var receiptHtml=document.getElementById('receiptContent').innerHTML;
   if(!receiptHtml||receiptHtml.trim()===''){alert('No receipt to print.');return;}
   var css='@page{size:3.5in 5.5in portrait;margin:0.25in}*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}body{font-family:Arial,sans-serif;font-size:11pt;color:#1a1a2e;background:#fff;padding:4px}.receipt{border:2px dashed #f5c518;border-radius:8px;padding:16px}.receipt-sub{text-align:center;font-size:9pt;color:#555;margin-bottom:10px}.receipt-arn{text-align:center;font-size:9pt;color:#555;margin-bottom:8px}.receipt-amount{text-align:center;font-size:22pt;font-weight:800;color:#061240;margin:10px 0;padding:8px;background:#fffbeb;border-radius:6px;border:1.5px solid #f5c518}.receipt-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dotted #ccc;font-size:9.5pt}.receipt-row:last-child{border-bottom:none}.receipt-row span{color:#555;flex-shrink:0;padding-right:8px}.receipt-row b{color:#061240;text-align:right}';
-  var html='<!DOCTYPE html><html><head><title>Acknowledgement Receipt</title><style>'+css+'</style></head><body>'+receiptHtml+'</body></html>';
+  var html='<!DOCTYPE html><html><head><title>Acknowledgement Receipt</title><style>'+css+'</style></head><body>'+receiptHtml+'<\/body><\/html>';
   var iframe=document.getElementById('printFrame');
   var doc=iframe.contentDocument||iframe.contentWindow.document;
   doc.open();doc.write(html);doc.close();
