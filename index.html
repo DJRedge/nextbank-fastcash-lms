@@ -12,7 +12,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>:root{--royal:#0a1f5c;--royal-dark:#061240;--royal-light:#1a3a8f;--gold:#f5c518;--gold-light:#ffe066;--gold-pale:#fffbeb;--white:#fff;--gray-50:#f8f6ee;--gray-100:#f0ead8;--gray-200:#d4b896;--gray-400:#b89a6a;--gray-600:#78580e;--gray-800:#1a1a2e;--success:#065f46;--success-bg:#ecfdf5;--danger:#991b1b;--danger-bg:#fef2f2;--warning:#92400e;--warning-bg:#fffbeb;--info:#0a1f5c;--info-bg:#eff6ff;--sidebar-w:220px;--header-h:62px;--radius:8px;--shadow:0 2px 12px rgba(6,18,64,.12);--shadow-md:0 4px 24px rgba(6,18,64,.18)}*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Nunito',sans-serif;background:var(--gray-50);color:var(--gray-800);min-height:100vh}#loadingOverlay{position:fixed;inset:0;background:rgba(6,18,64,.82);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:99999}.spinner{width:52px;height:52px;border:4px solid rgba(245,197,24,.2);border-top-color:var(--gold);border-right-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:16px}@keyframes spin{to{transform:rotate(360deg)}}#loadingMsg{color:var(--gold-light);font-size:14px;font-weight:600}#loadingSub{color:rgba(255,255,255,.35);font-size:11px;margin-top:6px}.load-progress{width:220px;height:4px;background:rgba(255,255,255,.15);border-radius:4px;margin-top:12px;overflow:hidden;display:none}.load-progress-fill{height:100%;background:var(--gold);border-radius:4px;transition:width .3s ease;width:0}.skeleton{background:linear-gradient(90deg,#e8e0c8 25%,#f5edd8 50%,#e8e0c8 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:4px;display:inline-block}@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}.skeleton-row td{padding:11px 14px!important}.toast{position:fixed;bottom:24px;right:24px;background:var(--royal-dark);color:var(--white);padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.3);z-index:99999;display:flex;align-items:center;gap:10px;border-left:4px solid var(--gold);transform:translateY(80px);opacity:0;transition:all .3s cubic-bezier(.4,0,.2,1);pointer-events:none}.toast.show{transform:translateY(0);opacity:1}#loginScreen{position:fixed;inset:0;background:linear-gradient(135deg,var(--royal-dark) 0%,var(--royal) 55%,var(--royal-light) 100%);display:flex;align-items:center;justify-content:center;z-index:9999}.login-card{background:var(--white);border-radius:18px;padding:48px 44px;width:420px;box-shadow:0 24px 80px rgba(0,0,0,.35);text-align:center;border-top:4px solid var(--gold)}.login-title{font-family:'Playfair Display',serif;font-size:22px;color:var(--royal-dark);margin-bottom:4px}.login-sub{font-size:13px;color:var(--royal-dark);font-weight:800;margin-bottom:4px;letter-spacing:.5px}.login-sub2{font-size:12px;color:var(--gray-600);font-weight:600;margin-bottom:28px;letter-spacing:.3px}.login-label{display:block;text-align:left;font-size:12px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}.login-input{width:100%;padding:11px 14px;border:1.5px solid var(--gray-200);border-radius:8px;font-family:'Nunito',sans-serif;font-size:14px;margin-bottom:18px;outline:none;transition:border .2s}.login-input:focus{border-color:var(--royal-light)}.login-btn{width:100%;padding:13px;background:linear-gradient(90deg,var(--royal-dark),var(--royal));color:var(--gold);font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;border:1.5px solid var(--gold);border-radius:8px;cursor:pointer;letter-spacing:.5px}.login-btn:hover{opacity:.9}.login-err{background:var(--danger-bg);color:var(--danger);font-size:13px;padding:8px 12px;border-radius:6px;margin-bottom:14px;display:none;text-align:left}#app{display:none;min-height:100vh}.sidebar{position:fixed;left:0;top:0;bottom:0;width:var(--sidebar-w);background:linear-gradient(180deg,var(--royal-dark) 0%,var(--royal) 100%);display:flex;flex-direction:column;z-index:100;box-shadow:4px 0 24px rgba(0,0,0,.18)}.sidebar-logo{padding:20px 18px 16px;border-bottom:1px solid rgba(245,197,24,.25)}.sidebar-logo .brand{font-family:'Playfair Display',serif;font-size:18px;color:var(--gold)}.sidebar-logo .sub{font-size:10px;color:rgba(255,255,255,.5);letter-spacing:.6px;text-transform:uppercase}.sidebar-nav{flex:1;padding:14px 10px;overflow-y:auto}.nav-section{font-size:10px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1px;padding:12px 8px 4px}.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;color:rgba(255,255,255,.7);font-size:13.5px;font-weight:500;margin-bottom:2px;transition:all .2s}.nav-item:hover{background:rgba(255,255,255,.09);color:var(--white)}.nav-item.active{background:rgba(245,197,24,.18);color:var(--gold);border-left:3px solid var(--gold)}.nav-item .icon{font-size:16px;width:20px;text-align:center}.sidebar-footer{padding:14px 14px 18px;border-top:1px solid rgba(245,197,24,.2)}.user-chip{display:flex;align-items:center;gap:10px}.user-av{width:34px;height:34px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:var(--royal-dark)}.user-info .name{font-size:13px;color:var(--white);font-weight:600}.user-info .role{font-size:11px;color:rgba(255,255,255,.45)}.logout-btn{margin-top:10px;width:100%;padding:8px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:7px;color:rgba(255,255,255,.6);font-size:12px;cursor:pointer;font-family:'Nunito',sans-serif}.logout-btn:hover{background:rgba(255,255,255,.13);color:var(--white)}.main{margin-left:var(--sidebar-w);min-height:100vh;display:flex;flex-direction:column}.topbar{height:var(--header-h);background:var(--white);border-bottom:3px solid var(--gold);display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:50;box-shadow:var(--shadow)}.topbar-title{font-family:'Playfair Display',serif;font-size:18px;color:var(--royal-dark)}.topbar-right{display:flex;align-items:center;gap:16px}.topbar-badge{background:var(--gold);color:var(--royal-dark);font-size:12px;font-weight:800;padding:4px 12px;border-radius:20px}.db-status{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:700}.db-online{background:var(--gold-pale);color:var(--royal-dark);border:1px solid var(--gold)}.db-offline{background:var(--danger-bg);color:var(--danger)}.clock-box{display:flex;align-items:center;background:var(--royal-dark);border:1.5px solid var(--gold);border-radius:8px;padding:6px 16px}.content{flex:1;padding:28px}.card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px 24px;margin-bottom:22px;border-top:2px solid var(--gold)}.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px}.card-title{font-size:16px;font-weight:700;color:var(--royal-dark)}.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}.stat-card{background:var(--white);border-radius:var(--radius);padding:20px 22px;box-shadow:var(--shadow);border-top:3px solid var(--royal)}.stat-label{font-size:12px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}.stat-value{font-size:26px;font-weight:700;color:var(--royal-dark)}.stat-sub{font-size:12px;color:var(--gray-400);margin-top:4px}.tbl-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13.5px}th{background:var(--gold-pale);color:var(--gray-600);font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;padding:11px 14px;text-align:left;border-bottom:2px solid var(--gold)}td{padding:11px 14px;border-bottom:1px solid var(--gray-100);color:var(--gray-800);vertical-align:middle}tr:hover td{background:#fffbeb}td.amt,th.amt{text-align:right}td.amt{font-weight:700}.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:7px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all .2s}.btn-primary{background:var(--royal);color:var(--gold)}.btn-primary:hover{background:var(--royal-dark)}.btn-gold{background:var(--gold);color:var(--royal-dark);font-weight:800}.btn-gold:hover{background:var(--gold-light)}.btn-outline{background:transparent;border:1.5px solid var(--royal);color:var(--royal)}.btn-outline:hover{background:var(--royal);color:var(--white)}.btn-danger{background:var(--danger);color:#fff}.btn-sm{padding:5px 12px;font-size:12px}.btn:disabled{opacity:.5;cursor:not-allowed}.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}.badge-success{background:var(--success-bg);color:var(--success)}.badge-danger{background:var(--danger-bg);color:var(--danger)}.badge-info{background:var(--info-bg);color:var(--info)}.badge-warning{background:var(--warning-bg);color:var(--warning)}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.form-group{margin-bottom:16px}.form-group.full{grid-column:1/-1}label.fl{display:block;font-size:12px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}input.fi,select.fi,textarea.fi{width:100%;padding:10px 13px;border:1.5px solid var(--gray-200);border-radius:7px;font-family:'Nunito',sans-serif;font-size:14px;outline:none;background:var(--white);color:var(--gray-800)}input.fi:focus,select.fi:focus{border-color:var(--royal-light)}textarea.fi{min-height:80px;resize:vertical}.search-bar{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap}.search-input{flex:1;min-width:180px;padding:9px 14px;border:1.5px solid var(--gray-200);border-radius:7px;font-family:'Nunito',sans-serif;font-size:13.5px;outline:none}.search-input:focus{border-color:var(--royal-light)}.modal-bg{position:fixed;inset:0;background:rgba(10,20,50,.55);display:none;align-items:center;justify-content:center;z-index:1000}.modal-bg.open{display:flex}.modal{background:var(--white);border-radius:14px;padding:30px 32px;width:520px;max-width:95vw;max-height:85vh;overflow-y:auto;box-shadow:var(--shadow-md);border-top:3px solid var(--gold)}.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}.modal-title{font-family:'Playfair Display',serif;font-size:18px;color:var(--royal-dark)}.modal-close{width:30px;height:30px;border-radius:50%;background:var(--gray-100);border:none;cursor:pointer;font-size:16px;color:var(--gray-600)}.alert{padding:12px 16px;border-radius:8px;font-size:13.5px;margin-bottom:14px;display:none}.alert-danger{background:var(--danger-bg);color:var(--danger);border-left:4px solid var(--danger)}.alert-success{background:var(--success-bg);color:var(--success);border-left:4px solid var(--success)}.alert-warning{background:var(--warning-bg);color:var(--warning);border-left:4px solid var(--warning)}.receipt{background:var(--white);border:2px dashed var(--gold);border-radius:10px;padding:24px;font-size:13px}.receipt-sub{text-align:center;font-size:11px;color:var(--gray-400);margin-bottom:14px}.receipt-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dotted var(--gray-200)}.receipt-row:last-child{border-bottom:none}.receipt-amount{text-align:center;font-size:28px;font-weight:800;color:var(--royal-dark);margin:14px 0;padding:10px;background:var(--gold-pale);border-radius:8px;border:1px solid var(--gold)}.receipt-arn{text-align:center;font-size:11px;color:var(--gray-400);margin-bottom:10px}.page{display:none}.page.active{display:block}.welcome-banner{background:linear-gradient(135deg,var(--royal-dark) 0%,var(--royal) 70%,var(--royal-light) 100%);border-radius:var(--radius);padding:28px 32px;color:var(--white);margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--gold)}.welcome-text h2{font-family:'Playfair Display',serif;font-size:22px;margin-bottom:6px;color:var(--gold)}.welcome-text p{font-size:13.5px;opacity:.75}.welcome-icon{font-size:52px;opacity:.35}.page-actions{display:flex;gap:8px;flex-wrap:wrap}@media print{@page{size:8.5in 5.5in landscape;margin:0.35in 0.4in}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}body{font-size:9pt}.sidebar,.topbar,#loadingOverlay,.page-actions,.btn,.modal-bg,.welcome-banner,.stat-grid,.search-bar,#rptSummary,#page-dashboard,#page-clients,#page-upload,#page-claiming,#page-transactions,#page-branches,#page-moc,#page-users{display:none!important}.main{margin-left:0!important}.content{padding:0!important}.page.active{display:block!important}#rptPrintHeader{display:block!important;margin-bottom:8pt}.card{box-shadow:none!important;border:none!important;padding:0!important;margin:0!important}#rptTableCard{display:block!important;box-shadow:none!important;border:none!important;padding:0!important;margin:0!important}table{width:100%!important;border-collapse:collapse!important;font-size:7.5pt!important}th{background:#061240!important;color:#fff!important;padding:4pt 5pt!important;font-size:7pt!important;border:1pt solid #061240!important}th.amt{text-align:right!important}td{padding:3.5pt 5pt!important;border-bottom:0.5pt solid #ddd!important;font-size:7.5pt!important}td.amt{text-align:right!important;font-weight:700!important}tfoot tr td{background:#061240!important;color:#fff!important;font-weight:700!important;font-size:8pt!important;padding:4pt 5pt!important}.badge{background:#eee!important;color:#000!important;padding:1pt 4pt!important;font-size:7pt!important}}</style>
 </head>
 <body>
@@ -37,9 +36,6 @@
     <label class="login-label">Password</label>
     <input class="login-input" type="password" id="loginPass" placeholder="Enter password" autocomplete="current-password">
     <button class="login-btn" onclick="doLogin()">Sign In</button>
-    <div style="text-align:center;margin-top:14px">
-      <a onclick="showForgotPw()" style="font-size:12px;color:var(--royal-light);cursor:pointer;text-decoration:underline;font-weight:600">Forgot Password?</a>
-    </div>
   </div>
 </div>
 <div id="app">
@@ -270,30 +266,6 @@
     <div class="card-header"><div class="card-title">User Management</div><button class="btn btn-primary" onclick="openModal('modalAddUser')">+ Add User</button></div>
     <div class="tbl-wrap"><table id="userTable"><thead><tr><th>Login Name</th><th>Full Name</th><th>Position</th><th>Email</th><th>System Access</th><th>Upload Access</th><th>Admin</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
   </div>
-  <div class="card" style="border-top-color:#7c3aed">
-    <div class="card-header">
-      <div class="card-title" style="color:#7c3aed">&#128140; Email OTP Settings (EmailJS)</div>
-      <a href="https://www.emailjs.com" target="_blank" class="btn btn-outline btn-sm" style="border-color:#7c3aed;color:#7c3aed">Get Free Account</a>
-    </div>
-    <div style="background:#fdf4ff;border-radius:8px;padding:14px 16px;margin-bottom:16px;border-left:4px solid #7c3aed;font-size:12.5px;line-height:1.9;color:#444">
-      <b style="color:#7c3aed">How to set up EmailJS (free - 200 emails/month):</b><br>
-      1. Go to <b>emailjs.com</b> and create a free account<br>
-      2. Add an <b>Email Service</b> (Gmail, Outlook, Yahoo) under Email Services<br>
-      3. Create an <b>Email Template</b> with variables: <code>{{to_name}}</code>, <code>{{otp_code}}</code>, <code>{{message}}</code><br>
-      4. Copy your <b>Service ID</b>, <b>Template ID</b>, and <b>Public Key</b><br>
-      5. Paste them below and click Save Settings
-    </div>
-    <div class="form-grid">
-      <div class="form-group"><label class="fl">EmailJS Service ID</label><input class="fi" id="ejs_service" placeholder="e.g. service_abc123"></div>
-      <div class="form-group"><label class="fl">EmailJS Template ID</label><input class="fi" id="ejs_template" placeholder="e.g. template_xyz789"></div>
-      <div class="form-group full"><label class="fl">EmailJS Public Key</label><input class="fi" id="ejs_pubkey" placeholder="e.g. abcDEFghiJKLmno123"></div>
-    </div>
-    <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
-      <button class="btn btn-primary" style="background:#7c3aed;border-color:#7c3aed" onclick="saveEmailJSSettings()">&#128190; Save Settings</button>
-      <button class="btn btn-outline" style="border-color:#7c3aed;color:#7c3aed" onclick="testEmailOTP()">&#9993;&#65039; Send Test OTP</button>
-      <span id="ejsStatus" style="font-size:12px;color:var(--gray-400)"></span>
-    </div>
-  </div>
 </div>
 
     </div>
@@ -354,7 +326,6 @@
       <div class="form-group"><label class="fl">Password</label><input class="fi" type="password" id="uPass" placeholder="Leave blank to keep"></div>
       <div class="form-group full"><label class="fl">Email</label><input class="fi" type="email" id="uEmail"></div>
       <div class="form-group full"><label class="fl">Position</label><input class="fi" id="uPosition" placeholder="e.g. Branch Manager"></div>
-      <div class="form-group full"><label class="fl">Mobile Number <span style="font-size:10px;color:var(--gray-400);font-weight:400">(for OTP - format: 09XXXXXXXXX)</span></label><input class="fi" id="uMobile" placeholder="09XXXXXXXXX" maxlength="11"></div>
       <div class="form-group full">
         <label class="fl">System Access</label>
         <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;padding:12px 14px;background:var(--gray-50);border:1.5px solid var(--gray-200);border-radius:7px">
@@ -441,54 +412,6 @@
     </div>
   </div>
 </div>
-
-
-<!-- OTP MODAL STEP 1: Enter Login Name -->
-<div class="modal-bg" id="modalForgotPw" style="z-index:10000">
-  <div class="modal" style="max-width:400px;text-align:center">
-    <div class="modal-header"><div class="modal-title">&#128241; Forgot Password</div><button class="modal-close" onclick="closeModal('modalForgotPw')">&#10005;</button></div>
-    <div style="font-size:13px;color:var(--gray-600);margin-bottom:18px;line-height:1.7">Enter your login name to receive a<br><b>6-digit OTP on your registered email address.</b></div>
-    <div class="form-group"><label class="fl">Login Name</label><input class="fi" id="otpLoginName" placeholder="Enter your login name" oninput="this.value=this.value.trim()"></div>
-    <div class="alert alert-danger" id="forgotAlert"></div>
-    <div style="display:flex;gap:8px;justify-content:center;margin-top:8px">
-      <button class="btn btn-outline" onclick="closeModal('modalForgotPw')">Cancel</button>
-      <button class="btn btn-primary" onclick="sendOTP()">&#128140; Send OTP via Email</button>
-    </div>
-  </div>
-</div>
-
-<!-- OTP MODAL STEP 2: Enter OTP -->
-<div class="modal-bg" id="modalVerifyOTP" style="z-index:10000">
-  <div class="modal" style="max-width:400px;text-align:center">
-    <div class="modal-header"><div class="modal-title">&#128272; Enter OTP</div><button class="modal-close" onclick="closeModal('modalVerifyOTP')">&#10005;</button></div>
-    <div style="font-size:13px;color:var(--gray-600);margin-bottom:6px;line-height:1.7" id="otpSentMsg">OTP sent to your email address.</div>
-    <div style="font-size:11px;color:var(--gray-400);margin-bottom:18px" id="otpExpiry"></div>
-    <div class="form-group">
-      <label class="fl">6-Digit OTP</label>
-      <input class="fi" id="otpCode" placeholder="Enter 6-digit OTP" maxlength="6" style="text-align:center;font-size:22px;font-weight:800;letter-spacing:8px" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-    </div>
-    <div class="alert alert-danger" id="otpAlert"></div>
-    <div style="display:flex;gap:8px;justify-content:center;margin-top:8px;flex-wrap:wrap">
-      <button class="btn btn-outline" onclick="resendOTP()" id="btnResendOTP">&#8635; Resend</button>
-      <button class="btn btn-primary" onclick="verifyOTP()">&#9989; Verify OTP</button>
-    </div>
-    <div style="margin-top:10px;font-size:11px;color:var(--gray-400)" id="otpCountdown"></div>
-  </div>
-</div>
-
-<!-- OTP MODAL STEP 3: New Password -->
-<div class="modal-bg" id="modalNewPassword" style="z-index:10000">
-  <div class="modal" style="max-width:400px;text-align:center">
-    <div class="modal-header"><div class="modal-title">&#128274; Set New Password</div><button class="modal-close" onclick="closeModal('modalNewPassword')">&#10005;</button></div>
-    <div style="font-size:13px;color:var(--gray-600);margin-bottom:18px">OTP verified! Set your new password.</div>
-    <div class="form-group"><label class="fl">New Password</label><input class="fi" type="password" id="newPwField" placeholder="Minimum 6 characters"></div>
-    <div class="form-group"><label class="fl">Confirm Password</label><input class="fi" type="password" id="newPwConfirm" placeholder="Re-enter new password"></div>
-    <div class="alert alert-danger" id="newPwAlert"></div>
-    <div style="display:flex;gap:8px;justify-content:center;margin-top:8px">
-      <button class="btn btn-primary" style="width:100%" onclick="saveNewPassword()">&#128274; Save New Password</button>
-    </div>
-  </div>
-</div>
 <iframe id="printFrame" style="display:none;position:fixed;width:0;height:0;border:none" tabindex="-1"></iframe>
 
 <script>var _cache={};
@@ -514,8 +437,6 @@ async function dbCached(table,query,ttlMs){
   cacheSet(key,result,ttlMs||30000);
   return result;
 }
-
-
 
 var SB_URL='https://bbpurrnroinfncwtyqsn.supabase.co',SB_KEY='sb_publishable_k1ckt5dZvdYVAuALsEylSw_jYSBzPDs';
 async function sbFetch(method,table,body,query){query=query||'';var url=SB_URL+'/rest/v1/'+table+query;var headers={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};if(method!=='GET')headers['Prefer']='return=representation';var opts={method:method,headers:headers};if(body)opts.body=JSON.stringify(body);var res=await fetch(url,opts);if(!res.ok){var msg='HTTP '+res.status;try{var j=await res.json();msg=j.message||j.hint||msg;}catch(e){}throw new Error(msg);}var text=await res.text();return text?JSON.parse(text):[];}
@@ -612,7 +533,7 @@ async function nav(page,el){
 }
 function setDate(){updateClock();setInterval(updateClock,1000);}
 function updateClock(){var now=new Date(),ce=document.getElementById('liveClock'),de=document.getElementById('liveDate');if(ce)ce.textContent=now.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});if(de)de.textContent=now.toLocaleDateString('en-PH',{weekday:'long',year:'numeric',month:'long',day:'numeric'});}
-function openModal(id){editKey[id]=null;if(id==='modalAddBranch'){document.getElementById('branchModalTitle').textContent='Add Branch';['bCode','bName','bAddr'].forEach(function(x){document.getElementById(x).value='';});document.getElementById('bStatus').value='Active';}if(id==='modalAddMOC'){document.getElementById('mocCode').value='';document.getElementById('mocDesc').value='';}if(id==='modalAddUser'){document.getElementById('userModalTitle').textContent='Add User';['uLast','uFirst','uMiddle','uExt','uLogin','uPass','uEmail','uPosition','uMobile'].forEach(function(x){document.getElementById(x).value='';});setAccessCheckboxes(['All']);document.getElementById('uUploadAccess').value='All Branches';document.getElementById('uAdmin').value='0';}document.getElementById(id).classList.add('open');}
+function openModal(id){editKey[id]=null;if(id==='modalAddBranch'){document.getElementById('branchModalTitle').textContent='Add Branch';['bCode','bName','bAddr'].forEach(function(x){document.getElementById(x).value='';});document.getElementById('bStatus').value='Active';}if(id==='modalAddMOC'){document.getElementById('mocCode').value='';document.getElementById('mocDesc').value='';}if(id==='modalAddUser'){document.getElementById('userModalTitle').textContent='Add User';['uLast','uFirst','uMiddle','uExt','uLogin','uPass','uEmail','uPosition'].forEach(function(x){document.getElementById(x).value='';});setAccessCheckboxes(['All']);document.getElementById('uUploadAccess').value='All Branches';document.getElementById('uAdmin').value='0';}document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 
 async function renderDashboard(){
@@ -994,21 +915,12 @@ async function editMOC(code){var m=cachedMOC.find(function(x){return x.moc===cod
 async function saveMOC(){var obj={moc:document.getElementById('mocCode').value.trim(),description:document.getElementById('mocDesc').value.trim()};if(!obj.moc){alert('MOC Code required.');return;}loading(true,'Saving...');try{if(editKey['modalAddMOC'])await db.update('moc',{description:obj.description},'?moc=eq.'+encodeURIComponent(obj.moc));else await db.insert('moc',obj);cachedMOC=[];cacheClear('moc');closeModal('modalAddMOC');await loadMOC();toast('MOC saved!','success');}catch(e){alert('Save error: '+e.message);}loading(false);}
 
 async function loadUsers(){
-  // Populate EmailJS settings fields if already configured
-  if(_emailjsService){
-    var s=document.getElementById('ejs_service');
-    var t=document.getElementById('ejs_template');
-    var k=document.getElementById('ejs_pubkey');
-    if(s)s.value=_emailjsService;
-    if(t)t.value=_emailjsTemplate;
-    if(k)k.value=_emailjsKey;
-  }loading(true,'Loading users...');showSkeleton('#userTable tbody',8,5);try{cachedUsersAll=await db.select('users','?order=lastname.asc');var tbody=document.querySelector('#userTable tbody');tbody.innerHTML='';cachedUsersAll.forEach(function(u){var uB=u.uploadaccess==='None'?'badge-danger':u.uploadaccess==='Own Branch'?'badge-warning':'badge-success';tbody.innerHTML+='<tr><td><b>'+sanitize(u.loginname)+'</b></td><td>'+sanitize(u.lastname)+', '+sanitize(u.firstname)+' '+(u.middlename||'')+' '+(u.extname||'')+'</td><td><span style="font-size:12px;color:var(--royal-dark);font-weight:600">'+(u.position||'--')+'</span></td><td>'+(u.email||'--')+'</td><td>'+(u.mobile?'<span class="badge badge-success">'+sanitize(u.mobile)+'</span>':'<span class="badge badge-danger">No mobile</span>')+'</td><td style="max-width:200px">'+renderAccessBadges(u.systemaccess)+'</td><td><span class="badge '+uB+'">'+(u.uploadaccess||'All Branches')+'</span></td><td><span class="badge '+(u.administrator?'badge-warning':'badge-success')+'">'+(u.administrator?'Admin':'Staff')+'</span></td><td style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-outline btn-sm" onclick="editUser(\''+u.loginname.replace(/'/g,"\\'")+'\')">Edit</button><button class="btn btn-primary btn-sm" onclick="openResetPw(\''+u.loginname.replace(/'/g,"\\'")+'\')">Reset PW</button></td></tr>';});}catch(e){alert('Error: '+e.message);}loading(false);}
-async function editUser(ln){var u=cachedUsersAll.find(function(x){return x.loginname===ln;});if(!u)return;editKey['modalAddUser']=ln;document.getElementById('userModalTitle').textContent='Edit User';document.getElementById('uLast').value=u.lastname;document.getElementById('uFirst').value=u.firstname;document.getElementById('uMiddle').value=u.middlename||'';document.getElementById('uExt').value=u.extname||'';document.getElementById('uLogin').value=u.loginname;document.getElementById('uPass').value='';document.getElementById('uEmail').value=u.email||'';document.getElementById('uPosition').value=u.position||'';
-  document.getElementById('uMobile').value=u.mobile||'';setAccessCheckboxes((u.systemaccess||'All').split(',').map(function(s){return s.trim();}));document.getElementById('uUploadAccess').value=u.uploadaccess||'All Branches';document.getElementById('uAdmin').value=String(u.administrator);document.getElementById('modalAddUser').classList.add('open');}
+loading(true,'Loading users...');showSkeleton('#userTable tbody',8,5);try{cachedUsersAll=await db.select('users','?order=lastname.asc');var tbody=document.querySelector('#userTable tbody');tbody.innerHTML='';cachedUsersAll.forEach(function(u){var uB=u.uploadaccess==='None'?'badge-danger':u.uploadaccess==='Own Branch'?'badge-warning':'badge-success';tbody.innerHTML+='<tr><td><b>'+sanitize(u.loginname)+'</b></td><td>'+sanitize(u.lastname)+', '+sanitize(u.firstname)+' '+(u.middlename||'')+' '+(u.extname||'')+'</td><td><span style="font-size:12px;color:var(--royal-dark);font-weight:600">'+(u.position||'--')+'</span></td><td>'+(u.email||'--')+'</td><td>'+(u.mobile?'<span class="badge badge-success">'+sanitize(u.mobile)+'</span>':'<span class="badge badge-danger">No mobile</span>')+'</td><td style="max-width:200px">'+renderAccessBadges(u.systemaccess)+'</td><td><span class="badge '+uB+'">'+(u.uploadaccess||'All Branches')+'</span></td><td><span class="badge '+(u.administrator?'badge-warning':'badge-success')+'">'+(u.administrator?'Admin':'Staff')+'</span></td><td style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-outline btn-sm" onclick="editUser(\''+u.loginname.replace(/'/g,"\\'")+'\')">Edit</button><button class="btn btn-primary btn-sm" onclick="openResetPw(\''+u.loginname.replace(/'/g,"\\'")+'\')">Reset PW</button></td></tr>';});}catch(e){alert('Error: '+e.message);}loading(false);}
+async function editUser(ln){var u=cachedUsersAll.find(function(x){return x.loginname===ln;});if(!u)return;editKey['modalAddUser']=ln;document.getElementById('userModalTitle').textContent='Edit User';document.getElementById('uLast').value=u.lastname;document.getElementById('uFirst').value=u.firstname;document.getElementById('uMiddle').value=u.middlename||'';document.getElementById('uExt').value=u.extname||'';document.getElementById('uLogin').value=u.loginname;document.getElementById('uPass').value='';document.getElementById('uEmail').value=u.email||'';document.getElementById('uPosition').value=u.position||'';setAccessCheckboxes((u.systemaccess||'All').split(',').map(function(s){return s.trim();}));document.getElementById('uUploadAccess').value=u.uploadaccess||'All Branches';document.getElementById('uAdmin').value=String(u.administrator);document.getElementById('modalAddUser').classList.add('open');}
 async function saveUser(){
   var isEdit=editKey['modalAddUser'],pw=document.getElementById('uPass').value;
   if(pw&&pw.length<6){alert('Password must be at least 6 characters.');return;}
-  var obj={lastname:document.getElementById('uLast').value.trim(),firstname:document.getElementById('uFirst').value.trim(),middlename:document.getElementById('uMiddle').value.trim(),extname:document.getElementById('uExt').value.trim(),loginname:document.getElementById('uLogin').value.trim(),email:document.getElementById('uEmail').value.trim(),position:document.getElementById('uPosition').value.trim(),mobile:document.getElementById('uMobile').value.trim(),systemaccess:getAccessValue(),uploadaccess:document.getElementById('uUploadAccess').value,administrator:parseInt(document.getElementById('uAdmin').value)};
+  var obj={lastname:document.getElementById('uLast').value.trim(),firstname:document.getElementById('uFirst').value.trim(),middlename:document.getElementById('uMiddle').value.trim(),extname:document.getElementById('uExt').value.trim(),loginname:document.getElementById('uLogin').value.trim(),email:document.getElementById('uEmail').value.trim(),position:document.getElementById('uPosition').value.trim(),systemaccess:getAccessValue(),uploadaccess:document.getElementById('uUploadAccess').value,administrator:parseInt(document.getElementById('uAdmin').value)};
   if(pw) obj.password=await hashPassword(pw);
   if(!obj.loginname||!obj.lastname){alert('Login Name and Last Name required.');return;}
   loading(true,'Saving...');
@@ -1042,224 +954,6 @@ document.addEventListener('DOMContentLoaded',function(){
 });
 function setDate(){updateClock();setInterval(updateClock,1000);}
 function updateClock(){var now=new Date(),ce=document.getElementById('liveClock'),de=document.getElementById('liveDate');if(ce)ce.textContent=now.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});if(de)de.textContent=now.toLocaleDateString('en-PH',{weekday:'long',year:'numeric',month:'long',day:'numeric'});}
-
-
-//  OTP / Forgot Password System (Semaphore SMS) 
-var _otpUser=null,_otpGenerated='',_otpExpiry=null,_otpCountdownTimer=null;
-// EmailJS Configuration - set these in User Management > Email Settings
-// Get free account at emailjs.com (200 emails/month free)
-var _emailjsService  = '';
-var _emailjsTemplate = '';
-var _emailjsKey      = '';
-
-function showForgotPw(){
-  document.getElementById('otpLoginName').value='';
-  document.getElementById('forgotAlert').style.display='none';
-  document.getElementById('modalForgotPw').classList.add('open');
-  setTimeout(function(){document.getElementById('otpLoginName').focus();},200);
-}
-
-async function sendOTP(){
-  var loginName=document.getElementById('otpLoginName').value.trim();
-  var alertEl=document.getElementById('forgotAlert');
-  alertEl.style.display='none';
-  if(!loginName){alertEl.textContent='Please enter your login name.';alertEl.style.display='block';return;}
-  loading(true,'Sending OTP...','Looking up your account...');
-  try{
-    var rows=await db.select('users','?loginname=eq.'+encodeURIComponent(loginName)+'&select=loginname,email,firstname,lastname');
-    if(!rows.length){alertEl.textContent='Login name not found.';alertEl.style.display='block';loading(false);return;}
-    var user=rows[0];
-    if(!user.email||user.email.trim()===''){alertEl.textContent='No email address registered for this account. Please contact your administrator.';alertEl.style.display='block';loading(false);return;}
-    _otpUser=user;
-    _otpGenerated=String(Math.floor(100000+Math.random()*900000));
-    _otpExpiry=new Date(Date.now()+10*60*1000);
-    await db.update('users',{otp:_otpGenerated,otp_expiry:_otpExpiry.toISOString()},'?loginname=eq.'+encodeURIComponent(loginName));
-    await sendEmailOTP(user.email,_otpGenerated,user.firstname,user.lastname);
-    closeModal('modalForgotPw');
-    var maskedEmail=maskEmail(user.email);
-    document.getElementById('otpSentMsg').textContent='OTP sent to '+maskedEmail+'. Check your email inbox.';
-    document.getElementById('otpCode').value='';
-    document.getElementById('otpAlert').style.display='none';
-    startOTPCountdown();
-    document.getElementById('modalVerifyOTP').classList.add('open');
-    setTimeout(function(){document.getElementById('otpCode').focus();},200);
-  }catch(e){alertEl.textContent='Error: '+e.message;alertEl.style.display='block';}
-  loading(false);
-}
-
-
-
-function saveEmailJSSettings(){
-  var svc = document.getElementById('ejs_service').value.trim();
-  var tpl = document.getElementById('ejs_template').value.trim();
-  var key = document.getElementById('ejs_pubkey').value.trim();
-  var st  = document.getElementById('ejsStatus');
-  if(!svc||!tpl||!key){st.textContent='Please fill in all 3 fields.';st.style.color='var(--danger)';return;}
-  _emailjsService  = svc;
-  _emailjsTemplate = tpl;
-  _emailjsKey      = key;
-  emailjs.init(key);
-  st.textContent='Settings saved for this session!';
-  st.style.color='var(--success)';
-  toast('EmailJS settings saved!','success');
-}
-
-async function testEmailOTP(){
-  var st=document.getElementById('ejsStatus');
-  if(!_emailjsService||!_emailjsTemplate||!_emailjsKey){
-    st.textContent='Save settings first!';
-    st.style.color='var(--danger)';
-    return;
-  }
-  if(!currentUser||!currentUser.email){
-    alert('Your account has no email address. Add one in User Management first.');
-    return;
-  }
-  loading(true,'Sending test OTP...','Check your email inbox...');
-  try{
-    var testOtp=String(Math.floor(100000+Math.random()*900000));
-    await sendEmailOTP(currentUser.email,testOtp,currentUser.firstname,currentUser.lastname);
-    st.textContent='Test OTP sent to '+currentUser.email+'!';
-    st.style.color='var(--success)';
-    toast('Test OTP sent to '+currentUser.email,'success',5000);
-  }catch(e){
-    st.textContent='Error: '+e.message;
-    st.style.color='var(--danger)';
-    alert('Email test failed: '+e.message);
-  }
-  loading(false);
-}
-
-function maskEmail(email){
-  if(!email)return '***@***.***';
-  var parts=email.split('@');
-  if(parts.length<2)return email;
-  var local=parts[0];
-  var domain=parts[1];
-  var masked=local.length<=2?local:local[0]+'*'.repeat(local.length-2)+local[local.length-1];
-  return masked+'@'+domain;
-}
-
-async function sendEmailOTP(email,otp,firstname,lastname){
-  var name=(firstname||'')+' '+(lastname||'');
-  var body=
-    'Dear '+name.trim()+',\n\n'+
-    'You requested a password reset for your NextBank-FastCash account.\n\n'+
-    'Your One-Time Password (OTP) is:\n\n'+
-    '        '+otp+'\n\n'+
-    'This OTP is valid for 10 minutes.\n'+
-    'Do NOT share this OTP with anyone.\n\n'+
-    'If you did not request this, please contact your administrator immediately.\n\n'+
-    'NextBank-FastCash Change Claiming System\n'+
-    'GSIS - PVAO - SSS';
-
-  // Use EmailJS to send email from browser
-  // EmailJS free tier: 200 emails/month - perfect for internal use
-  var serviceId  = _emailjsService  || '';
-  var templateId = _emailjsTemplate || '';
-  var publicKey  = _emailjsKey      || '';
-
-  if(!serviceId||!templateId||!publicKey){
-    // Fallback: show OTP in alert if EmailJS not configured
-    alert('EMAIL NOT CONFIGURED YET.\n\nFor now, your OTP is: '+otp+'\n\nPlease configure EmailJS. See instructions in User Management.');
-    return;
-  }
-
-  await emailjs.send(serviceId, templateId, {
-    to_email:  email,
-    to_name:   name.trim(),
-    otp_code:  otp,
-    message:   body
-  }, publicKey);
-}
-
-function startOTPCountdown(){
-  clearInterval(_otpCountdownTimer);
-  var cdEl=document.getElementById('otpCountdown');
-  var expiryEl=document.getElementById('otpExpiry');
-  _otpCountdownTimer=setInterval(function(){
-    var remaining=Math.max(0,Math.floor((_otpExpiry-Date.now())/1000));
-    var mins=Math.floor(remaining/60),secs=remaining%60;
-    var txt=mins+'m '+String(secs).padStart(2,'0')+'s remaining';
-    if(cdEl)cdEl.textContent=remaining>0?txt:'OTP expired. Please click Resend.';
-    if(expiryEl)expiryEl.textContent=remaining>0?'Expires in: '+txt:'Expired';
-    if(remaining<=0){clearInterval(_otpCountdownTimer);document.getElementById('btnResendOTP').style.background='var(--gold)';}
-  },1000);
-}
-
-async function verifyOTP(){
-  var code=document.getElementById('otpCode').value.trim();
-  var alertEl=document.getElementById('otpAlert');
-  alertEl.style.display='none';
-  if(!code||code.length!==6){alertEl.textContent='Enter the 6-digit OTP.';alertEl.style.display='block';return;}
-  if(!_otpUser){alertEl.textContent='Session expired. Please start again.';alertEl.style.display='block';return;}
-  if(Date.now()>_otpExpiry){alertEl.textContent='OTP has expired. Please request a new one.';alertEl.style.display='block';return;}
-  loading(true,'Verifying OTP...');
-  try{
-    // Verify against database
-    var rows=await db.select('users','?loginname=eq.'+encodeURIComponent(_otpUser.loginname)+'&select=otp,otp_expiry');
-    if(!rows.length||rows[0].otp!==code){alertEl.textContent='Invalid OTP. Please check your SMS and try again.';alertEl.style.display='block';loading(false);return;}
-    var dbExpiry=new Date(rows[0].otp_expiry);
-    if(Date.now()>dbExpiry){alertEl.textContent='OTP has expired. Please request a new one.';alertEl.style.display='block';loading(false);return;}
-    // OTP verified - clear it from DB
-    await db.update('users',{otp:'',otp_expiry:null},'?loginname=eq.'+encodeURIComponent(_otpUser.loginname));
-    clearInterval(_otpCountdownTimer);
-    closeModal('modalVerifyOTP');
-    // Show new password modal
-    document.getElementById('newPwField').value='';
-    document.getElementById('newPwConfirm').value='';
-    document.getElementById('newPwAlert').style.display='none';
-    document.getElementById('modalNewPassword').classList.add('open');
-    setTimeout(function(){document.getElementById('newPwField').focus();},200);
-  }catch(e){alertEl.textContent='Verification error: '+e.message;alertEl.style.display='block';}
-  loading(false);
-}
-
-async function resendOTP(){
-  if(!_otpUser){return;}
-  loading(true,'Resending OTP...');
-  try{
-    _otpGenerated=String(Math.floor(100000+Math.random()*900000));
-    _otpExpiry=new Date(Date.now()+5*60*1000);
-    await db.update('users',{otp:_otpGenerated,otp_expiry:_otpExpiry.toISOString()},'?loginname=eq.'+encodeURIComponent(_otpUser.loginname));
-    await sendEmailOTP(_otpUser.email,_otpGenerated,_otpUser.firstname,_otpUser.lastname);
-    document.getElementById('otpCode').value='';
-    document.getElementById('otpAlert').style.display='none';
-    startOTPCountdown();
-    toast('New OTP sent to your mobile!','success',4000);
-  }catch(e){alert('Resend error: '+e.message);}
-  loading(false);
-}
-
-async function saveNewPassword(){
-  var p1=document.getElementById('newPwField').value;
-  var p2=document.getElementById('newPwConfirm').value;
-  var alertEl=document.getElementById('newPwAlert');
-  alertEl.style.display='none';
-  if(!p1){alertEl.textContent='Enter a new password.';alertEl.style.display='block';return;}
-  if(p1.length<6){alertEl.textContent='Password must be at least 6 characters.';alertEl.style.display='block';return;}
-  if(p1!==p2){alertEl.textContent='Passwords do not match.';alertEl.style.display='block';return;}
-  if(!_otpUser){alertEl.textContent='Session expired. Please start over.';alertEl.style.display='block';return;}
-  loading(true,'Saving new password...');
-  try{
-    var hashed=await hashPassword(p1);
-    await db.update('users',{password:hashed},'?loginname=eq.'+encodeURIComponent(_otpUser.loginname));
-    closeModal('modalNewPassword');
-    _otpUser=null;_otpGenerated='';_otpExpiry=null;
-    // Show success on login page
-    var errEl=document.getElementById('loginErr');
-    if(errEl){
-      errEl.textContent='Password reset successful! Please login with your new password.';
-      errEl.style.display='block';
-      errEl.style.background='var(--success-bg)';
-      errEl.style.color='var(--success)';
-      errEl.style.borderLeft='4px solid var(--success)';
-    }
-    document.getElementById('loginUser').value=_otpUser?_otpUser.loginname:'';
-    toast('Password reset successful!','success',5000);
-  }catch(e){alertEl.textContent='Save error: '+e.message;alertEl.style.display='block';}
-  loading(false);
-}
 
 </script>
 </body>
