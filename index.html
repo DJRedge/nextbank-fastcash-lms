@@ -168,7 +168,7 @@
 
 <!-- REPORTS -->
 <div class="page" id="page-reports">
-  <div style="margin-bottom:16px;text-align:center"><img id="reportBannerEl" style="max-width:400px;width:100%;height:auto;border-radius:8px;box-shadow:var(--shadow)" alt="FastCash Finance Company Inc."></div>
+  
   <div class="card">
     <div class="card-header">
       <div class="card-title">Change Claimed Report</div>
@@ -201,12 +201,26 @@
   </div>
   <div class="card" id="rptTableCard" style="display:none">
     <div class="card-header"><div class="card-title" id="rptTableTitle">Report</div><div style="font-size:12px;color:var(--gray-400)" id="rptGeneratedAt"></div></div>
-    <div id="rptPrintHeader" style="display:none;text-align:center;margin-bottom:18px">
-      <div style="display:flex;justify-content:center;margin-bottom:12px"><img id="printBannerEl" style="max-width:380px;width:100%;height:auto;border-radius:6px" alt="FastCash"></div>
-      <div style="font-size:13px;color:var(--gray-600);margin-top:4px">GSIS - PVAO - SSS -- Change Claiming System</div>
-      <div style="font-size:15px;font-weight:700;color:var(--royal-dark);margin-top:10px" id="rptPrintTitle"></div>
-      <div style="font-size:12px;color:var(--gray-400);margin-top:4px" id="rptPrintParams"></div>
-      <hr style="margin:12px 0;border:none;border-top:2px solid var(--gold)">
+    <div id="rptPrintHeader" style="display:none;margin-bottom:12px">
+      <table style="width:100%;border-collapse:collapse;border-bottom:3px solid #f5c518;padding-bottom:8px;margin-bottom:8px">
+        <tr>
+          <td style="width:80px;vertical-align:middle">
+            <img id="printLogoEl" style="width:72px;height:72px;object-fit:contain;border-radius:6px" alt="FC">
+          </td>
+          <td style="vertical-align:middle;padding-left:14px">
+            <div style="font-size:18px;font-weight:800;color:#061240;font-family:serif">FastCash Finance Company Inc.</div>
+            <div style="font-size:11px;color:#555;margin-top:2px">GSIS - PVAO - SSS -- Change Claiming System</div>
+          </td>
+          <td style="text-align:right;vertical-align:middle">
+            <div style="font-size:10px;color:#888" id="rptPrintGenerated"></div>
+          </td>
+        </tr>
+      </table>
+      <div style="text-align:center;margin-bottom:6px">
+        <div style="font-size:15px;font-weight:800;color:#061240" id="rptPrintTitle"></div>
+        <div style="font-size:11px;color:#777;margin-top:3px" id="rptPrintParams"></div>
+      </div>
+      <hr style="border:none;border-top:1px solid #ddd;margin-bottom:8px">
     </div>
     <div class="tbl-wrap">
       <table id="rptTable">
@@ -489,8 +503,8 @@ async function doLogin(){
     document.getElementById('dbStatus').textContent='Cloud Connected';document.getElementById('dbStatus').className='db-status db-online';
     var li=document.getElementById('loginLogoEl'),limg=document.getElementById('IMG_LOGO');
     if(li&&limg)li.src=limg.src;
-    var rb=document.getElementById('reportBannerEl'),pb=document.getElementById('printBannerEl'),bimg=document.getElementById('IMG_BANNER');
-    if(rb&&bimg)rb.src=bimg.src;if(pb&&bimg)pb.src=bimg.src;
+    var pl=document.getElementById('printLogoEl'),limg=document.getElementById('IMG_LOGO');
+    if(pl&&limg)pl.src=limg.src;
     setDate();applyAccessControl();forceNavDashboard();startSessionTimer();
     await renderDashboard();
   }catch(e){errEl.textContent='Connection error: '+e.message;errEl.style.display='block';}
@@ -872,6 +886,7 @@ function renderReportTable(groupBy,df,dt,branch,moc){
   document.getElementById('rptSummary').style.display='grid';document.getElementById('rptTableCard').style.display='block';document.getElementById('rptEmpty').style.display='none';
   document.getElementById('btnRptExcel').style.display='inline-flex';
   document.getElementById('rptTableTitle').textContent='Change Claimed Report';document.getElementById('rptGeneratedAt').textContent='Generated: '+nowDT();
+  var pgen=document.getElementById('rptPrintGenerated');if(pgen)pgen.textContent='Generated: '+nowDT();
   document.getElementById('rptPrintTitle').textContent='Change Claimed Report';document.getElementById('rptPrintParams').textContent='Period: '+df+' to '+dt+' | Branch: '+(branch||'All')+' | MOC: '+(moc||'All')+' | '+rows.length+' record(s)';
   ['date','arnumber','clientcode','branchcode','moc','amount'].forEach(function(col){var el=document.getElementById('sort-'+col);if(!el)return;var active=rptCurrentSort.col===col;el.textContent=active?(rptCurrentSort.order==='asc'?' ^':' v'):'';el.style.color=active?'var(--gold)':'';});
   var tbody=document.getElementById('rptTableBody'),tfoot=document.getElementById('rptTableFoot');tbody.innerHTML='';tfoot.innerHTML='';
