@@ -200,7 +200,7 @@
     </div>
   </div>
   <div class="card" id="rptTableCard" style="display:none">
-    <div class="card-header"><div class="card-title" id="rptTableTitle">Report</div><div style="font-size:12px;color:var(--gray-400)" id="rptGeneratedAt"></div></div>
+    <div class="card-header" style="justify-content:flex-end"><div style="font-size:12px;color:var(--gray-400)" id="rptGeneratedAt"></div></div>
     <div id="rptPrintHeader" style="display:none;margin-bottom:12px">
       <table style="width:100%;border-collapse:collapse;border-bottom:3px solid #f5c518;padding-bottom:8px;margin-bottom:8px">
         <tr>
@@ -462,6 +462,7 @@ function today(){return new Date().toISOString().slice(0,10);}
 function nowDT(){return new Date().toLocaleString('en-PH',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});}
 function pad(n,l){return String(n).padStart(l||4,'0');}
 function fmtDate(d){if(!d)return '--';var dt=new Date(d+'T00:00:00');return dt.toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'});}
+function fmtDateLong(d){if(!d)return '--';var dt=new Date(d+'T00:00:00');return dt.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});}
 function fmtDateExcel(d){if(!d)return '';var dt=new Date(d+'T00:00:00');var mm=String(dt.getMonth()+1).padStart(2,'0');var dd=String(dt.getDate()).padStart(2,'0');return mm+'/'+dd+'/'+dt.getFullYear();}
 function loading(show,msg,sub,progress){document.getElementById('loadingOverlay').style.display=show?'flex':'none';if(msg)document.getElementById('loadingMsg').textContent=msg;var s=document.getElementById('loadingSub');if(s)s.textContent=sub||'';var pb=document.getElementById('loadProgress'),pf=document.getElementById('loadProgressFill');if(pb&&pf){if(progress!==undefined){pb.style.display='block';pf.style.width=Math.min(100,progress)+'%';}else{pb.style.display='none';pf.style.width='0';}}}
 function toast(msg,type,dur){type=type||'success';dur=dur||3000;var el=document.getElementById('toastMsg'),tx=document.getElementById('toastText');if(!el)return;tx.textContent=msg;el.style.borderLeftColor=type==='error'?'#f87171':type==='warning'?'#fbbf24':'var(--gold)';el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(function(){el.classList.remove('show');},dur);}
@@ -885,9 +886,9 @@ function renderReportTable(groupBy,df,dt,branch,moc){
   if(!rows.length){document.getElementById('rptSummary').style.display='none';document.getElementById('rptTableCard').style.display='none';document.getElementById('rptEmpty').style.display='block';return;}
   document.getElementById('rptSummary').style.display='grid';document.getElementById('rptTableCard').style.display='block';document.getElementById('rptEmpty').style.display='none';
   document.getElementById('btnRptExcel').style.display='inline-flex';
-  document.getElementById('rptTableTitle').textContent='Change Claimed Report';document.getElementById('rptGeneratedAt').textContent='Generated: '+nowDT();
+  document.getElementById('rptGeneratedAt').textContent='Generated: '+nowDT();
   var pgen=document.getElementById('rptPrintGenerated');if(pgen)pgen.textContent='Generated: '+nowDT();
-  document.getElementById('rptPrintTitle').textContent='Change Claimed Report';document.getElementById('rptPrintParams').textContent='Period: '+df+' to '+dt+' | Branch: '+(branch||'All')+' | MOC: '+(moc||'All')+' | '+rows.length+' record(s)';
+  document.getElementById('rptPrintTitle').textContent='Change Claimed Report';document.getElementById('rptPrintParams').textContent='Period: '+fmtDateLong(df)+' to '+fmtDateLong(dt)+' | Branch: '+(branch||'All')+' | MOC: '+(moc||'All')+' | '+rows.length+' record(s)';
   ['date','arnumber','clientcode','branchcode','moc','amount'].forEach(function(col){var el=document.getElementById('sort-'+col);if(!el)return;var active=rptCurrentSort.col===col;el.textContent=active?(rptCurrentSort.order==='asc'?' ^':' v'):'';el.style.color=active?'var(--gold)':'';});
   var tbody=document.getElementById('rptTableBody'),tfoot=document.getElementById('rptTableFoot');tbody.innerHTML='';tfoot.innerHTML='';
   var gEl=groupBy||document.getElementById('rptGroupBy').value;
