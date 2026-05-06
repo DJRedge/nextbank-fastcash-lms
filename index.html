@@ -184,10 +184,10 @@
       <div><label class="fl">Branch</label><select class="fi" id="rptBranch"><option value="">-- All Branches --</option></select></div>
       <div><label class="fl">Mode of Change</label><select class="fi" id="rptMOC"><option value="">-- All MOC --</option></select></div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:10px;padding-top:14px;border-top:1px solid var(--gray-100)">
-      <div><label class="fl">Sort By</label><select class="fi" id="rptSortBy"><option value="date">Date</option><option value="branchcode">Branch</option><option value="amount">Amount</option><option value="clientcode">Client Code</option></select></div>
-      <div><label class="fl">Sort Order</label><select class="fi" id="rptSortOrder"><option value="asc">Ascending</option><option value="desc">Descending</option></select></div>
-      <div><label class="fl">Group By</label><select class="fi" id="rptGroupBy"><option value="">-- No Grouping --</option><option value="branch">Branch</option><option value="moc">MOC</option><option value="date">Date</option></select></div>
+    <div style="display:none">
+      <select class="fi" id="rptSortBy"><option value="date">Date</option><option value="branchcode">Branch</option><option value="amount">Amount</option><option value="clientcode">Client Code</option></select>
+      <select class="fi" id="rptSortOrder"><option value="asc">Ascending</option><option value="desc">Descending</option></select>
+      <select class="fi" id="rptGroupBy"><option value="">-- No Grouping --</option><option value="branch">Branch</option><option value="moc">MOC</option><option value="date">Date</option></select>
     </div>
   </div>
   <div id="rptSummary" style="display:none">
