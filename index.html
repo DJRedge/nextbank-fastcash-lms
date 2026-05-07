@@ -569,7 +569,7 @@ async function renderDashboard(){
 async function loadClients(){
   loading(true,'Loading clients...','Please wait...');
   showSkeleton('#clientTable tbody',7,8);
-  try{cachedClients=await db.select('clients','?order=name.asc&limit=500');}catch(e){alert('Error: '+e.message);}
+  try{cachedClients=await db.select('clients','?order=name.asc&limit=500');}catch(e){toast('Error: '+e.message,'error');}
   loading(false);filterClients();
 }
 var _cST=null;
@@ -579,7 +579,7 @@ async function serverSearchClients(){
   clearTimeout(_cST);
   _cST=setTimeout(async function(){
     loading(true,'Searching...');
-    try{var qr='?order=name.asc&limit=200';if(by==='name')qr+='&name=ilike.*'+encodeURIComponent(q)+'*';else if(by==='clientcode')qr+='&clientcode=ilike.*'+encodeURIComponent(q)+'*';else qr+='&pnno=ilike.*'+encodeURIComponent(q)+'*';cachedClients=await db.select('clients',qr);filterClients();}catch(e){alert('Search error: '+e.message);}
+    try{var qr='?order=name.asc&limit=200';if(by==='name')qr+='&name=ilike.*'+encodeURIComponent(q)+'*';else if(by==='clientcode')qr+='&clientcode=ilike.*'+encodeURIComponent(q)+'*';else qr+='&pnno=ilike.*'+encodeURIComponent(q)+'*';cachedClients=await db.select('clients',qr);filterClients();}catch(e){toast('Search error: '+e.message,'error');}
     loading(false);
   },400);
 }
@@ -610,7 +610,7 @@ function makeXLSX(headers,rows,fname){var wb=XLSX.utils.book_new();var ws=XLSX.u
 function downloadTemplate(){makeXLSX(['branchcode','clientcode','name','amount','pnno','batchno'],[['BR-001','C-0001','DELA CRUZ, JOSE M.',1250,'PN-2024-001','BATCH-2024-01']],'ForUpload_Template.xls');}
 function downloadBranchTemplate(){makeXLSX(['branchcode','branchname','address','status'],[['BR-001','Main Office','Makati City','Active']],'Branch_Template.xls');}
 function downloadMOCTemplate(){makeXLSX(['moc','description'],[['CASH','Cash Over Counter'],['CHECK',"Manager's Check"]],'MOC_Template.xls');}
-function downloadUnlocated(){if(!_unlocatedRecords.length){alert('No unlocated records.');return;}makeXLSX(['Branch Code','Client Code','Name','Amount','PN No.','Batch No.','Reason'],_unlocatedRecords.map(function(r){return[r.branchcode,r.clientcode,r.name,parseFloat(r.amount)||0,r.pnno,r.batchno,'Branch not found'];}),'Unlocated_Branches_'+today()+'.xls');}
+function downloadUnlocated(){if(!_unlocatedRecords.length){toast('No unlocated records.','warning');return;}makeXLSX(['Branch Code','Client Code','Name','Amount','PN No.','Batch No.','Reason'],_unlocatedRecords.map(function(r){return[r.branchcode,r.clientcode,r.name,parseFloat(r.amount)||0,r.pnno,r.batchno,'Branch not found'];}),'Unlocated_Branches_'+today()+'.xls');}
 
 async function handleUpload(input){
   var file=input.files[0];if(!file)return;
@@ -693,7 +693,7 @@ function printUploadReport(){
   setTimeout(function(){try{iframe.contentWindow.focus();iframe.contentWindow.print();}catch(e){}},500);
 }
 function downloadUploadReportExcel(){
-  var log=_uploadLog;if(!log.length){alert('No data.');return;}
+  var log=_uploadLog;if(!log.length){toast('No data to export.','warning');return;}
   var newC=log.filter(function(r){return r.status==='New';}).length;
   var accC=log.filter(function(r){return r.status==='Accumulated';}).length;
   var nobrC=log.filter(function(r){return r.status==='Branch Not Found';}).length;
@@ -774,7 +774,7 @@ function printBranchReport(){
   setTimeout(function(){try{iframe.contentWindow.focus();iframe.contentWindow.print();}catch(e){}},500);
 }
 function downloadBranchReportExcel(){
-  var d=_branchLog;if(!d){alert('No data.');return;}
+  var d=_branchLog;if(!d){toast('No data to export.','warning');return;}
   var wb=XLSX.utils.book_new();
   var ws1=XLSX.utils.aoa_to_sheet([['NextBank-FastCash LMS - Branch Upload Report'],['Generated:',d.genAt],[],['Category','Count'],['New Branches Added',d.added],['Updated',d.updated],['Skipped',d.skipped],['TOTAL',d.added+d.updated]]);
   ws1['!cols']=[{wch:28},{wch:10}];XLSX.utils.book_append_sheet(wb,ws1,'Summary');
@@ -801,7 +801,7 @@ async function searchClaimClients(){
     }catch(e){console.error(e);}
   },350);
 }
-async function selectClaimClient(code){loading(true,'Loading client...');try{var rows=await db.select('clients','?clientcode=eq.'+encodeURIComponent(code));claimClient=rows[0]||null;if(claimClient){document.getElementById('claimCode').value=claimClient.clientcode;document.getElementById('claimName').value=claimClient.name;document.getElementById('claimBranch').value=claimClient.branchcode;document.getElementById('claimAvail').value=peso(claimClient.change);var ms=document.getElementById('claimMOC');if(claimClient.moc)ms.value=claimClient.moc;document.getElementById('claimSearchVal').value=claimClient.name;}document.getElementById('claimSearchResults').style.display='none';document.getElementById('claimAmt').focus();checkClaim();}catch(e){alert('Error: '+e.message);}loading(false);}
+async function selectClaimClient(code){loading(true,'Loading client...');try{var rows=await db.select('clients','?clientcode=eq.'+encodeURIComponent(code));claimClient=rows[0]||null;if(claimClient){document.getElementById('claimCode').value=claimClient.clientcode;document.getElementById('claimName').value=claimClient.name;document.getElementById('claimBranch').value=claimClient.branchcode;document.getElementById('claimAvail').value=peso(claimClient.change);var ms=document.getElementById('claimMOC');if(claimClient.moc)ms.value=claimClient.moc;document.getElementById('claimSearchVal').value=claimClient.name;}document.getElementById('claimSearchResults').style.display='none';document.getElementById('claimAmt').focus();checkClaim();}catch(e){toast('Error: '+e.message,'error');}loading(false);}
 function checkClaim(){var amt=parseFloat(document.getElementById('claimAmt').value)||0,avail=claimClient?parseFloat(claimClient.change):0,btn=document.getElementById('claimBtn'),al=document.getElementById('claimAlert');if(!claimClient||amt<=0){al.style.display='none';btn.disabled=true;return;}if(amt>avail){al.textContent='Insufficient! '+peso(amt)+' exceeds '+peso(avail);al.style.display='block';btn.disabled=true;}else{al.style.display='none';btn.disabled=false;}}
 async function processClaim(){
   if(!claimClient)return;var amt=parseFloat(document.getElementById('claimAmt').value)||0;if(amt<=0||amt>parseFloat(claimClient.change))return;
@@ -815,7 +815,7 @@ async function processClaim(){
     claimClient.change=parseFloat(claimClient.change)-amt;cachedClients=[];cachedTx=[];cacheClear('clients');cacheClear('changes');
     document.getElementById('claimAvail').value=peso(claimClient.change);document.getElementById('claimAmt').value='';document.getElementById('claimRemarks').value='';document.getElementById('claimBtn').disabled=true;
     showAlert('claimOK','Claim saved! AR No: '+arn,'success');toast('Claim processed! AR: '+arn,'success',4000);showReceipt(Object.assign({},tx,{moc:moc}),claimClient);await renderDashboard();
-  }catch(e){alert('Claim error: '+e.message);}loading(false);
+  }catch(e){toast('Claim error: '+e.message,'error');}loading(false);
 }
 function showReceipt(tx,cl){
   var remarksHtml=tx.remarks?'<div class="receipt-row"><span>Remarks</span><b>'+sanitize(tx.remarks)+'</b></div>':'';
@@ -843,7 +843,7 @@ function showReceipt(tx,cl){
 }
 function printReceipt(){
   var receiptHtml=document.getElementById('receiptContent').innerHTML;
-  if(!receiptHtml||receiptHtml.trim()===''){alert('No receipt to print.');return;}
+  if(!receiptHtml||receiptHtml.trim()===''){toast('No receipt to print.','warning');return;}
   var css='@page{size:3.5in 5.5in portrait;margin:0.25in}*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}body{font-family:Arial,sans-serif;font-size:11pt;color:#1a1a2e;background:#fff;padding:4px}.receipt{border:2px dashed #f5c518;border-radius:8px;padding:16px}.receipt-sub{text-align:center;font-size:9pt;color:#555;margin-bottom:10px}.receipt-arn{text-align:center;font-size:9pt;color:#555;margin-bottom:8px}.receipt-amount{text-align:center;font-size:22pt;font-weight:800;color:#061240;margin:10px 0;padding:8px;background:#fffbeb;border-radius:6px;border:1.5px solid #f5c518}.receipt-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dotted #ccc;font-size:9.5pt}.receipt-row:last-child{border-bottom:none}.receipt-row span{color:#555;flex-shrink:0;padding-right:8px}.receipt-row b{color:#061240;text-align:right}';
   var html='<!DOCTYPE html><html><head><title>Acknowledgement Receipt</title><style>'+css+'</style></head><body>'+receiptHtml+'<\/body><\/html>';
   var iframe=document.getElementById('printFrame');
@@ -853,9 +853,9 @@ function printReceipt(){
   setTimeout(function(){try{iframe.contentWindow.focus();iframe.contentWindow.print();}catch(e){}},600);
 }
 
-async function loadTransactions(){loading(true,'Loading transactions...','Up to 1,000 records...');showSkeleton('#txTable tbody',8,8);try{cachedTx=await db.select('changes','?order=id.desc&limit=1000');}catch(e){alert('Error: '+e.message);}loading(false);filterTransactions();}
+async function loadTransactions(){loading(true,'Loading transactions...','Up to 1,000 records...');showSkeleton('#txTable tbody',8,8);try{cachedTx=await db.select('changes','?order=id.desc&limit=1000');}catch(e){toast('Error: '+e.message,'error');}loading(false);filterTransactions();}
 function filterTransactions(){var q=(document.getElementById('txSearch')||{value:''}).value.toLowerCase();var tbody=document.querySelector('#txTable tbody');tbody.innerHTML='';cachedTx.filter(function(c){return !q||c.arnumber.toLowerCase().includes(q)||c.clientcode.toLowerCase().includes(q)||c.branchcode.toLowerCase().includes(q);}).forEach(function(c){tbody.innerHTML+='<tr><td><b>'+sanitize(c.arnumber)+'</b></td><td>'+fmtDate(c.date)+'</td><td>'+sanitize(c.clientcode)+'</td><td>'+sanitize(c.branchcode)+'</td><td class="amt" style="color:var(--success)">'+peso(c.amount)+'</td><td>'+(sanitize(c.remarks)||'--')+'</td><td>'+sanitize(c.printedby)+'</td><td><button class="btn btn-outline btn-sm" onclick="showReceiptById('+c.id+')">Receipt</button></td></tr>';});}
-async function showReceiptById(id){loading(true,'Loading...');try{var txRows=await db.select('changes','?id=eq.'+id);var tx=txRows[0];if(!tx){loading(false);return;}var clRows=await db.select('clients','?clientcode=eq.'+encodeURIComponent(tx.clientcode));var cl=clRows[0]||{name:tx.clientcode,clientcode:tx.clientcode,branchcode:tx.branchcode,moc:'--',change:0};showReceipt(tx,cl);}catch(e){alert('Error: '+e.message);}loading(false);}
+async function showReceiptById(id){loading(true,'Loading...');try{var txRows=await db.select('changes','?id=eq.'+id);var tx=txRows[0];if(!tx){loading(false);return;}var clRows=await db.select('clients','?clientcode=eq.'+encodeURIComponent(tx.clientcode));var cl=clRows[0]||{name:tx.clientcode,clientcode:tx.clientcode,branchcode:tx.branchcode,moc:'--',change:0};showReceipt(tx,cl);}catch(e){toast('Error: '+e.message,'error');}loading(false);}
 
 async function initReports(){
   if(!cachedBranches.length)cachedBranches=await dbCached('branches','?order=name.asc',300000);
@@ -868,7 +868,7 @@ async function initReports(){
 function resetReportFilters(){var now=new Date();document.getElementById('rptDateFrom').value=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);document.getElementById('rptDateTo').value=today();['rptBranch','rptMOC'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('rptSortBy').value='date';document.getElementById('rptSortOrder').value='asc';document.getElementById('rptGroupBy').value='';document.getElementById('rptSummary').style.display='none';document.getElementById('rptTableCard').style.display='none';document.getElementById('rptEmpty').style.display='none';document.getElementById('btnRptExcel').style.display='none';rptData=[];rptFiltered=[];}
 async function generateReport(){
   var df=document.getElementById('rptDateFrom').value,dt=document.getElementById('rptDateTo').value,branch=document.getElementById('rptBranch').value,moc=document.getElementById('rptMOC').value,sortBy=document.getElementById('rptSortBy').value,sortOrder=document.getElementById('rptSortOrder').value,groupBy=document.getElementById('rptGroupBy').value;
-  if(!df||!dt){alert('Set both dates.');return;}if(df>dt){alert('Date From cannot be after Date To.');return;}
+  if(!df||!dt){toast('Please set both Date From and Date To.','warning');return;}if(df>dt){toast('Date From cannot be after Date To.','error');return;}
   loading(true,'Generating report...');
   try{
     var query='?order='+sortBy+'.'+sortOrder+'&date=gte.'+df+'&date=lte.'+dt;if(branch)query+='&branchcode=eq.'+encodeURIComponent(branch);
@@ -877,7 +877,7 @@ async function generateReport(){
     rows=rows.map(function(r){return Object.assign({},r,{clientname:(rptClientMap[r.clientcode]||{}).name||r.clientcode,moc:(rptClientMap[r.clientcode]||{}).moc||'--'});});
     if(moc)rows=rows.filter(function(r){return r.moc===moc;});rptData=rows;rptFiltered=rows;rptCurrentSort={col:sortBy,order:sortOrder};
     renderReportTable(groupBy,df,dt,branch,moc);
-  }catch(e){alert('Report error: '+e.message);}loading(false);
+  }catch(e){toast('Report error: '+e.message,'error');}loading(false);
 }
 function renderReportTable(groupBy,df,dt,branch,moc){
   var rows=rptFiltered,total=rows.reduce(function(a,r){return a+parseFloat(r.amount||0);},0),avg=rows.length?total/rows.length:0,max=rows.length?Math.max.apply(null,rows.map(function(r){return parseFloat(r.amount||0);})):0;
@@ -897,9 +897,9 @@ function renderReportTable(groupBy,df,dt,branch,moc){
 }
 function buildReportRow(r){return '<tr><td>'+fmtDate(r.date)+'</td><td><b>'+sanitize(r.arnumber)+'</b></td><td>'+sanitize(r.clientcode)+'</td><td>'+sanitize(r.clientname)+'</td><td>'+sanitize(r.branchcode)+'</td><td><span class="badge badge-info">'+sanitize(r.moc||'--')+'</span></td><td class="amt" style="color:var(--success)">'+peso(r.amount)+'</td><td>'+sanitize(r.printedby)+'</td></tr>';}
 function sortReportBy(col){if(rptCurrentSort.col===col)rptCurrentSort.order=rptCurrentSort.order==='asc'?'desc':'asc';else rptCurrentSort={col:col,order:'asc'};rptFiltered.sort(function(a,b){var va=a[col]||'',vb=b[col]||'';if(col==='amount'){va=parseFloat(va||0);vb=parseFloat(vb||0);}else{va=String(va).toLowerCase();vb=String(vb).toLowerCase();}if(va<vb)return rptCurrentSort.order==='asc'?-1:1;if(va>vb)return rptCurrentSort.order==='asc'?1:-1;return 0;});renderReportTable('',null,null,null,null);}
-function printReport(){if(!rptFiltered.length){alert('Generate a report first.');return;}document.getElementById('rptPrintHeader').style.display='block';window.print();document.getElementById('rptPrintHeader').style.display='none';}
+function printReport(){if(!rptFiltered.length){toast('Please generate a report first.','warning');return;}document.getElementById('rptPrintHeader').style.display='block';window.print();document.getElementById('rptPrintHeader').style.display='none';}
 function exportReportExcel(){
-  if(!rptFiltered.length){alert('Generate a report first.');return;}
+  if(!rptFiltered.length){toast('Please generate a report first.','warning');return;}
   var rows=rptFiltered,total=rows.reduce(function(a,r){return a+parseFloat(r.amount||0);},0);
   var df=document.getElementById('rptDateFrom').value,dt=document.getElementById('rptDateTo').value;
   var branch=document.getElementById('rptBranch').value||'All Branches',moc=document.getElementById('rptMOC').value||'All';
@@ -921,25 +921,25 @@ function exportReportExcel(){
   XLSX.writeFile(wb,'Change_Claimed_Report_'+fmtDateExcel(df)+'_to_'+fmtDateExcel(dt)+'.xls',{bookType:'xls'});
 }
 
-async function loadBranches(){loading(true,'Loading branches...');showSkeleton('#branchTable tbody',5,6);try{cachedBranches=await db.select('branches','?order=name.asc');var tbody=document.querySelector('#branchTable tbody');tbody.innerHTML='';cachedBranches.forEach(function(b){tbody.innerHTML+='<tr><td><b>'+sanitize(b.code)+'</b></td><td>'+sanitize(b.name)+'</td><td>'+(b.address||'--')+'</td><td><span class="badge '+(b.status==='Active'?'badge-success':'badge-danger')+'">'+b.status+'</span></td><td><button class="btn btn-outline btn-sm" onclick="editBranch(\''+b.code.replace(/'/g,"\\'")+'\')">Edit</button></td></tr>';});}catch(e){alert('Error: '+e.message);}loading(false);}
+async function loadBranches(){loading(true,'Loading branches...');showSkeleton('#branchTable tbody',5,6);try{cachedBranches=await db.select('branches','?order=name.asc');var tbody=document.querySelector('#branchTable tbody');tbody.innerHTML='';cachedBranches.forEach(function(b){tbody.innerHTML+='<tr><td><b>'+sanitize(b.code)+'</b></td><td>'+sanitize(b.name)+'</td><td>'+(b.address||'--')+'</td><td><span class="badge '+(b.status==='Active'?'badge-success':'badge-danger')+'">'+b.status+'</span></td><td><button class="btn btn-outline btn-sm" onclick="editBranch(\''+b.code.replace(/'/g,"\\'")+'\')">Edit</button></td></tr>';});}catch(e){toast('Error: '+e.message,'error');}loading(false);}
 async function editBranch(code){var b=cachedBranches.find(function(x){return x.code===code;});if(!b)return;editKey['modalAddBranch']=code;document.getElementById('branchModalTitle').textContent='Edit Branch';document.getElementById('bCode').value=b.code;document.getElementById('bName').value=b.name;document.getElementById('bAddr').value=b.address||'';document.getElementById('bStatus').value=b.status;document.getElementById('modalAddBranch').classList.add('open');}
-async function saveBranch(){var obj={code:document.getElementById('bCode').value.trim(),name:document.getElementById('bName').value.trim(),address:document.getElementById('bAddr').value.trim(),status:document.getElementById('bStatus').value};if(!obj.code||!obj.name){alert('Code and Name required.');return;}loading(true,'Saving...');try{if(editKey['modalAddBranch'])await db.update('branches',{name:obj.name,address:obj.address,status:obj.status},'?code=eq.'+encodeURIComponent(obj.code));else await db.insert('branches',obj);cachedBranches=[];cacheClear('branches');closeModal('modalAddBranch');await loadBranches();toast('Branch saved!','success');}catch(e){alert('Save error: '+e.message);}loading(false);}
+async function saveBranch(){var obj={code:document.getElementById('bCode').value.trim(),name:document.getElementById('bName').value.trim(),address:document.getElementById('bAddr').value.trim(),status:document.getElementById('bStatus').value};if(!obj.code||!obj.name){toast('Branch Code and Name are required.','error');return;}loading(true,'Saving...');try{if(editKey['modalAddBranch'])await db.update('branches',{name:obj.name,address:obj.address,status:obj.status},'?code=eq.'+encodeURIComponent(obj.code));else await db.insert('branches',obj);cachedBranches=[];cacheClear('branches');closeModal('modalAddBranch');await loadBranches();toast('Branch saved!','success');}catch(e){toast('Save error: '+e.message,'error');}loading(false);}
 
-async function loadMOC(){loading(true,'Loading MOC...');try{cachedMOC=await db.select('moc','?order=moc.asc');var tbody=document.querySelector('#mocTable tbody');tbody.innerHTML='';cachedMOC.forEach(function(m){tbody.innerHTML+='<tr><td><b>'+sanitize(m.moc)+'</b></td><td>'+sanitize(m.description)+'</td><td><button class="btn btn-outline btn-sm" onclick="editMOC(\''+m.moc.replace(/'/g,"\\'")+'\')">Edit</button></td></tr>';});}catch(e){alert('Error: '+e.message);}loading(false);}
+async function loadMOC(){loading(true,'Loading MOC...');try{cachedMOC=await db.select('moc','?order=moc.asc');var tbody=document.querySelector('#mocTable tbody');tbody.innerHTML='';cachedMOC.forEach(function(m){tbody.innerHTML+='<tr><td><b>'+sanitize(m.moc)+'</b></td><td>'+sanitize(m.description)+'</td><td><button class="btn btn-outline btn-sm" onclick="editMOC(\''+m.moc.replace(/'/g,"\\'")+'\')">Edit</button></td></tr>';});}catch(e){toast('Error: '+e.message,'error');}loading(false);}
 async function editMOC(code){var m=cachedMOC.find(function(x){return x.moc===code;});if(!m)return;editKey['modalAddMOC']=code;document.getElementById('mocCode').value=m.moc;document.getElementById('mocDesc').value=m.description;document.getElementById('modalAddMOC').classList.add('open');}
-async function saveMOC(){var obj={moc:document.getElementById('mocCode').value.trim(),description:document.getElementById('mocDesc').value.trim()};if(!obj.moc){alert('MOC Code required.');return;}loading(true,'Saving...');try{if(editKey['modalAddMOC'])await db.update('moc',{description:obj.description},'?moc=eq.'+encodeURIComponent(obj.moc));else await db.insert('moc',obj);cachedMOC=[];cacheClear('moc');closeModal('modalAddMOC');await loadMOC();toast('MOC saved!','success');}catch(e){alert('Save error: '+e.message);}loading(false);}
+async function saveMOC(){var obj={moc:document.getElementById('mocCode').value.trim(),description:document.getElementById('mocDesc').value.trim()};if(!obj.moc){toast('MOC Code is required.','error');return;}loading(true,'Saving...');try{if(editKey['modalAddMOC'])await db.update('moc',{description:obj.description},'?moc=eq.'+encodeURIComponent(obj.moc));else await db.insert('moc',obj);cachedMOC=[];cacheClear('moc');closeModal('modalAddMOC');await loadMOC();toast('MOC saved!','success');}catch(e){toast('Save error: '+e.message,'error');}loading(false);}
 
 async function loadUsers(){
-loading(true,'Loading users...');showSkeleton('#userTable tbody',8,5);try{cachedUsersAll=await db.select('users','?order=lastname.asc');var tbody=document.querySelector('#userTable tbody');tbody.innerHTML='';cachedUsersAll.forEach(function(u){var uB=u.uploadaccess==='None'?'badge-danger':u.uploadaccess==='Own Branch'?'badge-warning':'badge-success';tbody.innerHTML+='<tr><td><b>'+sanitize(u.loginname)+'</b></td><td>'+sanitize(u.lastname)+', '+sanitize(u.firstname)+' '+(u.middlename||'')+' '+(u.extname||'')+'</td><td><span style="font-size:12px;color:var(--royal-dark);font-weight:600">'+(u.position||'--')+'</span></td><td>'+(u.email||'--')+'</td><td style="max-width:200px">'+renderAccessBadges(u.systemaccess)+'</td><td><span class="badge '+uB+'">'+(u.uploadaccess||'All Branches')+'</span></td><td><span class="badge '+(u.administrator?'badge-warning':'badge-success')+'">'+(u.administrator?'Admin':'Staff')+'</span></td><td style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-outline btn-sm" onclick="editUser(\''+u.loginname.replace(/'/g,"\\'")+'\')">Edit</button><button class="btn btn-primary btn-sm" onclick="openResetPw(\''+u.loginname.replace(/'/g,"\\'")+'\')">Reset PW</button></td></tr>';});}catch(e){alert('Error: '+e.message);}loading(false);}
+loading(true,'Loading users...');showSkeleton('#userTable tbody',8,5);try{cachedUsersAll=await db.select('users','?order=lastname.asc');var tbody=document.querySelector('#userTable tbody');tbody.innerHTML='';cachedUsersAll.forEach(function(u){var uB=u.uploadaccess==='None'?'badge-danger':u.uploadaccess==='Own Branch'?'badge-warning':'badge-success';tbody.innerHTML+='<tr><td><b>'+sanitize(u.loginname)+'</b></td><td>'+sanitize(u.lastname)+', '+sanitize(u.firstname)+' '+(u.middlename||'')+' '+(u.extname||'')+'</td><td><span style="font-size:12px;color:var(--royal-dark);font-weight:600">'+(u.position||'--')+'</span></td><td>'+(u.email||'--')+'</td><td style="max-width:200px">'+renderAccessBadges(u.systemaccess)+'</td><td><span class="badge '+uB+'">'+(u.uploadaccess||'All Branches')+'</span></td><td><span class="badge '+(u.administrator?'badge-warning':'badge-success')+'">'+(u.administrator?'Admin':'Staff')+'</span></td><td style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-outline btn-sm" onclick="editUser(\''+u.loginname.replace(/'/g,"\\'")+'\')">Edit</button><button class="btn btn-primary btn-sm" onclick="openResetPw(\''+u.loginname.replace(/'/g,"\\'")+'\')">Reset PW</button></td></tr>';});}catch(e){toast('Error: '+e.message,'error');}loading(false);}
 async function editUser(ln){var u=cachedUsersAll.find(function(x){return x.loginname===ln;});if(!u)return;editKey['modalAddUser']=ln;document.getElementById('userModalTitle').textContent='Edit User';document.getElementById('uLast').value=u.lastname;document.getElementById('uFirst').value=u.firstname;document.getElementById('uMiddle').value=u.middlename||'';document.getElementById('uExt').value=u.extname||'';document.getElementById('uLogin').value=u.loginname;document.getElementById('uPass').value='';document.getElementById('uEmail').value=u.email||'';document.getElementById('uPosition').value=u.position||'';setAccessCheckboxes((u.systemaccess||'All').split(',').map(function(s){return s.trim();}));document.getElementById('uUploadAccess').value=u.uploadaccess||'All Branches';document.getElementById('uAdmin').value=String(u.administrator);document.getElementById('modalAddUser').classList.add('open');}
 async function saveUser(){
   var isEdit=editKey['modalAddUser'],pw=document.getElementById('uPass').value;
-  if(pw&&pw.length<6){alert('Password must be at least 6 characters.');return;}
+  if(pw&&pw.length<6){toast('Password must be at least 6 characters.','error');return;}
   var obj={lastname:document.getElementById('uLast').value.trim(),firstname:document.getElementById('uFirst').value.trim(),middlename:document.getElementById('uMiddle').value.trim(),extname:document.getElementById('uExt').value.trim(),loginname:document.getElementById('uLogin').value.trim(),email:document.getElementById('uEmail').value.trim(),position:document.getElementById('uPosition').value.trim(),systemaccess:getAccessValue(),uploadaccess:document.getElementById('uUploadAccess').value,administrator:parseInt(document.getElementById('uAdmin').value)};
   if(pw) obj.password=await hashPassword(pw);
-  if(!obj.loginname||!obj.lastname){alert('Login Name and Last Name required.');return;}
+  if(!obj.loginname||!obj.lastname){toast('Login Name and Last Name are required.','error');return;}
   loading(true,'Saving...');
-  try{if(isEdit)await db.update('users',obj,'?loginname=eq.'+encodeURIComponent(isEdit));else{if(!pw){alert('Password required.');loading(false);return;}obj.code='U'+Date.now();await db.insert('users',obj);}cachedUsersAll=[];closeModal('modalAddUser');await loadUsers();toast('User saved!','success');}catch(e){alert('Save error: '+e.message);}loading(false);
+  try{if(isEdit)await db.update('users',obj,'?loginname=eq.'+encodeURIComponent(isEdit));else{if(!pw){toast('Password is required for new users.','error');loading(false);return;}obj.code='U'+Date.now();await db.insert('users',obj);}cachedUsersAll=[];closeModal('modalAddUser');await loadUsers();toast('User saved!','success');}catch(e){toast('Save error: '+e.message,'error');}loading(false);
 }
 function openResetPw(ln){document.getElementById('rpUser').value=ln;document.getElementById('rpPass').value='';document.getElementById('rpConfirm').value='';document.getElementById('rpAlert').style.display='none';document.getElementById('modalResetPw').classList.add('open');}
 async function doResetPw(){
