@@ -588,7 +588,13 @@ function filterClients(){
   var tbody=document.querySelector('#clientTable tbody');tbody.innerHTML='';
   cachedClients.filter(function(c){var v=(by==='name'?c.name:by==='clientcode'?c.clientcode:c.pnno||'').toLowerCase();return !q||v.includes(q);}).forEach(function(c){
     var sc=c.clientcode.replace(/'/g,"\\'");
-    tbody.innerHTML+='<tr><td><b>'+sanitize(c.clientcode)+'</b></td><td>'+sanitize(c.name)+'</td><td>'+sanitize(c.branchcode)+'</td><td>'+sanitize(c.pnno||'--')+'</td><td class="amt" style="color:var(--success)">'+peso(c.change)+'</td><td><span class="badge badge-info">'+sanitize(c.moc||'--')+'</span></td><td style="display:flex;gap:6px"><button class="btn btn-gold btn-sm" onclick="viewClient(\''+sc+'\')">View</button><button class="btn btn-primary btn-sm" onclick="claimFromClient(\''+sc+'\')">Claim</button></td></tr>';
+    var bal=parseFloat(c.change||0);
+    var hasBalance=bal>0;
+    var amtStyle=hasBalance?'color:var(--success)':'color:var(--danger)';
+    var disAttr=hasBalance?'':'disabled style="opacity:.4;cursor:not-allowed" title="No available balance"';
+    var viewBtn='<button class="btn btn-gold btn-sm" '+disAttr+' '+(hasBalance?'onclick="viewClient(\\\''+sc+'\\\')">':'>')+'View<\/button>';
+    var claimBtn='<button class="btn btn-primary btn-sm" '+disAttr+' '+(hasBalance?'onclick="claimFromClient(\\\''+sc+'\\\')">':'>')+'Claim<\/button>';
+    tbody.innerHTML+='<tr><td><b>'+sanitize(c.clientcode)+'<\/b><\/td><td>'+sanitize(c.name)+'<\/td><td>'+sanitize(c.branchcode)+'<\/td><td>'+sanitize(c.pnno||'--')+'<\/td><td class="amt" style="'+amtStyle+'">'+peso(c.change)+'<\/td><td><span class="badge badge-info">'+sanitize(c.moc||'--')+'<\/span><\/td><td style="display:flex;gap:6px">'+viewBtn+claimBtn+'<\/td><\/tr>';
   });
 }
 async function viewClient(code){
