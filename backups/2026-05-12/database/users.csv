@@ -1,0 +1,6 @@
+loginname,lastname,firstname,middlename,extname,email,position,systemaccess,uploadaccess,administrator
+RAlberca,Alberca,Regidor,Apolinario,"",ralberca@pcni.com.ph,"Senior MIS Manager",All,"",1
+ACatienza,Catienza,"Ann Margaret","","",acatienza@pcni.com.ph,"Treasury Manager","Clients,Claim,Transactions,Reports",All,0
+JEspinola,Espinola,Joanne,"","",jespinola@pcni.com.ph,"Assistant Treasury Manager","Dashboard,Clients,Claim,Transactions,Reports","All Branches",0
+KLabad,Labad,Kimberly,"","",klabad@pcni.com.ph,"Treasury Assistant","Dashboard,Clients","All Branches",0
+RPorlares,Porlares,Rebecca,Flores,"",rporlares@pcni.com.ph,Treasury,"Dashboard,Clients,Claim,Transactions,Reports","All Branches",0

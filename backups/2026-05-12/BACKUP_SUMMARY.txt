@@ -1,0 +1,16 @@
+NEXTBANK-FASTCASH LMS - BACKUP SUMMARY
+========================================
+Date     : 2026-05-12
+Time     : 2223 PHT
+URL      : https://nbccs.fcash.com.ph
+========================================
+Clients              : 999
+Changes/Transactions : 6
+Branches             : 155
+MOC                  : 5
+Users                : 4
+NB Master            : 999
+----------------------------------------
+TOTAL RECORDS        : 2168
+========================================
+Passwords NOT included in this backup.
