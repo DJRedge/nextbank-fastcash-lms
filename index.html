@@ -84,7 +84,10 @@
     <div class="welcome-text"><h2>Welcome back, <span id="wName">Administrator</span>!</h2><p>NextBank-FastCash Change Claiming System -- Live Data</p></div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
       <div class="welcome-icon">&#127974;</div>
-      <button id="btnBackupDB" onclick="backupDatabase()" class="btn btn-gold btn-sm" style="display:none;font-size:12px;padding:7px 16px;border-radius:8px">&#128190; Backup Database</button>
+      <div style="text-align:right">
+        <button id="btnBackupDB" onclick="backupDatabase(false)" class="btn btn-gold btn-sm" style="display:none;font-size:12px;padding:7px 16px;border-radius:8px">&#128190; Backup Now</button>
+        <div id="lastBackupInfo" style="font-size:10px;margin-top:4px;display:none;color:var(--success)"></div>
+      </div>
     </div>
   </div>
   <div class="stat-grid">
@@ -512,12 +515,19 @@ async function doLogin(){
     // Show backup button for admins only
     var backupBtn=document.getElementById('btnBackupDB');
     if(backupBtn) backupBtn.style.display=currentUser.administrator?'inline-flex':'none';
+    // Start auto-backup scheduler for admins
+    if(currentUser.administrator){
+      startAutoBackupScheduler();
+      var lbi=document.getElementById('lastBackupInfo');
+      if(lbi) lbi.style.display='block';
+      setTimeout(updateLastBackupDisplay, 1000);
+    }
     await renderDashboard();
   }catch(e){errEl.textContent='Connection error: '+e.message;errEl.style.display='block';}
   loading(false);
 }
 function doLogout(){
-  stopSessionTimer();clearTimeout(sessionTimer);clearInterval(countdownTimer);sessionTimer=null;countdownTimer=null;warningShown=false;
+  stopSessionTimer();clearTimeout(sessionTimer);clearInterval(countdownTimer);sessionTimer=null;countdownTimer=null;warningShown=false;stopAutoBackupScheduler();
   currentUser=null;cachedClients=[];cachedBranches=[];cachedMOC=[];cachedTx=[];cachedUsersAll=[];claimClient=null;
   window._allowedModules=new Set();window._isAllAccess=false;
   var lu=document.getElementById('loginUser'),lp=document.getElementById('loginPass'),le=document.getElementById('loginErr');
@@ -1114,6 +1124,208 @@ async function backupDatabase(){
     loading(false);
     toast('Backup failed: '+e.message,'error',6000);
   }
+}
+
+
+
+//  Auto Backup System 
+// Runs automatically every Monday at 8:00 AM or on first login of the week
+var _autoBackupTimer = null;
+var _BACKUP_DAY     = 1;    // 1 = Monday
+var _BACKUP_HOUR    = 8;    // 8:00 AM
+var _LAST_BACKUP_KEY = 'nbccs_last_backup';
+
+function getLastBackupDate(){
+  try{ return sessionStorage.getItem(_LAST_BACKUP_KEY)||''; }catch(e){ return ''; }
+}
+function setLastBackupDate(d){
+  try{ sessionStorage.setItem(_LAST_BACKUP_KEY, d); }catch(e){}
+}
+
+function shouldAutoBackup(){
+  if(!currentUser||!currentUser.administrator) return false;
+  var now   = new Date();
+  var day   = now.getDay();    // 0=Sun,1=Mon,...6=Sat
+  var hour  = now.getHours();
+  var today = now.toISOString().slice(0,10);
+  var last  = getLastBackupDate();
+  // Run if: it's Monday AND hour >= 8 AND not yet backed up today
+  if(day === _BACKUP_DAY && hour >= _BACKUP_HOUR && last !== today) return true;
+  // Also run if last backup was more than 7 days ago (missed Monday)
+  if(last){
+    var daysSince = Math.floor((now - new Date(last)) / 86400000);
+    if(daysSince >= 7) return true;
+  }
+  return false;
+}
+
+function startAutoBackupScheduler(){
+  if(!currentUser||!currentUser.administrator) return;
+  clearInterval(_autoBackupTimer);
+  // Check every 30 minutes
+  _autoBackupTimer = setInterval(function(){
+    if(shouldAutoBackup()) runAutoBackup();
+  }, 30 * 60 * 1000);
+  // Also check immediately on login
+  setTimeout(function(){
+    if(shouldAutoBackup()) runAutoBackup();
+  }, 5000);
+}
+
+function stopAutoBackupScheduler(){
+  clearInterval(_autoBackupTimer);
+  _autoBackupTimer = null;
+}
+
+async function runAutoBackup(){
+  var today = new Date().toISOString().slice(0,10);
+  setLastBackupDate(today);  // Mark as done immediately to prevent double-run
+  toast('Auto-backup starting... Please wait.','success',4000);
+  // Small delay to let user see the toast
+  setTimeout(async function(){
+    await backupDatabase(true);
+  }, 1500);
+}
+
+async function backupDatabase(isAuto){
+  if(!currentUser||!currentUser.administrator){
+    toast('Access denied. Administrators only.','error');
+    return;
+  }
+  var autoLabel = isAuto ? 'Auto-' : '';
+  loading(true, autoLabel+'Backup in progress...','Fetching all tables...',0);
+  try{
+    var stamp   = new Date();
+    var dateStr = stamp.getFullYear()+'-'+String(stamp.getMonth()+1).padStart(2,'0')+'-'+String(stamp.getDate()).padStart(2,'0');
+    var timeStr = String(stamp.getHours()).padStart(2,'0')+String(stamp.getMinutes()).padStart(2,'0');
+    var fname   = 'NBCCS_'+(isAuto?'AutoBackup_':'Backup_')+dateStr+'_'+timeStr+'.xls';
+
+    loading(true,'Fetching clients...',null,10);
+    var clients  = await db.select('clients','?order=name.asc');
+
+    loading(true,'Fetching transactions...',null,25);
+    var changes  = await db.select('changes','?order=id.desc');
+
+    loading(true,'Fetching branches...',null,40);
+    var branches = await db.select('branches','?order=name.asc');
+
+    loading(true,'Fetching MOC...',null,55);
+    var moc      = await db.select('moc','?order=moc.asc');
+
+    loading(true,'Fetching users...',null,70);
+    var users    = await db.select('users','?order=lastname.asc');
+
+    loading(true,'Fetching NB Master...',null,85);
+    var nbmaster = await db.select('nbmaster','?order=id.desc&limit=5000');
+
+    loading(true,'Building Excel file...',null,95);
+
+    var wb = XLSX.utils.book_new();
+
+    // Cover Sheet
+    var coverData=[
+      ['NEXTBANK-FASTCASH CHANGE CLAIMING SYSTEM'],
+      ['Database Backup Report - '+(isAuto?'AUTOMATIC':'MANUAL')],
+      [''],
+      ['Generated By:', currentUser.firstname+' '+currentUser.lastname],
+      ['Generated At:', nowDT()],
+      ['Backup Type:', isAuto?'Automatic (Scheduled)':'Manual (On-Demand)'],
+      ['Backup Date:', dateStr],
+      ['System URL:', 'https://nbccs.fcash.com.ph'],
+      [''],
+      ['TABLE','RECORD COUNT'],
+      ['Clients', clients.length],
+      ['Changes / Transactions', changes.length],
+      ['Branches', branches.length],
+      ['Mode of Change (MOC)', moc.length],
+      ['Users', users.length],
+      ['NB Master', nbmaster.length],
+      [''],
+      ['TOTAL RECORDS', clients.length+changes.length+branches.length+moc.length+users.length+nbmaster.length],
+    ];
+    var wsCover = XLSX.utils.aoa_to_sheet(coverData);
+    wsCover['!cols'] = [{wch:30},{wch:40}];
+    XLSX.utils.book_append_sheet(wb, wsCover, 'BACKUP INFO');
+
+    // Clients
+    var wsClients = XLSX.utils.aoa_to_sheet(
+      [['clientcode','name','branchcode','change','moc','pnno']].concat(
+        clients.map(function(c){return[c.clientcode,c.name,c.branchcode,parseFloat(c.change||0),c.moc||'',c.pnno||''];})
+      )
+    );
+    wsClients['!cols']=[{wch:22},{wch:36},{wch:12},{wch:14},{wch:10},{wch:22}];
+    XLSX.utils.book_append_sheet(wb, wsClients, 'CLIENTS');
+
+    // Changes
+    var wsChanges = XLSX.utils.aoa_to_sheet(
+      [['id','branchcode','clientcode','date','arnumber','amount','remarks','printedby','printeddatetime']].concat(
+        changes.map(function(c){return[c.id,c.branchcode,c.clientcode,c.date,c.arnumber,parseFloat(c.amount||0),c.remarks||'',c.printedby,c.printeddatetime||''];})
+      )
+    );
+    wsChanges['!cols']=[{wch:8},{wch:12},{wch:22},{wch:12},{wch:16},{wch:14},{wch:28},{wch:16},{wch:20}];
+    XLSX.utils.book_append_sheet(wb, wsChanges, 'TRANSACTIONS');
+
+    // Branches
+    var wsBranches = XLSX.utils.aoa_to_sheet(
+      [['code','name','address','status']].concat(
+        branches.map(function(b){return[b.code,b.name,b.address||'',b.status];})
+      )
+    );
+    wsBranches['!cols']=[{wch:14},{wch:36},{wch:44},{wch:10}];
+    XLSX.utils.book_append_sheet(wb, wsBranches, 'BRANCHES');
+
+    // MOC
+    var wsMOC = XLSX.utils.aoa_to_sheet(
+      [['moc','description']].concat(
+        moc.map(function(m){return[m.moc,m.description];})
+      )
+    );
+    wsMOC['!cols']=[{wch:14},{wch:36}];
+    XLSX.utils.book_append_sheet(wb, wsMOC, 'MOC');
+
+    // Users (no passwords)
+    var wsUsers = XLSX.utils.aoa_to_sheet(
+      [['loginname','lastname','firstname','middlename','extname','email','position','systemaccess','uploadaccess','administrator']].concat(
+        users.map(function(u){return[u.loginname,u.lastname,u.firstname,u.middlename||'',u.extname||'',u.email||'',u.position||'',u.systemaccess||'All',u.uploadaccess||'All Branches',u.administrator?'Yes':'No'];})
+      )
+    );
+    wsUsers['!cols']=[{wch:16},{wch:18},{wch:18},{wch:16},{wch:8},{wch:28},{wch:24},{wch:40},{wch:16},{wch:10}];
+    XLSX.utils.book_append_sheet(wb, wsUsers, 'USERS');
+
+    // NB Master
+    var wsNB = XLSX.utils.aoa_to_sheet(
+      [['id','clientcode','pnno','name','amount','batchno']].concat(
+        nbmaster.map(function(n){return[n.id,n.clientcode,n.pnno||'',n.name,parseFloat(n.amount||0),n.batchno||''];})
+      )
+    );
+    wsNB['!cols']=[{wch:8},{wch:22},{wch:22},{wch:36},{wch:14},{wch:20}];
+    XLSX.utils.book_append_sheet(wb, wsNB, 'NB MASTER');
+
+    XLSX.writeFile(wb, fname, {bookType:'xls'});
+    loading(false);
+
+    var msg = isAuto
+      ? 'Auto-backup complete! File saved: '+fname
+      : 'Backup complete! File saved: '+fname;
+    toast(msg,'success',6000);
+
+    // Update last backup display
+    updateLastBackupDisplay();
+
+  }catch(e){
+    loading(false);
+    toast('Backup failed: '+e.message,'error',6000);
+    // Reset last backup date so it retries
+    if(isAuto) setLastBackupDate('');
+  }
+}
+
+function updateLastBackupDisplay(){
+  var el = document.getElementById('lastBackupInfo');
+  if(!el) return;
+  var last = getLastBackupDate();
+  el.textContent = last ? 'Last backup: '+fmtDate(last) : 'No backup yet this week';
+  el.style.color = last ? 'var(--success)' : 'var(--danger)';
 }
 
 </script>
