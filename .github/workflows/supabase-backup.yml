@@ -7,6 +7,9 @@ on:
   workflow_dispatch:
     # Allow manual trigger from GitHub Actions tab anytime
 
+permissions:
+  contents: write
+
 jobs:
   backup:
     runs-on: ubuntu-latest
@@ -18,12 +21,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
       # ── Step 2: Set backup date/time variables ────────────────────
       - name: Set backup timestamp
         id: timestamp
         run: |
-          # Philippine Time = UTC+8
           BACKUP_DATE=$(TZ='Asia/Manila' date '+%Y-%m-%d')
           BACKUP_TIME=$(TZ='Asia/Manila' date '+%H%M')
           BACKUP_FOLDER="backups/${BACKUP_DATE}"
@@ -35,10 +38,23 @@ jobs:
       # ── Step 3: Create backup folder ─────────────────────────────
       - name: Create backup directory
         run: |
-          mkdir -p ${{ steps.timestamp.outputs.folder }}
-          echo "Created folder: ${{ steps.timestamp.outputs.folder }}"
+          mkdir -p ${{ steps.timestamp.outputs.folder }}/database
+          mkdir -p ${{ steps.timestamp.outputs.folder }}/system
+          echo "Created folders under: ${{ steps.timestamp.outputs.folder }}"
 
-      # ── Step 4: Export CLIENTS table ─────────────────────────────
+      # ── Step 4: Backup SYSTEM FILE (index.html) ───────────────────
+      - name: Backup system file (index.html)
+        run: |
+          if [ -f "index.html" ]; then
+            cp index.html "${{ steps.timestamp.outputs.folder }}/system/index_${{ steps.timestamp.outputs.date }}.html"
+            SIZE=$(wc -c < index.html | tr -d ' ')
+            LINES=$(wc -l < index.html | tr -d ' ')
+            echo "System file backed up: ${SIZE} bytes | ${LINES} lines"
+          else
+            echo "WARNING: index.html not found in repository root"
+          fi
+
+      # ── Step 5: Export CLIENTS table ─────────────────────────────
       - name: Export clients table
         run: |
           curl -s \
@@ -46,11 +62,11 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}" \
             -H "Accept: text/csv" \
             "${{ secrets.SUPABASE_URL }}/rest/v1/clients?order=name.asc&select=clientcode,name,branchcode,change,moc,pnno" \
-            -o "${{ steps.timestamp.outputs.folder }}/clients.csv"
-          COUNT=$(tail -n +2 "${{ steps.timestamp.outputs.folder }}/clients.csv" | wc -l)
+            -o "${{ steps.timestamp.outputs.folder }}/database/clients.csv"
+          COUNT=$(tail -n +2 "${{ steps.timestamp.outputs.folder }}/database/clients.csv" | wc -l | tr -d ' ')
           echo "Clients exported: ${COUNT} records"
 
-      # ── Step 5: Export CHANGES / TRANSACTIONS table ───────────────
+      # ── Step 6: Export CHANGES table ─────────────────────────────
       - name: Export changes table
         run: |
           curl -s \
@@ -58,11 +74,11 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}" \
             -H "Accept: text/csv" \
             "${{ secrets.SUPABASE_URL }}/rest/v1/changes?order=id.desc&select=id,branchcode,clientcode,date,arnumber,amount,remarks,printedby,printeddatetime" \
-            -o "${{ steps.timestamp.outputs.folder }}/changes.csv"
-          COUNT=$(tail -n +2 "${{ steps.timestamp.outputs.folder }}/changes.csv" | wc -l)
+            -o "${{ steps.timestamp.outputs.folder }}/database/changes.csv"
+          COUNT=$(tail -n +2 "${{ steps.timestamp.outputs.folder }}/database/changes.csv" | wc -l | tr -d ' ')
           echo "Changes exported: ${COUNT} records"
 
-      # ── Step 6: Export BRANCHES table ────────────────────────────
+      # ── Step 7: Export BRANCHES table ────────────────────────────
       - name: Export branches table
         run: |
           curl -s \
@@ -70,11 +86,11 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}" \
             -H "Accept: text/csv" \
             "${{ secrets.SUPABASE_URL }}/rest/v1/branches?order=name.asc&select=code,name,address,status" \
-            -o "${{ steps.timestamp.outputs.folder }}/branches.csv"
-          COUNT=$(tail -n +2 "${{ steps.timestamp.outputs.folder }}/branches.csv" | wc -l)
+            -o "${{ steps.timestamp.outputs.folder }}/database/branches.csv"
+          COUNT=$(tail -n +2 "${{ steps.timestamp.outputs.folder }}/database/branches.csv" | wc -l | tr -d ' ')
           echo "Branches exported: ${COUNT} records"
 
-      # ── Step 7: Export MOC table ──────────────────────────────────
+      # ── Step 8: Export MOC table ──────────────────────────────────
       - name: Export moc table
         run: |
           curl -s \
@@ -82,11 +98,11 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}" \
             -H "Accept: text/csv" \
             "${{ secrets.SUPABASE_URL }}/rest/v1/moc?order=moc.asc&select=moc,description" \
-            -o "${{ steps.timestamp.outputs.folder }}/moc.csv"
-          COUNT=$(tail -n +2 "${{ steps.timestamp.outputs.folder }}/moc.csv" | wc -l)
+            -o "${{ steps.timestamp.outputs.folder }}/database/moc.csv"
+          COUNT=$(tail -n +2 "${{ steps.timestamp.outputs.folder }}/database/moc.csv" | wc -l | tr -d ' ')
           echo "MOC exported: ${COUNT} records"
 
-      # ── Step 8: Export USERS table (no passwords) ─────────────────
+      # ── Step 9: Export USERS table (no passwords) ─────────────────
       - name: Export users table
         run: |
           curl -s \
@@ -94,11 +110,11 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}" \
             -H "Accept: text/csv" \
             "${{ secrets.SUPABASE_URL }}/rest/v1/users?order=lastname.asc&select=loginname,lastname,firstname,middlename,extname,email,position,systemaccess,uploadaccess,administrator" \
-            -o "${{ steps.timestamp.outputs.folder }}/users.csv"
-          COUNT=$(tail -n +2 "${{ steps.timestamp.outputs.folder }}/users.csv" | wc -l)
+            -o "${{ steps.timestamp.outputs.folder }}/database/users.csv"
+          COUNT=$(tail -n +2 "${{ steps.timestamp.outputs.folder }}/database/users.csv" | wc -l | tr -d ' ')
           echo "Users exported: ${COUNT} records"
 
-      # ── Step 9: Export NBMASTER table ────────────────────────────
+      # ── Step 10: Export NBMASTER table ───────────────────────────
       - name: Export nbmaster table
         run: |
           curl -s \
@@ -106,79 +122,104 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}" \
             -H "Accept: text/csv" \
             "${{ secrets.SUPABASE_URL }}/rest/v1/nbmaster?order=id.desc&select=id,clientcode,pnno,name,amount,batchno" \
-            -o "${{ steps.timestamp.outputs.folder }}/nbmaster.csv"
-          COUNT=$(tail -n +2 "${{ steps.timestamp.outputs.folder }}/nbmaster.csv" | wc -l)
+            -o "${{ steps.timestamp.outputs.folder }}/database/nbmaster.csv"
+          COUNT=$(tail -n +2 "${{ steps.timestamp.outputs.folder }}/database/nbmaster.csv" | wc -l | tr -d ' ')
           echo "NBMaster exported: ${COUNT} records"
 
-      # ── Step 10: Create backup summary ───────────────────────────
+      # ── Step 11: Create backup summary ───────────────────────────
       - name: Create backup summary
         run: |
-          CLIENTS=$(tail -n +2 "${{ steps.timestamp.outputs.folder }}/clients.csv" | wc -l)
-          CHANGES=$(tail -n +2 "${{ steps.timestamp.outputs.folder }}/changes.csv" | wc -l)
-          BRANCHES=$(tail -n +2 "${{ steps.timestamp.outputs.folder }}/branches.csv" | wc -l)
-          MOC=$(tail -n +2 "${{ steps.timestamp.outputs.folder }}/moc.csv" | wc -l)
-          USERS=$(tail -n +2 "${{ steps.timestamp.outputs.folder }}/users.csv" | wc -l)
-          NBMASTER=$(tail -n +2 "${{ steps.timestamp.outputs.folder }}/nbmaster.csv" | wc -l)
+          CLIENTS=$(tail -n +2 "${{ steps.timestamp.outputs.folder }}/database/clients.csv" | wc -l | tr -d ' ')
+          CHANGES=$(tail -n +2 "${{ steps.timestamp.outputs.folder }}/database/changes.csv" | wc -l | tr -d ' ')
+          BRANCHES=$(tail -n +2 "${{ steps.timestamp.outputs.folder }}/database/branches.csv" | wc -l | tr -d ' ')
+          MOC=$(tail -n +2 "${{ steps.timestamp.outputs.folder }}/database/moc.csv" | wc -l | tr -d ' ')
+          USERS=$(tail -n +2 "${{ steps.timestamp.outputs.folder }}/database/users.csv" | wc -l | tr -d ' ')
+          NBMASTER=$(tail -n +2 "${{ steps.timestamp.outputs.folder }}/database/nbmaster.csv" | wc -l | tr -d ' ')
           TOTAL=$((CLIENTS + CHANGES + BRANCHES + MOC + USERS + NBMASTER))
+          SYS_SIZE=$(wc -c < "index.html" 2>/dev/null | tr -d ' ' || echo "0")
 
-          cat > "${{ steps.timestamp.outputs.folder }}/BACKUP_SUMMARY.txt" << EOF
-          ============================================================
-          NEXTBANK-FASTCASH LMS - DATABASE BACKUP SUMMARY
-          ============================================================
-          Backup Date  : ${{ steps.timestamp.outputs.date }}
-          Backup Time  : ${{ steps.timestamp.outputs.time }} PHT
-          System URL   : https://nbccs.fcash.com.ph
-          ============================================================
-          TABLE               RECORDS
-          ============================================================
-          Clients             ${CLIENTS}
-          Changes             ${CHANGES}
-          Branches            ${BRANCHES}
-          MOC                 ${MOC}
-          Users               ${USERS}
-          NB Master           ${NBMASTER}
-          ------------------------------------------------------------
-          TOTAL RECORDS       ${TOTAL}
-          ============================================================
-          Files in this backup:
-          - clients.csv
-          - changes.csv
-          - branches.csv
-          - moc.csv
-          - users.csv
-          - nbmaster.csv
-          - BACKUP_SUMMARY.txt
-          ============================================================
-          NOTE: User passwords are NOT included in this backup.
-          NOTE: This backup was generated automatically by GitHub Actions.
-          ============================================================
-          EOF
+          cat > "${{ steps.timestamp.outputs.folder }}/BACKUP_SUMMARY.txt" << SUMMARY
+============================================================
+NEXTBANK-FASTCASH LMS - FULL BACKUP SUMMARY
+============================================================
+Backup Date  : ${{ steps.timestamp.outputs.date }}
+Backup Time  : ${{ steps.timestamp.outputs.time }} PHT
+System URL   : https://nbccs.fcash.com.ph
+============================================================
+SYSTEM FILE BACKUP
+============================================================
+File         : index.html
+Size         : ${SYS_SIZE} bytes
+Saved As     : system/index_${{ steps.timestamp.outputs.date }}.html
+============================================================
+DATABASE BACKUP
+============================================================
+TABLE                    RECORDS
+============================================================
+Clients                  ${CLIENTS}
+Changes / Transactions   ${CHANGES}
+Branches                 ${BRANCHES}
+MOC                      ${MOC}
+Users                    ${USERS}
+NB Master                ${NBMASTER}
+------------------------------------------------------------
+TOTAL RECORDS            ${TOTAL}
+============================================================
+FOLDER STRUCTURE
+============================================================
+backups/${{ steps.timestamp.outputs.date }}/
+  BACKUP_SUMMARY.txt
+  system/
+    index_${{ steps.timestamp.outputs.date }}.html
+  database/
+    clients.csv
+    changes.csv
+    branches.csv
+    moc.csv
+    users.csv
+    nbmaster.csv
+============================================================
+NOTE: User passwords are NOT included in this backup.
+NOTE: Generated automatically by GitHub Actions.
+============================================================
+          SUMMARY
+
           echo "Backup summary created"
-          echo ""
-          echo "====== BACKUP COMPLETE ======"
           cat "${{ steps.timestamp.outputs.folder }}/BACKUP_SUMMARY.txt"
 
-      # ── Step 11: Commit and push backup files ─────────────────────
+      # ── Step 12: Commit and push all backup files ─────────────────
       - name: Commit backup to repository
         run: |
           git config --global user.name "NBCCS Backup Bot"
-          git config --global user.email "backup@nbccs.fcash.com.ph"
+          git config --global user.email "actions@github.com"
           git add backups/
-          git commit -m "Auto-backup: ${{ steps.timestamp.outputs.date }} ${{ steps.timestamp.outputs.time }} PHT" || echo "No changes to commit"
-          git push
+          if git diff --staged --quiet; then
+            echo "No new backup files to commit"
+          else
+            git commit -m "Auto-backup: ${{ steps.timestamp.outputs.date }} ${{ steps.timestamp.outputs.time }} PHT - DB + System"
+            git push origin HEAD:main
+          fi
 
-      # ── Step 12: Cleanup old backups (keep last 12 weeks) ─────────
+      # ── Step 13: Cleanup old backups (keep last 12 weeks) ─────────
       - name: Cleanup old backups
         run: |
-          cd backups
-          # List all backup folders sorted by date, keep newest 12
-          ls -1d */ 2>/dev/null | sort | head -n -12 | while read folder; do
-            echo "Removing old backup: ${folder}"
-            git rm -r "${folder}" 2>/dev/null || rm -rf "${folder}"
-          done
-          if git diff --cached --quiet; then
-            echo "No old backups to remove"
-          else
-            git commit -m "Cleanup: removed backups older than 12 weeks"
-            git push
+          if [ -d "backups" ]; then
+            cd backups
+            FOLDERS=$(ls -1d */ 2>/dev/null | sort)
+            COUNT=$(echo "$FOLDERS" | grep -c '/' || true)
+            if [ "$COUNT" -gt 12 ]; then
+              TO_DELETE=$(echo "$FOLDERS" | head -n -12)
+              echo "Removing old backups: $TO_DELETE"
+              echo "$TO_DELETE" | while read folder; do
+                rm -rf "../backups/${folder}"
+              done
+              cd ..
+              git add backups/
+              if ! git diff --staged --quiet; then
+                git commit -m "Cleanup: removed backups older than 12 weeks"
+                git push origin HEAD:main
+              fi
+            else
+              echo "Only ${COUNT} backup(s) - no cleanup needed"
+            fi
           fi
