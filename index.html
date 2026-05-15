@@ -918,7 +918,19 @@ async function generateReport(){
     var query='?order='+sortBy+'.'+sortOrder+'&date=gte.'+df+'&date=lte.'+dt;if(branch)query+='&branchcode=eq.'+encodeURIComponent(branch);
     var rows=await db.select('changes',query);
     var clients=await dbCached('clients','?select=clientcode,name,moc',60000);rptClientMap={};clients.forEach(function(c){rptClientMap[c.clientcode]={name:c.name,moc:c.moc};});
-    rows=rows.map(function(r){return Object.assign({},r,{clientname:(rptClientMap[r.clientcode]||{}).name||r.clientcode,moc:(rptClientMap[r.clientcode]||{}).moc||'--'});});
+    // Find clientcodes missing from the map and fetch them directly
+    var missingCodes=[...new Set(rows.map(function(r){return r.clientcode;}).filter(function(cc){return !rptClientMap[cc];}))];
+    if(missingCodes.length){
+      try{
+        var chunkSize=50;
+        for(var mi=0;mi<missingCodes.length;mi+=chunkSize){
+          var chunk=missingCodes.slice(mi,mi+chunkSize);
+          var missing=await db.select('clients','?clientcode=in.('+chunk.map(function(c){return encodeURIComponent(c);}).join(',')+')&select=clientcode,name,moc');
+          missing.forEach(function(c){rptClientMap[c.clientcode]={name:c.name,moc:c.moc};});
+        }
+      }catch(e){}
+    }
+    rows=rows.map(function(r){var cm=rptClientMap[r.clientcode]||{};return Object.assign({},r,{clientname:cm.name||'('+r.clientcode+')',moc:cm.moc||r.moc||'--'});});
     if(moc)rows=rows.filter(function(r){return r.moc===moc;});rptData=rows;rptFiltered=rows;rptCurrentSort={col:sortBy,order:sortOrder};
     renderReportTable(groupBy,df,dt,branch,moc);
   }catch(e){toast('Report error: '+e.message,'error');}loading(false);
