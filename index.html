@@ -577,7 +577,20 @@ async function renderDashboard(){
     document.getElementById('dsh-today').textContent=changes.filter(function(c){return c.date===today();}).length.toLocaleString('en-PH');
     document.getElementById('dsh-claimed').textContent=peso(changes.reduce(function(a,c){return a+parseFloat(c.amount||0);},0));
     var tbody=document.querySelector('#dsh-table tbody');tbody.innerHTML='';
-    changes.forEach(function(c){var cl=clients.find(function(x){return x.clientcode===c.clientcode;})||{};tbody.innerHTML+='<tr><td>'+sanitize(c.arnumber)+'</td><td>'+sanitize(cl.name||c.clientcode)+'</td><td>'+sanitize(c.branchcode)+'</td><td class="amt" style="color:var(--success)">'+peso(c.amount)+'</td><td>'+fmtDate(c.date)+'</td><td>'+sanitize(c.printedby)+'</td></tr>';});
+    // Build client map from cached clients
+    var dshClientMap={};clients.forEach(function(c){dshClientMap[c.clientcode]=c.name;});
+    // Find missing clientcodes and fetch them directly
+    var dshMissing=[...new Set(changes.map(function(c){return c.clientcode;}).filter(function(cc){return !dshClientMap[cc];}))];
+    if(dshMissing.length){
+      try{
+        var dshExtra=await db.select('clients','?clientcode=in.('+dshMissing.map(function(c){return encodeURIComponent(c);}).join(',')+')'+'&select=clientcode,name');
+        dshExtra.forEach(function(c){dshClientMap[c.clientcode]=c.name;});
+      }catch(e){}
+    }
+    changes.forEach(function(c){
+      var clientName=dshClientMap[c.clientcode]||c.clientcode;
+      tbody.innerHTML+='<tr><td>'+sanitize(c.arnumber)+'</td><td>'+sanitize(clientName)+'</td><td>'+sanitize(c.branchcode)+'</td><td class="amt" style="color:var(--success)">'+peso(c.amount)+'</td><td>'+fmtDate(c.date)+'</td><td>'+sanitize(c.printedby)+'</td></tr>';
+    });
   }catch(e){console.error(e);}
   loading(false);
 }
