@@ -97,7 +97,7 @@
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
     <div class="stat-card" style="border-top-color:#065f46;border-radius:10px">
-      <div class="stat-label" style="color:#065f46;font-weight:800">&#128178; Total Unclaimed</div>
+      <div class="stat-label" style="color:#065f46;font-weight:800">&#8369; Total Unclaimed</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
         <div style="text-align:center;padding:10px;background:#ecfdf5;border-radius:8px">
           <div style="font-size:11px;font-weight:700;color:#065f46;text-transform:uppercase;margin-bottom:4px">Client Count</div>
@@ -218,7 +218,7 @@
       <div><label class="fl">Mode of Change</label><select class="fi" id="rptMOC"><option value="">-- All MOC --</option></select></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 3fr;gap:12px;margin-top:10px">
-      <div><label class="fl">Change Type</label><select class="fi" id="rptChangeType"><option value="all">All Changes</option><option value="claimed">Claimed Change Only</option><option value="unclaimed">Unclaimed Change Only</option></select></div>
+      <div><label class="fl">Change Type</label><select class="fi" id="rptChangeType"><option value="all">All Types</option><option value="claimed">Claimed Change Only</option><option value="unclaimed">Unclaimed Change Only</option></select></div>
     </div>
     <div style="display:none">
       <select class="fi" id="rptSortBy"><option value="date">Date</option><option value="branchcode">Branch</option><option value="amount">Amount</option><option value="clientcode">Client Code</option></select>
@@ -992,20 +992,30 @@ async function generateReport(){
     // Change Type filter
     var changeType=document.getElementById('rptChangeType').value;
     if(changeType==='claimed'){
-      // Only rows where client has been claimed (change transaction exists)
-      rows=rows.filter(function(r){return parseFloat(r.amount||0)>0;});
-    } else if(changeType==='unclaimed'){
-      // Unclaimed: fetch clients with change > 0 and no transactions in date range
-      var allClientCodes=new Set(rows.map(function(r){return r.clientcode;}));
-      var unclaimedClients=rptAllClients.filter(function(c){return parseFloat(c.change||0)>0 && !allClientCodes.has(c.clientcode);});
-      // Build unclaimed rows from clients
-      rows=unclaimedClients.map(function(c){return {clientcode:c.clientcode,clientname:c.name,branchcode:c.branchcode,change:c.change,amount:0,arnumber:'--',date:'--',moc:c.moc||'--',printedby:'--',status:'Unclaimed'};});
-    }
-    // Add status field to claimed rows
-    if(changeType!=='unclaimed'){
+      // Claimed Only: transactions within date range
       rows=rows.map(function(r){return Object.assign({},r,{status:'Claimed'});});
-    }
-    rptData=rows;rptFiltered=rows;rptCurrentSort={col:sortBy,order:sortOrder};
+      rptData=rows;rptFiltered=rows;
+    } else if(changeType==='unclaimed'){
+      // Unclaimed Only: clients with change > 0 (date filter does NOT apply)
+      var unclaimedClients=rptAllClients.filter(function(c){return parseFloat(c.change||0)>0;});
+      rows=unclaimedClients.map(function(c){return {clientcode:c.clientcode,clientname:c.name,branchcode:c.branchcode,change:parseFloat(c.change||0),amount:0,arnumber:'--',date:'--',moc:c.moc||'--',printedby:'--',status:'Unclaimed'};});
+      // Apply branch filter if selected
+      if(branch)rows=rows.filter(function(r){return r.branchcode===branch;});
+      // Apply moc filter if selected
+      if(moc)rows=rows.filter(function(r){return r.moc===moc;});
+      rptData=rows;rptFiltered=rows;
+    } else {
+      // All Types: claimed transactions (date range) + all unclaimed clients
+      var claimedRows=rows.map(function(r){return Object.assign({},r,{status:'Claimed'});});
+      var claimedCodes=new Set(rows.map(function(r){return r.clientcode;}));
+      var unclaimedClients=rptAllClients.filter(function(c){return parseFloat(c.change||0)>0;});
+      var unclaimedRows=unclaimedClients.map(function(c){return {clientcode:c.clientcode,clientname:c.name,branchcode:c.branchcode,change:parseFloat(c.change||0),amount:0,arnumber:'--',date:'--',moc:c.moc||'--',printedby:'--',status:'Unclaimed'};});
+      // Apply branch/moc filter to unclaimed rows too
+      if(branch)unclaimedRows=unclaimedRows.filter(function(r){return r.branchcode===branch;});
+      if(moc)unclaimedRows=unclaimedRows.filter(function(r){return r.moc===moc;});
+      rows=[].concat(claimedRows,unclaimedRows);
+      rptData=rows;rptFiltered=rows;
+    }rptCurrentSort={col:sortBy,order:sortOrder};
     renderReportTable(groupBy,df,dt,branch,moc);
   }catch(e){toast('Report error: '+e.message,'error');}loading(false);
 }
@@ -1018,7 +1028,7 @@ function renderReportTable(groupBy,df,dt,branch,moc){
   document.getElementById('rptGeneratedAt').textContent='Generated: '+nowDT();
   var pgen=document.getElementById('rptPrintGenerated');if(pgen)pgen.textContent='Generated: '+nowDT();
   var changeTypeEl=document.getElementById('rptChangeType');
-  var changeTypeLabel=changeTypeEl?changeTypeEl.options[changeTypeEl.selectedIndex].text:'All Changes';
+  var changeTypeLabel=changeTypeEl?changeTypeEl.options[changeTypeEl.selectedIndex].text:'All Types';
   document.getElementById('rptPrintTitle').textContent='Change '+changeTypeLabel+' Report';document.getElementById('rptPrintParams').textContent='Period: '+fmtDateLong(df)+' to '+fmtDateLong(dt)+' | Branch: '+(branch||'All')+' | MOC: '+(moc||'All')+' | '+rows.length+' record(s)';
   ['date','arnumber','clientcode','branchcode','moc','amount'].forEach(function(col){var el=document.getElementById('sort-'+col);if(!el)return;var active=rptCurrentSort.col===col;el.textContent=active?(rptCurrentSort.order==='asc'?' ^':' v'):'';el.style.color=active?'var(--gold)':'';});
   var tbody=document.getElementById('rptTableBody'),tfoot=document.getElementById('rptTableFoot');tbody.innerHTML='';tfoot.innerHTML='';
@@ -1047,7 +1057,7 @@ function exportReportExcel(){
   var wb=XLSX.utils.book_new();
   var ws1=XLSX.utils.aoa_to_sheet([['NextBank-FastCash LMS - Change Claimed Report'],['Generated:',nowDT(),'By:',currentUser?currentUser.loginname:''],[],'Category,Value'.split(','),['Period From',fmtDateExcel(df)],['Period To',fmtDateExcel(dt)],['Branch',branch],['MOC',moc],[],['Total Transactions',rows.length],['Total Amount',total],['Average',avg],['Highest',max]]);
   ws1['!cols']=[{wch:20},{wch:20}];XLSX.utils.book_append_sheet(wb,ws1,'Summary');
-  var changeTypeLabel2=(document.getElementById('rptChangeType')||{options:[{text:'All Changes'}]});var ctLabel=changeTypeLabel2.options?changeTypeLabel2.options[changeTypeLabel2.selectedIndex||0].text:'All Changes';var ws2d=[['Date','AR No.','Client Code','Client Name','Branch','MOC','Amount','Printed By','Status']];
+  var changeTypeLabel2=(document.getElementById('rptChangeType')||{options:[{text:'All Types'}]});var ctLabel=changeTypeLabel2.options?changeTypeLabel2.options[changeTypeLabel2.selectedIndex||0].text:'All Types';var ws2d=[['Date','AR No.','Client Code','Client Name','Branch','MOC','Amount','Printed By','Status']];
   rows.forEach(function(r){ws2d.push([fmtDateExcel(r.date),r.arnumber,r.clientcode,r.clientname||r.clientcode,r.branchcode,r.moc||'--',r.status==='Unclaimed'?parseFloat(r.change||0):parseFloat(r.amount||0),r.printedby||'--',r.status||'Claimed']);});
   ws2d.push(['','','','','','GRAND TOTAL',total,'']);
   var ws2=XLSX.utils.aoa_to_sheet(ws2d);
