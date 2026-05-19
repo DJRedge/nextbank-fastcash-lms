@@ -92,7 +92,7 @@
   </div>
   <div class="stat-grid">
     <div class="stat-card" style="border-top-color:var(--gold)"><div class="stat-label">Total Clients</div><div class="stat-value" id="dsh-clients">--</div><div class="stat-sub">Registered accounts</div></div>
-    <div class="stat-card" style="border-top-color:#065f46"><div class="stat-label">Change Pool</div><div class="stat-value" id="dsh-pool">--</div><div class="stat-sub">Unclaimed balance</div></div>
+    <div class="stat-card" style="border-top-color:#065f46"><div class="stat-label">Total Unclaimed Change</div><div class="stat-value" id="dsh-pool">--</div><div class="stat-sub">Unclaimed balance</div></div>
     <div class="stat-card"><div class="stat-label">Claims Today</div><div class="stat-value" id="dsh-today">--</div><div class="stat-sub">Transactions</div></div>
     <div class="stat-card" style="border-top-color:var(--danger)"><div class="stat-label">Total Claimed</div><div class="stat-value" id="dsh-claimed">--</div><div class="stat-sub">All time</div></div>
   </div>
@@ -568,30 +568,23 @@ function closeModal(id){document.getElementById(id).classList.remove('open');}
 
 async function renderDashboard(){
   loading(true,'Loading dashboard...','Fetching live data...');
-  showSkeleton('#dsh-table tbody',6,5);
   try{
-    var clients=await dbCached('clients','?select=clientcode,name,change',30000),changes=await dbCached('changes','?order=id.desc&limit=10',30000);
+    var clients=await dbCached('clients','?select=clientcode,name,change',30000);
+    var changes=await dbCached('changes','?select=clientcode,amount,date&order=id.desc',30000);
     cachedClients=clients;
+    var todayStr=today();
     document.getElementById('dsh-clients').textContent=clients.length.toLocaleString('en-PH');
-    document.getElementById('dsh-pool').textContent=peso(clients.reduce(function(a,c){return a+parseFloat(c.change||0);},0));
-    document.getElementById('dsh-today').textContent=changes.filter(function(c){return c.date===today();}).length.toLocaleString('en-PH');
-    document.getElementById('dsh-claimed').textContent=peso(changes.reduce(function(a,c){return a+parseFloat(c.amount||0);},0));
-    var tbody=document.querySelector('#dsh-table tbody');tbody.innerHTML='';
-    // Build client map from cached clients
-    var dshClientMap={};clients.forEach(function(c){dshClientMap[c.clientcode]=c.name;});
-    // Find missing clientcodes and fetch them directly
-    var dshMissing=[...new Set(changes.map(function(c){return c.clientcode;}).filter(function(cc){return !dshClientMap[cc];}))];
-    if(dshMissing.length){
-      try{
-        var dshExtra=await db.select('clients','?clientcode=in.('+dshMissing.map(function(c){return encodeURIComponent(c);}).join(',')+')'+'&select=clientcode,name');
-        dshExtra.forEach(function(c){dshClientMap[c.clientcode]=c.name;});
-      }catch(e){}
-    }
-    changes.forEach(function(c){
-      var clientName=dshClientMap[c.clientcode]||c.clientcode;
-      tbody.innerHTML+='<tr><td>'+sanitize(c.arnumber)+'</td><td>'+sanitize(clientName)+'</td><td>'+sanitize(c.branchcode)+'</td><td class="amt" style="color:var(--success)">'+peso(c.amount)+'</td><td>'+fmtDate(c.date)+'</td><td>'+sanitize(c.printedby)+'</td></tr>';
-    });
-  }catch(e){console.error(e);}
+    var unclaimed=clients.filter(function(c){return parseFloat(c.change||0)>0;});
+    var unclaimedAmt=unclaimed.reduce(function(a,c){return a+parseFloat(c.change||0);},0);
+    document.getElementById('dsh-pool').textContent=peso(unclaimedAmt);
+    var duc=document.getElementById('dsh-unclaimed-count');
+    if(duc)duc.textContent=unclaimed.length.toLocaleString('en-PH');
+    document.getElementById('dsh-today').textContent=changes.filter(function(c){return c.date===todayStr;}).length.toLocaleString('en-PH');
+    var totalClaimed=changes.reduce(function(a,c){return a+parseFloat(c.amount||0);},0);
+    document.getElementById('dsh-claimed').textContent=peso(totalClaimed);
+    var dcc=document.getElementById('dsh-claimed-clients');
+    if(dcc)dcc.textContent=new Set(changes.map(function(c){return c.clientcode;})).size.toLocaleString('en-PH');
+  }catch(e){toast('Dashboard error: '+e.message,'error',6000);}
   loading(false);
 }
 
@@ -1155,17 +1148,10 @@ async function backupDatabase(){
 
 //  Auto Backup System 
 // Runs automatically every Monday at 8:00 AM or on first login of the week
-var _autoBackupTimer = null;
-var _BACKUP_DAY     = 1;    // 1 = Monday
-var _BACKUP_HOUR    = 8;    // 8:00 AM
-var _LAST_BACKUP_KEY = 'nbccs_last_backup';
+var _autoBackupTimer=null,_BACKUP_DAY=1,_BACKUP_HOUR=8,_lastBackupDate='';
 
-function getLastBackupDate(){
-  try{ return sessionStorage.getItem(_LAST_BACKUP_KEY)||''; }catch(e){ return ''; }
-}
-function setLastBackupDate(d){
-  try{ sessionStorage.setItem(_LAST_BACKUP_KEY, d); }catch(e){}
-}
+function getLastBackupDate(){return _lastBackupDate||'';}
+function setLastBackupDate(d){_lastBackupDate=d||'';}
 
 function shouldAutoBackup(){
   if(!currentUser||!currentUser.administrator) return false;
