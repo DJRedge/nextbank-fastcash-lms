@@ -110,7 +110,7 @@
       </div>
     </div>
     <div class="stat-card" style="border-top-color:#0a1f5c;border-radius:10px">
-      <div class="stat-label" style="color:#0a1f5c;font-weight:800">&#9989; Total Claimed</div>
+      <div class="stat-label" style="color:#0a1f5c;font-weight:800">&#8369; Total Claimed</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
         <div style="text-align:center;padding:10px;background:#eff6ff;border-radius:8px">
           <div style="font-size:11px;font-weight:700;color:#0a1f5c;text-transform:uppercase;margin-bottom:4px">Client Count</div>
@@ -123,11 +123,6 @@
       </div>
     </div>
   </div>
-  <div class="card">
-    <div class="card-header"><div class="card-title">Recent Transactions</div></div>
-    <div class="tbl-wrap"><table id="dsh-table"><thead><tr><th>AR No.</th><th>Client</th><th>Branch</th><th class="amt">Amount</th><th>Date</th><th>Printed By</th></tr></thead><tbody></tbody></table></div>
-  </div>
-</div>
 
 <!-- CLIENTS -->
 <div class="page" id="page-clients">
@@ -599,7 +594,6 @@ function closeModal(id){document.getElementById(id).classList.remove('open');}
 
 async function renderDashboard(){
   loading(true,'Loading dashboard...','Fetching live data...');
-  showSkeleton('#dsh-table tbody',6,5);
   try{
     var clients=await dbCached('clients','?select=clientcode,name,change',30000),changes=await dbCached('changes','?order=id.desc&limit=10',30000);
     cachedClients=clients;
@@ -620,9 +614,7 @@ async function renderDashboard(){
     var unclaimedAmt=unclaimedClients.reduce(function(a,c){return a+parseFloat(c.change||0);},0);
     document.getElementById('dsh-unclaimed-count').textContent=unclaimedClients.length.toLocaleString('en-PH');
     document.getElementById('dsh-pool').textContent=peso(unclaimedAmt);
-    var tbody=document.querySelector('#dsh-table tbody');tbody.innerHTML='';
-    // Build client map from cached clients
-    var dshClientMap={};clients.forEach(function(c){dshClientMap[c.clientcode]=c.name;});
+    
     // Find missing clientcodes and fetch them directly
     var dshMissing=[...new Set(changes.map(function(c){return c.clientcode;}).filter(function(cc){return !dshClientMap[cc];}))];
     if(dshMissing.length){
@@ -992,27 +984,31 @@ async function generateReport(){
     // Change Type filter
     var changeType=document.getElementById('rptChangeType').value;
     if(changeType==='claimed'){
-      // Claimed Only: transactions within date range
+      // Claimed Only: transactions within date range only
       rows=rows.map(function(r){return Object.assign({},r,{status:'Claimed'});});
       rptData=rows;rptFiltered=rows;
     } else if(changeType==='unclaimed'){
-      // Unclaimed Only: clients with change > 0 (date filter does NOT apply)
-      var unclaimedClients=rptAllClients.filter(function(c){return parseFloat(c.change||0)>0;});
-      rows=unclaimedClients.map(function(c){return {clientcode:c.clientcode,clientname:c.name,branchcode:c.branchcode,change:parseFloat(c.change||0),amount:0,arnumber:'--',date:'--',moc:c.moc||'--',printedby:'--',status:'Unclaimed'};});
+      // Unclaimed Only: clients with change > 0 regardless of date range
+      var unclaimedAll=rptAllClients.filter(function(c){return parseFloat(c.change||0)>0;});
       // Apply branch filter if selected
-      if(branch)rows=rows.filter(function(r){return r.branchcode===branch;});
+      if(branch)unclaimedAll=unclaimedAll.filter(function(c){return c.branchcode===branch;});
       // Apply moc filter if selected
-      if(moc)rows=rows.filter(function(r){return r.moc===moc;});
+      if(moc)unclaimedAll=unclaimedAll.filter(function(c){return (c.moc||'--')===moc;});
+      rows=unclaimedAll.map(function(c){return {clientcode:c.clientcode,clientname:c.name,branchcode:c.branchcode,change:parseFloat(c.change||0),amount:0,arnumber:'--',date:'--',moc:c.moc||'--',printedby:'--',status:'Unclaimed'};});
       rptData=rows;rptFiltered=rows;
     } else {
-      // All Types: claimed transactions (date range) + all unclaimed clients
+      // All Types: claimed (within date range) + unclaimed (within date range)
+      // Claimed rows = transactions within date range
       var claimedRows=rows.map(function(r){return Object.assign({},r,{status:'Claimed'});});
+      // Unclaimed rows = clients with change > 0 who have NO transaction in date range
       var claimedCodes=new Set(rows.map(function(r){return r.clientcode;}));
-      var unclaimedClients=rptAllClients.filter(function(c){return parseFloat(c.change||0)>0;});
-      var unclaimedRows=unclaimedClients.map(function(c){return {clientcode:c.clientcode,clientname:c.name,branchcode:c.branchcode,change:parseFloat(c.change||0),amount:0,arnumber:'--',date:'--',moc:c.moc||'--',printedby:'--',status:'Unclaimed'};});
-      // Apply branch/moc filter to unclaimed rows too
-      if(branch)unclaimedRows=unclaimedRows.filter(function(r){return r.branchcode===branch;});
-      if(moc)unclaimedRows=unclaimedRows.filter(function(r){return r.moc===moc;});
+      var unclaimedInRange=rptAllClients.filter(function(c){
+        return parseFloat(c.change||0)>0 && !claimedCodes.has(c.clientcode);
+      });
+      // Apply branch/moc filter to unclaimed rows
+      if(branch)unclaimedInRange=unclaimedInRange.filter(function(c){return c.branchcode===branch;});
+      if(moc)unclaimedInRange=unclaimedInRange.filter(function(c){return (c.moc||'--')===moc;});
+      var unclaimedRows=unclaimedInRange.map(function(c){return {clientcode:c.clientcode,clientname:c.name,branchcode:c.branchcode,change:parseFloat(c.change||0),amount:0,arnumber:'--',date:'--',moc:c.moc||'--',printedby:'--',status:'Unclaimed'};});
       rows=[].concat(claimedRows,unclaimedRows);
       rptData=rows;rptFiltered=rows;
     }rptCurrentSort={col:sortBy,order:sortOrder};
