@@ -477,7 +477,7 @@ function cacheClear(prefix){
 async function dbCached(table,query,ttlMs){
   var key=table+(query||'');
   var cached=cacheGet(key);
-  if(cached)return cached;
+  if(cached)return Promise.resolve(cached);
   var result=await db.select(table,query);
   cacheSet(key,result,ttlMs||30000);
   return result;
