@@ -90,17 +90,39 @@
       </div>
     </div>
   </div>
-  <div class="stat-grid">
+  <div class="stat-grid" style="grid-template-columns:repeat(3,1fr)">
     <div class="stat-card" style="border-top-color:var(--gold)"><div class="stat-label">Total Clients</div><div class="stat-value" id="dsh-clients">--</div><div class="stat-sub">Registered accounts</div></div>
-    <div class="stat-card" style="border-top-color:#065f46"><div class="stat-label">Change Pool</div><div class="stat-value" id="dsh-pool">--</div><div class="stat-sub">Unclaimed balance</div></div>
-    <div class="stat-card"><div class="stat-label">Claims Today</div><div class="stat-value" id="dsh-today">--</div><div class="stat-sub">Transactions</div></div>
-    <div class="stat-card" style="border-top-color:var(--danger)"><div class="stat-label">Total Claimed</div><div class="stat-value" id="dsh-claimed">--</div><div class="stat-sub">All time</div></div>
+    <div class="stat-card"><div class="stat-label">Claims Today</div><div class="stat-value" id="dsh-today">--</div><div class="stat-sub">Transactions today</div></div>
+    <div class="stat-card" style="border-top-color:var(--danger)"><div class="stat-label">Total Claimed Amount</div><div class="stat-value" id="dsh-claimed">--</div><div class="stat-sub" id="dsh-claimed-count">All time transactions</div></div>
   </div>
-  <div class="card">
-    <div class="card-header"><div class="card-title">Recent Transactions</div></div>
-    <div class="tbl-wrap"><table id="dsh-table"><thead><tr><th>AR No.</th><th>Client</th><th>Branch</th><th class="amt">Amount</th><th>Date</th><th>Printed By</th></tr></thead><tbody></tbody></table></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+    <div class="stat-card" style="border-top-color:#065f46;border-radius:10px">
+      <div class="stat-label" style="color:#065f46;font-weight:800">&#8369; Total Unclaimed</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+        <div style="text-align:center;padding:10px;background:#ecfdf5;border-radius:8px">
+          <div style="font-size:11px;font-weight:700;color:#065f46;text-transform:uppercase;margin-bottom:4px">Client Count</div>
+          <div class="stat-value" id="dsh-unclaimed-count" style="font-size:22px;color:#065f46">--</div>
+        </div>
+        <div style="text-align:center;padding:10px;background:#ecfdf5;border-radius:8px">
+          <div style="font-size:11px;font-weight:700;color:#065f46;text-transform:uppercase;margin-bottom:4px">Total Amount</div>
+          <div class="stat-value" id="dsh-pool" style="font-size:22px;color:#065f46">--</div>
+        </div>
+      </div>
+    </div>
+    <div class="stat-card" style="border-top-color:#0a1f5c;border-radius:10px">
+      <div class="stat-label" style="color:#0a1f5c;font-weight:800">&#8369; Total Claimed</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+        <div style="text-align:center;padding:10px;background:#eff6ff;border-radius:8px">
+          <div style="font-size:11px;font-weight:700;color:#0a1f5c;text-transform:uppercase;margin-bottom:4px">Client Count</div>
+          <div class="stat-value" id="dsh-claimed-clients" style="font-size:22px;color:#0a1f5c">--</div>
+        </div>
+        <div style="text-align:center;padding:10px;background:#eff6ff;border-radius:8px">
+          <div style="font-size:11px;font-weight:700;color:#0a1f5c;text-transform:uppercase;margin-bottom:4px">Total Amount</div>
+          <div class="stat-value" id="dsh-claimed-amt" style="font-size:22px;color:#0a1f5c">--</div>
+        </div>
+      </div>
+    </div>
   </div>
-</div>
 
 <!-- CLIENTS -->
 <div class="page" id="page-clients">
@@ -190,6 +212,9 @@
       <div><label class="fl">Branch</label><select class="fi" id="rptBranch"><option value="">-- All Branches --</option></select></div>
       <div><label class="fl">Mode of Change</label><select class="fi" id="rptMOC"><option value="">-- All MOC --</option></select></div>
     </div>
+    <div style="display:grid;grid-template-columns:1fr 3fr;gap:12px;margin-top:10px">
+      <div><label class="fl">Change Type</label><select class="fi" id="rptChangeType"><option value="all">All Types</option><option value="claimed">Claimed Change Only</option><option value="unclaimed">Unclaimed Change Only</option></select></div>
+    </div>
     <div style="display:none">
       <select class="fi" id="rptSortBy"><option value="date">Date</option><option value="branchcode">Branch</option><option value="amount">Amount</option><option value="clientcode">Client Code</option></select>
       <select class="fi" id="rptSortOrder"><option value="asc">Ascending</option><option value="desc">Descending</option></select>
@@ -239,6 +264,7 @@
           <th onclick="sortReportBy('amount')" style="cursor:pointer" class="amt">Amount <span id="sort-amount"></span></th>
           <th>Printed By</th>
         </tr></thead>
+          <th>Status</th>
         <tbody id="rptTableBody"></tbody>
         <tfoot id="rptTableFoot"></tfoot>
       </table>
@@ -451,7 +477,7 @@ function cacheClear(prefix){
 async function dbCached(table,query,ttlMs){
   var key=table+(query||'');
   var cached=cacheGet(key);
-  if(cached)return cached;
+  if(cached)return Promise.resolve(cached);
   var result=await db.select(table,query);
   cacheSet(key,result,ttlMs||30000);
   return result;
@@ -460,7 +486,7 @@ async function dbCached(table,query,ttlMs){
 var SB_URL='https://bbpurrnroinfncwtyqsn.supabase.co',SB_KEY='sb_publishable_k1ckt5dZvdYVAuALsEylSw_jYSBzPDs';
 async function sbFetch(method,table,body,query){query=query||'';var url=SB_URL+'/rest/v1/'+table+query;var headers={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};if(method!=='GET')headers['Prefer']='return=representation';var opts={method:method,headers:headers};if(body)opts.body=JSON.stringify(body);var res=await fetch(url,opts);if(!res.ok){var msg='HTTP '+res.status;try{var j=await res.json();msg=j.message||j.hint||msg;}catch(e){}throw new Error(msg);}var text=await res.text();return text?JSON.parse(text):[];}
 var db={select:function(t,q){return sbFetch('GET',t,null,q);},insert:function(t,d){return sbFetch('POST',t,d,'');},update:function(t,d,q){return sbFetch('PATCH',t,d,q);},delete:function(t,q){return sbFetch('DELETE',t,null,q);}};
-var currentUser=null,editKey={},cachedClients=[],cachedBranches=[],cachedMOC=[],cachedTx=[],cachedUsersAll=[],claimClient=null,_uploadLog=[],_branchLog=[],_unlocatedRecords=[],rptData=[],rptFiltered=[],rptClientMap={},rptCurrentSort={col:'date',order:'asc'};
+var currentUser=null,editKey={},cachedClients=[],cachedBranches=[],cachedMOC=[],cachedTx=[],cachedUsersAll=[],claimClient=null,_uploadLog=[],_branchLog=[],_unlocatedRecords=[],rptData=[],rptFiltered=[],rptClientMap={},rptAllClients=[],rptCurrentSort={col:'date',order:'asc'};
 function peso(n){return '\u20b1'+parseFloat(n||0).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function sanitize(s){if(!s)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function today(){return new Date().toISOString().slice(0,10);}
@@ -568,30 +594,34 @@ function closeModal(id){document.getElementById(id).classList.remove('open');}
 
 async function renderDashboard(){
   loading(true,'Loading dashboard...','Fetching live data...');
-  showSkeleton('#dsh-table tbody',6,5);
   try{
-    var clients=await dbCached('clients','?select=clientcode,name,change',30000),changes=await dbCached('changes','?order=id.desc&limit=10',30000);
+    var clients=await dbCached('clients','?select=clientcode,name,change',30000);
+    var changes=await dbCached('changes','?select=clientcode,amount,date',30000);
     cachedClients=clients;
+
+    //  Stat Card: Total Clients 
     document.getElementById('dsh-clients').textContent=clients.length.toLocaleString('en-PH');
-    document.getElementById('dsh-pool').textContent=peso(clients.reduce(function(a,c){return a+parseFloat(c.change||0);},0));
-    document.getElementById('dsh-today').textContent=changes.filter(function(c){return c.date===today();}).length.toLocaleString('en-PH');
-    document.getElementById('dsh-claimed').textContent=peso(changes.reduce(function(a,c){return a+parseFloat(c.amount||0);},0));
-    var tbody=document.querySelector('#dsh-table tbody');tbody.innerHTML='';
-    // Build client map from cached clients
-    var dshClientMap={};clients.forEach(function(c){dshClientMap[c.clientcode]=c.name;});
-    // Find missing clientcodes and fetch them directly
-    var dshMissing=[...new Set(changes.map(function(c){return c.clientcode;}).filter(function(cc){return !dshClientMap[cc];}))];
-    if(dshMissing.length){
-      try{
-        var dshExtra=await db.select('clients','?clientcode=in.('+dshMissing.map(function(c){return encodeURIComponent(c);}).join(',')+')'+'&select=clientcode,name');
-        dshExtra.forEach(function(c){dshClientMap[c.clientcode]=c.name;});
-      }catch(e){}
-    }
-    changes.forEach(function(c){
-      var clientName=dshClientMap[c.clientcode]||c.clientcode;
-      tbody.innerHTML+='<tr><td>'+sanitize(c.arnumber)+'</td><td>'+sanitize(clientName)+'</td><td>'+sanitize(c.branchcode)+'</td><td class="amt" style="color:var(--success)">'+peso(c.amount)+'</td><td>'+fmtDate(c.date)+'</td><td>'+sanitize(c.printedby)+'</td></tr>';
-    });
-  }catch(e){console.error(e);}
+
+    //  Stat Card: Claims Today 
+    var todayStr=today();
+    document.getElementById('dsh-today').textContent=changes.filter(function(c){return c.date===todayStr;}).length.toLocaleString('en-PH');
+
+    //  Stat Card: Total Claimed Amount 
+    var totalClaimedAmt=changes.reduce(function(a,c){return a+parseFloat(c.amount||0);},0);
+    document.getElementById('dsh-claimed').textContent=peso(totalClaimedAmt);
+
+    //  Stat Card: Total Claimed - Client Count 
+    var claimedCodes=new Set(changes.map(function(c){return c.clientcode;}));
+    document.getElementById('dsh-claimed-clients').textContent=claimedCodes.size.toLocaleString('en-PH');
+    document.getElementById('dsh-claimed-amt').textContent=peso(totalClaimedAmt);
+
+    //  Stat Card: Total Unclaimed - Client Count + Amount 
+    var unclaimedClients=clients.filter(function(c){return parseFloat(c.change||0)>0;});
+    var unclaimedAmt=unclaimedClients.reduce(function(a,c){return a+parseFloat(c.change||0);},0);
+    document.getElementById('dsh-unclaimed-count').textContent=unclaimedClients.length.toLocaleString('en-PH');
+    document.getElementById('dsh-pool').textContent=peso(unclaimedAmt);
+
+  }catch(e){toast('Dashboard error: '+e.message,'error');}
   loading(false);
 }
 
@@ -922,7 +952,7 @@ async function initReports(){
   var now=new Date();document.getElementById('rptDateFrom').value=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);document.getElementById('rptDateTo').value=today();
   document.getElementById('rptSummary').style.display='none';document.getElementById('rptTableCard').style.display='none';document.getElementById('rptEmpty').style.display='none';
 }
-function resetReportFilters(){var now=new Date();document.getElementById('rptDateFrom').value=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);document.getElementById('rptDateTo').value=today();['rptBranch','rptMOC'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('rptSortBy').value='date';document.getElementById('rptSortOrder').value='asc';document.getElementById('rptGroupBy').value='';document.getElementById('rptSummary').style.display='none';document.getElementById('rptTableCard').style.display='none';document.getElementById('rptEmpty').style.display='none';document.getElementById('btnRptExcel').style.display='none';rptData=[];rptFiltered=[];}
+function resetReportFilters(){var now=new Date();document.getElementById('rptDateFrom').value=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);document.getElementById('rptDateTo').value=today();['rptBranch','rptMOC','rptChangeType'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});document.getElementById('rptSortBy').value='date';document.getElementById('rptSortOrder').value='asc';document.getElementById('rptGroupBy').value='';document.getElementById('rptSummary').style.display='none';document.getElementById('rptTableCard').style.display='none';document.getElementById('rptEmpty').style.display='none';document.getElementById('btnRptExcel').style.display='none';rptData=[];rptFiltered=[];}
 async function generateReport(){
   var df=document.getElementById('rptDateFrom').value,dt=document.getElementById('rptDateTo').value,branch=document.getElementById('rptBranch').value,moc=document.getElementById('rptMOC').value,sortBy=document.getElementById('rptSortBy').value,sortOrder=document.getElementById('rptSortOrder').value,groupBy=document.getElementById('rptGroupBy').value;
   if(!df||!dt){toast('Please set both Date From and Date To.','warning');return;}if(df>dt){toast('Date From cannot be after Date To.','error');return;}
@@ -930,7 +960,7 @@ async function generateReport(){
   try{
     var query='?order='+sortBy+'.'+sortOrder+'&date=gte.'+df+'&date=lte.'+dt;if(branch)query+='&branchcode=eq.'+encodeURIComponent(branch);
     var rows=await db.select('changes',query);
-    var clients=await dbCached('clients','?select=clientcode,name,moc',60000);rptClientMap={};clients.forEach(function(c){rptClientMap[c.clientcode]={name:c.name,moc:c.moc};});
+    var clients=await dbCached('clients','?select=clientcode,name,moc,branchcode,change',60000);rptAllClients=clients;rptClientMap={};clients.forEach(function(c){rptClientMap[c.clientcode]={name:c.name,moc:c.moc};});
     // Find clientcodes missing from the map and fetch them directly
     var missingCodes=[...new Set(rows.map(function(r){return r.clientcode;}).filter(function(cc){return !rptClientMap[cc];}))];
     if(missingCodes.length){
@@ -944,7 +974,38 @@ async function generateReport(){
       }catch(e){}
     }
     rows=rows.map(function(r){var cm=rptClientMap[r.clientcode]||{};return Object.assign({},r,{clientname:cm.name||'('+r.clientcode+')',moc:cm.moc||r.moc||'--'});});
-    if(moc)rows=rows.filter(function(r){return r.moc===moc;});rptData=rows;rptFiltered=rows;rptCurrentSort={col:sortBy,order:sortOrder};
+    if(moc)rows=rows.filter(function(r){return r.moc===moc;});
+    // Change Type filter
+    var changeType=document.getElementById('rptChangeType').value;
+    if(changeType==='claimed'){
+      // Claimed Only: transactions within date range only
+      rows=rows.map(function(r){return Object.assign({},r,{status:'Claimed'});});
+      rptData=rows;rptFiltered=rows;
+    } else if(changeType==='unclaimed'){
+      // Unclaimed Only: clients with change > 0 regardless of date range
+      var unclaimedAll=rptAllClients.filter(function(c){return parseFloat(c.change||0)>0;});
+      // Apply branch filter if selected
+      if(branch)unclaimedAll=unclaimedAll.filter(function(c){return c.branchcode===branch;});
+      // Apply moc filter if selected
+      if(moc)unclaimedAll=unclaimedAll.filter(function(c){return (c.moc||'--')===moc;});
+      rows=unclaimedAll.map(function(c){return {clientcode:c.clientcode,clientname:c.name,branchcode:c.branchcode,change:parseFloat(c.change||0),amount:0,arnumber:'--',date:'--',moc:c.moc||'--',printedby:'--',status:'Unclaimed'};});
+      rptData=rows;rptFiltered=rows;
+    } else {
+      // All Types: claimed (within date range) + unclaimed (within date range)
+      // Claimed rows = transactions within date range
+      var claimedRows=rows.map(function(r){return Object.assign({},r,{status:'Claimed'});});
+      // Unclaimed rows = clients with change > 0 who have NO transaction in date range
+      var claimedCodes=new Set(rows.map(function(r){return r.clientcode;}));
+      var unclaimedInRange=rptAllClients.filter(function(c){
+        return parseFloat(c.change||0)>0 && !claimedCodes.has(c.clientcode);
+      });
+      // Apply branch/moc filter to unclaimed rows
+      if(branch)unclaimedInRange=unclaimedInRange.filter(function(c){return c.branchcode===branch;});
+      if(moc)unclaimedInRange=unclaimedInRange.filter(function(c){return (c.moc||'--')===moc;});
+      var unclaimedRows=unclaimedInRange.map(function(c){return {clientcode:c.clientcode,clientname:c.name,branchcode:c.branchcode,change:parseFloat(c.change||0),amount:0,arnumber:'--',date:'--',moc:c.moc||'--',printedby:'--',status:'Unclaimed'};});
+      rows=[].concat(claimedRows,unclaimedRows);
+      rptData=rows;rptFiltered=rows;
+    }rptCurrentSort={col:sortBy,order:sortOrder};
     renderReportTable(groupBy,df,dt,branch,moc);
   }catch(e){toast('Report error: '+e.message,'error');}loading(false);
 }
@@ -956,7 +1017,9 @@ function renderReportTable(groupBy,df,dt,branch,moc){
   document.getElementById('btnRptExcel').style.display='inline-flex';
   document.getElementById('rptGeneratedAt').textContent='Generated: '+nowDT();
   var pgen=document.getElementById('rptPrintGenerated');if(pgen)pgen.textContent='Generated: '+nowDT();
-  document.getElementById('rptPrintTitle').textContent='Change Claimed Report';document.getElementById('rptPrintParams').textContent='Period: '+fmtDateLong(df)+' to '+fmtDateLong(dt)+' | Branch: '+(branch||'All')+' | MOC: '+(moc||'All')+' | '+rows.length+' record(s)';
+  var changeTypeEl=document.getElementById('rptChangeType');
+  var changeTypeLabel=changeTypeEl?changeTypeEl.options[changeTypeEl.selectedIndex].text:'All Types';
+  document.getElementById('rptPrintTitle').textContent='Change '+changeTypeLabel+' Report';document.getElementById('rptPrintParams').textContent='Period: '+fmtDateLong(df)+' to '+fmtDateLong(dt)+' | Branch: '+(branch||'All')+' | MOC: '+(moc||'All')+' | '+rows.length+' record(s)';
   ['date','arnumber','clientcode','branchcode','moc','amount'].forEach(function(col){var el=document.getElementById('sort-'+col);if(!el)return;var active=rptCurrentSort.col===col;el.textContent=active?(rptCurrentSort.order==='asc'?' ^':' v'):'';el.style.color=active?'var(--gold)':'';});
   var tbody=document.getElementById('rptTableBody'),tfoot=document.getElementById('rptTableFoot');tbody.innerHTML='';tfoot.innerHTML='';
   var gEl=groupBy||document.getElementById('rptGroupBy').value;
@@ -964,7 +1027,15 @@ function renderReportTable(groupBy,df,dt,branch,moc){
   else rows.forEach(function(r){tbody.innerHTML+=buildReportRow(r);});
   tfoot.innerHTML='<tr style="background:var(--royal);color:var(--white)"><td colspan="6" style="padding:11px 14px;font-weight:700;font-size:13px">GRAND TOTAL - '+rows.length+' Transaction(s)</td><td class="amt" style="padding:11px 14px;font-weight:700;font-size:15px;color:var(--gold)">'+peso(total)+'</td><td></td></tr>';
 }
-function buildReportRow(r){return '<tr><td>'+fmtDate(r.date)+'</td><td><b>'+sanitize(r.arnumber)+'</b></td><td>'+sanitize(r.clientcode)+'</td><td>'+sanitize(r.clientname)+'</td><td>'+sanitize(r.branchcode)+'</td><td><span class="badge badge-info">'+sanitize(r.moc||'--')+'</span></td><td class="amt" style="color:var(--success)">'+peso(r.amount)+'</td><td>'+sanitize(r.printedby)+'</td></tr>';}
+function buildReportRow(r){
+  var statusBadge=r.status==='Unclaimed'
+    ?'<span class="badge" style="background:#ecfdf5;color:#065f46;border:1px solid #065f46">Unclaimed</span>'
+    :'<span class="badge" style="background:#eff6ff;color:#0a1f5c;border:1px solid #0a1f5c">Claimed</span>';
+  var amtDisplay=r.status==='Unclaimed'
+    ?'<td class="amt" style="color:#065f46">'+peso(r.change)+'</td>'
+    :'<td class="amt" style="color:var(--success)">'+peso(r.amount)+'</td>';
+  return '<tr><td>'+fmtDate(r.date)+'</td><td><b>'+sanitize(r.arnumber)+'</b></td><td>'+sanitize(r.clientcode)+'</td><td>'+sanitize(r.clientname||r.clientcode)+'</td><td>'+sanitize(r.branchcode)+'</td><td><span class="badge badge-info">'+sanitize(r.moc||'--')+'</span></td>'+amtDisplay+'<td>'+sanitize(r.printedby)+'</td><td>'+statusBadge+'</td></tr>';
+}
 function sortReportBy(col){if(rptCurrentSort.col===col)rptCurrentSort.order=rptCurrentSort.order==='asc'?'desc':'asc';else rptCurrentSort={col:col,order:'asc'};rptFiltered.sort(function(a,b){var va=a[col]||'',vb=b[col]||'';if(col==='amount'){va=parseFloat(va||0);vb=parseFloat(vb||0);}else{va=String(va).toLowerCase();vb=String(vb).toLowerCase();}if(va<vb)return rptCurrentSort.order==='asc'?-1:1;if(va>vb)return rptCurrentSort.order==='asc'?1:-1;return 0;});renderReportTable('',null,null,null,null);}
 function printReport(){if(!rptFiltered.length){toast('Please generate a report first.','warning');return;}document.getElementById('rptPrintHeader').style.display='block';window.print();document.getElementById('rptPrintHeader').style.display='none';}
 function exportReportExcel(){
@@ -976,8 +1047,8 @@ function exportReportExcel(){
   var wb=XLSX.utils.book_new();
   var ws1=XLSX.utils.aoa_to_sheet([['NextBank-FastCash LMS - Change Claimed Report'],['Generated:',nowDT(),'By:',currentUser?currentUser.loginname:''],[],'Category,Value'.split(','),['Period From',fmtDateExcel(df)],['Period To',fmtDateExcel(dt)],['Branch',branch],['MOC',moc],[],['Total Transactions',rows.length],['Total Amount',total],['Average',avg],['Highest',max]]);
   ws1['!cols']=[{wch:20},{wch:20}];XLSX.utils.book_append_sheet(wb,ws1,'Summary');
-  var ws2d=[['Date','AR No.','Client Code','Client Name','Branch','MOC','Amount','Printed By']];
-  rows.forEach(function(r){ws2d.push([fmtDateExcel(r.date),r.arnumber,r.clientcode,r.clientname,r.branchcode,r.moc,parseFloat(r.amount||0),r.printedby]);});
+  var changeTypeLabel2=(document.getElementById('rptChangeType')||{options:[{text:'All Types'}]});var ctLabel=changeTypeLabel2.options?changeTypeLabel2.options[changeTypeLabel2.selectedIndex||0].text:'All Types';var ws2d=[['Date','AR No.','Client Code','Client Name','Branch','MOC','Amount','Printed By','Status']];
+  rows.forEach(function(r){ws2d.push([fmtDateExcel(r.date),r.arnumber,r.clientcode,r.clientname||r.clientcode,r.branchcode,r.moc||'--',r.status==='Unclaimed'?parseFloat(r.change||0):parseFloat(r.amount||0),r.printedby||'--',r.status||'Claimed']);});
   ws2d.push(['','','','','','GRAND TOTAL',total,'']);
   var ws2=XLSX.utils.aoa_to_sheet(ws2d);
   ws2['!cols']=[{wch:12},{wch:16},{wch:22},{wch:32},{wch:12},{wch:10},{wch:16},{wch:16}];XLSX.utils.book_append_sheet(wb,ws2,'All Records');
@@ -1156,15 +1227,15 @@ async function backupDatabase(){
 //  Auto Backup System 
 // Runs automatically every Monday at 8:00 AM or on first login of the week
 var _autoBackupTimer = null;
-var _BACKUP_DAY     = 1;    // 1 = Monday
-var _BACKUP_HOUR    = 8;    // 8:00 AM
-var _LAST_BACKUP_KEY = 'nbccs_last_backup';
+var _BACKUP_DAY      = 1;
+var _BACKUP_HOUR     = 8;
+var _lastBackupDate  = '';
 
 function getLastBackupDate(){
-  try{ return sessionStorage.getItem(_LAST_BACKUP_KEY)||''; }catch(e){ return ''; }
+  return _lastBackupDate||'';
 }
 function setLastBackupDate(d){
-  try{ sessionStorage.setItem(_LAST_BACKUP_KEY, d); }catch(e){}
+  _lastBackupDate=d||'';
 }
 
 function shouldAutoBackup(){
