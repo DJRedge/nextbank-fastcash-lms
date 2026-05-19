@@ -92,11 +92,15 @@
   </div>
   <div class="stat-grid">
     <div class="stat-card" style="border-top-color:var(--gold)"><div class="stat-label">Total Clients</div><div class="stat-value" id="dsh-clients">--</div><div class="stat-sub">Registered accounts</div></div>
-    <div class="stat-card" style="border-top-color:#065f46"><div class="stat-label">Unclaimed Pool</div><div class="stat-value" id="dsh-pool">--</div><div class="stat-sub"><span id="dsh-unclaimed-count">--</span> clients with balance</div></div>
-    <div class="stat-card"><div class="stat-label">Claims Today</div><div class="stat-value" id="dsh-today">--</div><div class="stat-sub">Transactions today</div></div>
-    <div class="stat-card" style="border-top-color:var(--danger)"><div class="stat-label">Total Claimed</div><div class="stat-value" id="dsh-claimed">--</div><div class="stat-sub"><span id="dsh-claimed-clients">--</span> clients &bull; <span id="dsh-claimed-amt">--</span></div></div>
+    <div class="stat-card" style="border-top-color:#065f46"><div class="stat-label">Change Pool</div><div class="stat-value" id="dsh-pool">--</div><div class="stat-sub">Unclaimed balance</div></div>
+    <div class="stat-card"><div class="stat-label">Claims Today</div><div class="stat-value" id="dsh-today">--</div><div class="stat-sub">Transactions</div></div>
+    <div class="stat-card" style="border-top-color:var(--danger)"><div class="stat-label">Total Claimed</div><div class="stat-value" id="dsh-claimed">--</div><div class="stat-sub">All time</div></div>
   </div>
-
+  <div class="card">
+    <div class="card-header"><div class="card-title">Recent Transactions</div></div>
+    <div class="tbl-wrap"><table id="dsh-table"><thead><tr><th>AR No.</th><th>Client</th><th>Branch</th><th class="amt">Amount</th><th>Date</th><th>Printed By</th></tr></thead><tbody></tbody></table></div>
+  </div>
+</div>
 
 <!-- CLIENTS -->
 <div class="page" id="page-clients">
@@ -186,7 +190,6 @@
       <div><label class="fl">Branch</label><select class="fi" id="rptBranch"><option value="">-- All Branches --</option></select></div>
       <div><label class="fl">Mode of Change</label><select class="fi" id="rptMOC"><option value="">-- All MOC --</option></select></div>
     </div>
-
     <div style="display:none">
       <select class="fi" id="rptSortBy"><option value="date">Date</option><option value="branchcode">Branch</option><option value="amount">Amount</option><option value="clientcode">Client Code</option></select>
       <select class="fi" id="rptSortOrder"><option value="asc">Ascending</option><option value="desc">Descending</option></select>
@@ -448,7 +451,7 @@ function cacheClear(prefix){
 async function dbCached(table,query,ttlMs){
   var key=table+(query||'');
   var cached=cacheGet(key);
-  if(cached)return Promise.resolve(cached);
+  if(cached)return cached;
   var result=await db.select(table,query);
   cacheSet(key,result,ttlMs||30000);
   return result;
@@ -457,7 +460,7 @@ async function dbCached(table,query,ttlMs){
 var SB_URL='https://bbpurrnroinfncwtyqsn.supabase.co',SB_KEY='sb_publishable_k1ckt5dZvdYVAuALsEylSw_jYSBzPDs';
 async function sbFetch(method,table,body,query){query=query||'';var url=SB_URL+'/rest/v1/'+table+query;var headers={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};if(method!=='GET')headers['Prefer']='return=representation';var opts={method:method,headers:headers};if(body)opts.body=JSON.stringify(body);var res=await fetch(url,opts);if(!res.ok){var msg='HTTP '+res.status;try{var j=await res.json();msg=j.message||j.hint||msg;}catch(e){}throw new Error(msg);}var text=await res.text();return text?JSON.parse(text):[];}
 var db={select:function(t,q){return sbFetch('GET',t,null,q);},insert:function(t,d){return sbFetch('POST',t,d,'');},update:function(t,d,q){return sbFetch('PATCH',t,d,q);},delete:function(t,q){return sbFetch('DELETE',t,null,q);}};
-var currentUser=null,editKey={},cachedClients=[],cachedBranches=[],cachedMOC=[],cachedTx=[],cachedUsersAll=[],claimClient=null,_uploadLog=[],_branchLog=[],_unlocatedRecords=[],rptData=[],rptFiltered=[],rptClientMap={},rptAllClients=[],rptCurrentSort={col:'date',order:'asc'};
+var currentUser=null,editKey={},cachedClients=[],cachedBranches=[],cachedMOC=[],cachedTx=[],cachedUsersAll=[],claimClient=null,_uploadLog=[],_branchLog=[],_unlocatedRecords=[],rptData=[],rptFiltered=[],rptClientMap={},rptCurrentSort={col:'date',order:'asc'};
 function peso(n){return '\u20b1'+parseFloat(n||0).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function sanitize(s){if(!s)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function today(){return new Date().toISOString().slice(0,10);}
@@ -570,23 +573,16 @@ async function renderDashboard(){
     var changes=await dbCached('changes','?select=clientcode,amount,date&order=id.desc',30000);
     cachedClients=clients;
     var todayStr=today();
-    // Total Clients
     document.getElementById('dsh-clients').textContent=clients.length.toLocaleString('en-PH');
-    // Unclaimed pool
     var unclaimed=clients.filter(function(c){return parseFloat(c.change||0)>0;});
     var unclaimedAmt=unclaimed.reduce(function(a,c){return a+parseFloat(c.change||0);},0);
     document.getElementById('dsh-pool').textContent=peso(unclaimedAmt);
-    document.getElementById('dsh-unclaimed-count').textContent=unclaimed.length.toLocaleString('en-PH');
-    // Claims Today
+    var duc=document.getElementById('dsh-unclaimed-count');if(duc)duc.textContent=unclaimed.length.toLocaleString('en-PH');
     document.getElementById('dsh-today').textContent=changes.filter(function(c){return c.date===todayStr;}).length.toLocaleString('en-PH');
-    // Total Claimed
     var totalClaimed=changes.reduce(function(a,c){return a+parseFloat(c.amount||0);},0);
-    var claimedClients=new Set(changes.map(function(c){return c.clientcode;}));
     document.getElementById('dsh-claimed').textContent=peso(totalClaimed);
-    document.getElementById('dsh-claimed-clients').textContent=claimedClients.size.toLocaleString('en-PH');
-    var dca=document.getElementById('dsh-claimed-amt');
-    if(dca)dca.textContent=peso(totalClaimed);
-  }catch(e){toast('Dashboard error: '+e.message,'error',8000);console.error('Dashboard:',e);}
+    var dcc=document.getElementById('dsh-claimed-clients');if(dcc)dcc.textContent=new Set(changes.map(function(c){return c.clientcode;})).size.toLocaleString('en-PH');
+  }catch(e){toast('Dashboard error: '+e.message,'error',6000);}
   loading(false);
 }
 
@@ -600,8 +596,8 @@ async function loadClients(){
   }catch(e){
     loading(false);
     toast('Error loading clients: '+e.message,'error',8000);
-    var tbody=document.querySelector('#clientTable tbody');
-    if(tbody)tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:20px">Error: '+sanitize(e.message)+'</td></tr>';
+    var tb=document.querySelector('#clientTable tbody');
+    if(tb)tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:20px">'+sanitize(e.message)+'</td></tr>';
   }
 }
 var _cST=null;
@@ -947,8 +943,7 @@ async function generateReport(){
       }catch(e){}
     }
     rows=rows.map(function(r){var cm=rptClientMap[r.clientcode]||{};return Object.assign({},r,{clientname:cm.name||'('+r.clientcode+')',moc:cm.moc||r.moc||'--'});});
-    if(moc)rows=rows.filter(function(r){return r.moc===moc;});
-    rows=rows.map(function(r){return Object.assign({},r,{status:'Claimed'});});rptData=rows;rptFiltered=rows;rptCurrentSort={col:sortBy,order:sortOrder};
+    if(moc)rows=rows.filter(function(r){return r.moc===moc;});rptData=rows;rptFiltered=rows;rptCurrentSort={col:sortBy,order:sortOrder};
     renderReportTable(groupBy,df,dt,branch,moc);
   }catch(e){toast('Report error: '+e.message,'error');}loading(false);
 }
@@ -960,8 +955,6 @@ function renderReportTable(groupBy,df,dt,branch,moc){
   document.getElementById('btnRptExcel').style.display='inline-flex';
   document.getElementById('rptGeneratedAt').textContent='Generated: '+nowDT();
   var pgen=document.getElementById('rptPrintGenerated');if(pgen)pgen.textContent='Generated: '+nowDT();
-
-
   document.getElementById('rptPrintTitle').textContent='Change Claimed Report';document.getElementById('rptPrintParams').textContent='Period: '+fmtDateLong(df)+' to '+fmtDateLong(dt)+' | Branch: '+(branch||'All')+' | MOC: '+(moc||'All')+' | '+rows.length+' record(s)';
   ['date','arnumber','clientcode','branchcode','moc','amount'].forEach(function(col){var el=document.getElementById('sort-'+col);if(!el)return;var active=rptCurrentSort.col===col;el.textContent=active?(rptCurrentSort.order==='asc'?' ^':' v'):'';el.style.color=active?'var(--gold)':'';});
   var tbody=document.getElementById('rptTableBody'),tfoot=document.getElementById('rptTableFoot');tbody.innerHTML='';tfoot.innerHTML='';
@@ -970,15 +963,7 @@ function renderReportTable(groupBy,df,dt,branch,moc){
   else rows.forEach(function(r){tbody.innerHTML+=buildReportRow(r);});
   tfoot.innerHTML='<tr style="background:var(--royal);color:var(--white)"><td colspan="6" style="padding:11px 14px;font-weight:700;font-size:13px">GRAND TOTAL - '+rows.length+' Transaction(s)</td><td class="amt" style="padding:11px 14px;font-weight:700;font-size:15px;color:var(--gold)">'+peso(total)+'</td><td></td></tr>';
 }
-function buildReportRow(r){
-  var statusBadge=r.status==='Unclaimed'
-    ?'<span class="badge" style="background:#ecfdf5;color:#065f46;border:1px solid #065f46">Unclaimed</span>'
-    :'<span class="badge" style="background:#eff6ff;color:#0a1f5c;border:1px solid #0a1f5c">Claimed</span>';
-  var amtDisplay=r.status==='Unclaimed'
-    ?'<td class="amt" style="color:#065f46">'+peso(r.change)+'</td>'
-    :'<td class="amt" style="color:var(--success)">'+peso(r.amount)+'</td>';
-  return '<tr><td>'+fmtDate(r.date)+'</td><td><b>'+sanitize(r.arnumber)+'</b></td><td>'+sanitize(r.clientcode)+'</td><td>'+sanitize(r.clientname||r.clientcode)+'</td><td>'+sanitize(r.branchcode)+'</td><td><span class="badge badge-info">'+sanitize(r.moc||'--')+'</span></td>'+amtDisplay+'<td>'+sanitize(r.printedby)+'</td><td>'+statusBadge+'</td></tr>';
-}
+function buildReportRow(r){return '<tr><td>'+fmtDate(r.date)+'</td><td><b>'+sanitize(r.arnumber)+'</b></td><td>'+sanitize(r.clientcode)+'</td><td>'+sanitize(r.clientname)+'</td><td>'+sanitize(r.branchcode)+'</td><td><span class="badge badge-info">'+sanitize(r.moc||'--')+'</span></td><td class="amt" style="color:var(--success)">'+peso(r.amount)+'</td><td>'+sanitize(r.printedby)+'</td></tr>';}
 function sortReportBy(col){if(rptCurrentSort.col===col)rptCurrentSort.order=rptCurrentSort.order==='asc'?'desc':'asc';else rptCurrentSort={col:col,order:'asc'};rptFiltered.sort(function(a,b){var va=a[col]||'',vb=b[col]||'';if(col==='amount'){va=parseFloat(va||0);vb=parseFloat(vb||0);}else{va=String(va).toLowerCase();vb=String(vb).toLowerCase();}if(va<vb)return rptCurrentSort.order==='asc'?-1:1;if(va>vb)return rptCurrentSort.order==='asc'?1:-1;return 0;});renderReportTable('',null,null,null,null);}
 function printReport(){if(!rptFiltered.length){toast('Please generate a report first.','warning');return;}document.getElementById('rptPrintHeader').style.display='block';window.print();document.getElementById('rptPrintHeader').style.display='none';}
 function exportReportExcel(){
@@ -1169,17 +1154,10 @@ async function backupDatabase(){
 
 //  Auto Backup System 
 // Runs automatically every Monday at 8:00 AM or on first login of the week
-var _autoBackupTimer = null;
-var _BACKUP_DAY      = 1;
-var _BACKUP_HOUR     = 8;
-var _lastBackupDate  = '';
+var _autoBackupTimer=null,_BACKUP_DAY=1,_BACKUP_HOUR=8,_lastBackupDate='';
 
-function getLastBackupDate(){
-  return _lastBackupDate||'';
-}
-function setLastBackupDate(d){
-  _lastBackupDate=d||'';
-}
+function getLastBackupDate(){return _lastBackupDate||'';}
+function setLastBackupDate(d){_lastBackupDate=d||'';}
 
 function shouldAutoBackup(){
   if(!currentUser||!currentUser.administrator) return false;
