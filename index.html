@@ -595,39 +595,33 @@ function closeModal(id){document.getElementById(id).classList.remove('open');}
 async function renderDashboard(){
   loading(true,'Loading dashboard...','Fetching live data...');
   try{
-    var clients=await dbCached('clients','?select=clientcode,name,change',30000),changes=await dbCached('changes','?order=id.desc&limit=10',30000);
+    var clients=await dbCached('clients','?select=clientcode,name,change',30000);
+    var changes=await dbCached('changes','?select=clientcode,amount,date',30000);
     cachedClients=clients;
-    // Total clients
+
+    //  Stat Card: Total Clients 
     document.getElementById('dsh-clients').textContent=clients.length.toLocaleString('en-PH');
-    // Claims today
-    document.getElementById('dsh-today').textContent=changes.filter(function(c){return c.date===today();}).length.toLocaleString('en-PH');
-    // Total Claimed Amount (all transactions)
-    var allChanges=await dbCached('changes','?select=clientcode,amount',30000);
-    var totalClaimedAmt=allChanges.reduce(function(a,c){return a+parseFloat(c.amount||0);},0);
+
+    //  Stat Card: Claims Today 
+    var todayStr=today();
+    document.getElementById('dsh-today').textContent=changes.filter(function(c){return c.date===todayStr;}).length.toLocaleString('en-PH');
+
+    //  Stat Card: Total Claimed Amount 
+    var totalClaimedAmt=changes.reduce(function(a,c){return a+parseFloat(c.amount||0);},0);
     document.getElementById('dsh-claimed').textContent=peso(totalClaimedAmt);
-    // Unique clients who have claimed
-    var claimedClientCodes=new Set(allChanges.map(function(c){return c.clientcode;}));
-    document.getElementById('dsh-claimed-clients').textContent=claimedClientCodes.size.toLocaleString('en-PH');
+
+    //  Stat Card: Total Claimed - Client Count 
+    var claimedCodes=new Set(changes.map(function(c){return c.clientcode;}));
+    document.getElementById('dsh-claimed-clients').textContent=claimedCodes.size.toLocaleString('en-PH');
     document.getElementById('dsh-claimed-amt').textContent=peso(totalClaimedAmt);
-    // Unclaimed: clients with change > 0
+
+    //  Stat Card: Total Unclaimed - Client Count + Amount 
     var unclaimedClients=clients.filter(function(c){return parseFloat(c.change||0)>0;});
     var unclaimedAmt=unclaimedClients.reduce(function(a,c){return a+parseFloat(c.change||0);},0);
     document.getElementById('dsh-unclaimed-count').textContent=unclaimedClients.length.toLocaleString('en-PH');
     document.getElementById('dsh-pool').textContent=peso(unclaimedAmt);
-    
-    // Find missing clientcodes and fetch them directly
-    var dshMissing=[...new Set(changes.map(function(c){return c.clientcode;}).filter(function(cc){return !dshClientMap[cc];}))];
-    if(dshMissing.length){
-      try{
-        var dshExtra=await db.select('clients','?clientcode=in.('+dshMissing.map(function(c){return encodeURIComponent(c);}).join(',')+')'+'&select=clientcode,name');
-        dshExtra.forEach(function(c){dshClientMap[c.clientcode]=c.name;});
-      }catch(e){}
-    }
-    changes.forEach(function(c){
-      var clientName=dshClientMap[c.clientcode]||c.clientcode;
-      tbody.innerHTML+='<tr><td>'+sanitize(c.arnumber)+'</td><td>'+sanitize(clientName)+'</td><td>'+sanitize(c.branchcode)+'</td><td class="amt" style="color:var(--success)">'+peso(c.amount)+'</td><td>'+fmtDate(c.date)+'</td><td>'+sanitize(c.printedby)+'</td></tr>';
-    });
-  }catch(e){console.error(e);}
+
+  }catch(e){toast('Dashboard error: '+e.message,'error');}
   loading(false);
 }
 
