@@ -586,15 +586,23 @@ async function renderDashboard(){
     document.getElementById('dsh-claimed-clients').textContent=claimedClients.size.toLocaleString('en-PH');
     var dca=document.getElementById('dsh-claimed-amt');
     if(dca)dca.textContent=peso(totalClaimed);
-  }catch(e){toast('Dashboard error: '+e.message,'error');}
+  }catch(e){toast('Dashboard error: '+e.message,'error',8000);console.error('Dashboard:',e);}
   loading(false);
 }
 
 async function loadClients(){
   loading(true,'Loading clients...','Please wait...');
   showSkeleton('#clientTable tbody',7,8);
-  try{cachedClients=await db.select('clients','?order=name.asc&limit=500');}catch(e){toast('Error: '+e.message,'error');}
-  loading(false);filterClients();
+  try{
+    cachedClients=await db.select('clients','?order=name.asc&limit=500');
+    loading(false);
+    filterClients();
+  }catch(e){
+    loading(false);
+    toast('Error loading clients: '+e.message,'error',8000);
+    var tbody=document.querySelector('#clientTable tbody');
+    if(tbody)tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:20px">Error: '+sanitize(e.message)+'</td></tr>';
+  }
 }
 var _cST=null;
 async function serverSearchClients(){
