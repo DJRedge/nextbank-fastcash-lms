@@ -592,8 +592,6 @@ async function nav(page,el){
   else if(page==='moc')await loadMOC();
   else if(page==='users')await loadUsers();
 }
-
-
 function openModal(id){editKey[id]=null;if(id==='modalAddBranch'){document.getElementById('branchModalTitle').textContent='Add Branch';['bCode','bName','bAddr'].forEach(function(x){document.getElementById(x).value='';});document.getElementById('bStatus').value='Active';}if(id==='modalAddMOC'){document.getElementById('mocCode').value='';document.getElementById('mocDesc').value='';}if(id==='modalAddUser'){document.getElementById('userModalTitle').textContent='Add User';['uLast','uFirst','uMiddle','uExt','uLogin','uPass','uEmail','uPosition'].forEach(function(x){document.getElementById(x).value='';});setAccessCheckboxes(['All']);document.getElementById('uUploadAccess').value='All Branches';document.getElementById('uAdmin').value='0';}document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 
@@ -1062,7 +1060,6 @@ document.addEventListener('DOMContentLoaded',function(){
 });
 function setDate(){updateClock();setInterval(updateClock,1000);}
 function updateClock(){var now=new Date(),ce=document.getElementById('liveClock'),de=document.getElementById('liveDate');if(ce)ce.textContent=now.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});if(de)de.textContent=now.toLocaleDateString('en-PH',{weekday:'long',year:'numeric',month:'long',day:'numeric'});}
-
 
 
 
