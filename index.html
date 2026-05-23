@@ -90,19 +90,33 @@
       </div>
     </div>
   </div>
-  <div class="stat-grid">
-    <div class="stat-card" style="border-top-color:var(--gold)"><div class="stat-label">Total Clients</div><div class="stat-value" id="dsh-clients">--</div><div class="stat-sub">Registered accounts</div></div>
-    <div class="stat-card" style="border-top-color:#065f46"><div class="stat-label">Total Unclaimed Change</div><div class="stat-value" id="dsh-pool">--</div><div class="stat-sub">Unclaimed balance</div></div>
-    <div class="stat-card"><div class="stat-label">Claims Today</div><div class="stat-value" id="dsh-today">--</div><div class="stat-sub">Transactions</div></div>
-    <div class="stat-card" style="border-top-color:var(--danger)"><div class="stat-label">Total Claimed</div><div class="stat-value" id="dsh-claimed">--</div><div class="stat-sub">All time</div></div>
+  <div class="stat-grid" style="grid-template-columns:1fr 1fr 1fr 1fr">
+    <div class="stat-card" style="border-top-color:var(--gold)">
+      <div class="stat-label">Total Count of Claimed</div>
+      <div class="stat-value" id="dsh-claimed-count" style="color:var(--royal-dark)">--</div>
+      <div class="stat-sub">Clients who claimed</div>
+    </div>
+    <div class="stat-card" style="border-top-color:var(--gold)">
+      <div class="stat-label">Total Amount of Claimed</div>
+      <div class="stat-value" id="dsh-claimed-amt" style="color:var(--success)">--</div>
+      <div class="stat-sub">All time claimed</div>
+    </div>
+    <div class="stat-card" style="border-top-color:#065f46">
+      <div class="stat-label">Total Count of Unclaimed</div>
+      <div class="stat-value" id="dsh-unclaimed-count" style="color:var(--royal-dark)">--</div>
+      <div class="stat-sub">Clients with balance</div>
+    </div>
+    <div class="stat-card" style="border-top-color:#065f46">
+      <div class="stat-label">Total Amount of Unclaimed</div>
+      <div class="stat-value" id="dsh-unclaimed-amt" style="color:#065f46">--</div>
+      <div class="stat-sub">Total unclaimed balance</div>
+    </div>
   </div>
   <div class="card">
     <div class="card-header"><div class="card-title">Recent Transactions</div></div>
     <div class="tbl-wrap"><table id="dsh-table"><thead><tr><th>AR No.</th><th>Client</th><th>Branch</th><th class="amt">Amount</th><th>Date</th><th>Printed By</th></tr></thead><tbody></tbody></table></div>
   </div>
-</div>
-
-<!-- CLIENTS -->
+</div><!-- CLIENTS -->
 <div class="page" id="page-clients">
   <div class="card">
     <div class="card-header"><div class="card-title">Client List</div></div>
@@ -561,29 +575,34 @@ async function nav(page,el){
   else if(page==='moc')await loadMOC();
   else if(page==='users')await loadUsers();
 }
-function setDate(){updateClock();setInterval(updateClock,1000);}
-function updateClock(){var now=new Date(),ce=document.getElementById('liveClock'),de=document.getElementById('liveDate');if(ce)ce.textContent=now.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});if(de)de.textContent=now.toLocaleDateString('en-PH',{weekday:'long',year:'numeric',month:'long',day:'numeric'});}
 function openModal(id){editKey[id]=null;if(id==='modalAddBranch'){document.getElementById('branchModalTitle').textContent='Add Branch';['bCode','bName','bAddr'].forEach(function(x){document.getElementById(x).value='';});document.getElementById('bStatus').value='Active';}if(id==='modalAddMOC'){document.getElementById('mocCode').value='';document.getElementById('mocDesc').value='';}if(id==='modalAddUser'){document.getElementById('userModalTitle').textContent='Add User';['uLast','uFirst','uMiddle','uExt','uLogin','uPass','uEmail','uPosition'].forEach(function(x){document.getElementById(x).value='';});setAccessCheckboxes(['All']);document.getElementById('uUploadAccess').value='All Branches';document.getElementById('uAdmin').value='0';}document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 
 async function renderDashboard(){
   loading(true,'Loading dashboard...','Fetching live data...');
+  showSkeleton('#dsh-table tbody',6,5);
   try{
     var clients=await dbCached('clients','?select=clientcode,name,change',30000);
-    var changes=await dbCached('changes','?select=clientcode,amount,date&order=id.desc',30000);
+    var changes=await dbCached('changes','?select=clientcode,amount,date,arnumber,branchcode,printedby&order=id.desc',30000);
     cachedClients=clients;
-    var todayStr=today();
-    document.getElementById('dsh-clients').textContent=clients.length.toLocaleString('en-PH');
+    var claimedCodes=new Set(changes.map(function(c){return c.clientcode;}));
+    var claimedAmt=changes.reduce(function(a,c){return a+parseFloat(c.amount||0);},0);
+    document.getElementById('dsh-claimed-count').textContent=claimedCodes.size.toLocaleString('en-PH');
+    document.getElementById('dsh-claimed-amt').textContent=peso(claimedAmt);
     var unclaimed=clients.filter(function(c){return parseFloat(c.change||0)>0;});
     var unclaimedAmt=unclaimed.reduce(function(a,c){return a+parseFloat(c.change||0);},0);
-    document.getElementById('dsh-pool').textContent=peso(unclaimedAmt);
-    var duc=document.getElementById('dsh-unclaimed-count');
-    if(duc)duc.textContent=unclaimed.length.toLocaleString('en-PH');
-    document.getElementById('dsh-today').textContent=changes.filter(function(c){return c.date===todayStr;}).length.toLocaleString('en-PH');
-    var totalClaimed=changes.reduce(function(a,c){return a+parseFloat(c.amount||0);},0);
-    document.getElementById('dsh-claimed').textContent=peso(totalClaimed);
-    var dcc=document.getElementById('dsh-claimed-clients');
-    if(dcc)dcc.textContent=new Set(changes.map(function(c){return c.clientcode;})).size.toLocaleString('en-PH');
+    document.getElementById('dsh-unclaimed-count').textContent=unclaimed.length.toLocaleString('en-PH');
+    document.getElementById('dsh-unclaimed-amt').textContent=peso(unclaimedAmt);
+    var tbody=document.querySelector('#dsh-table tbody');
+    if(tbody){
+      tbody.innerHTML='';
+      var clientMap={};
+      clients.forEach(function(c){clientMap[c.clientcode]=c.name;});
+      changes.slice(0,10).forEach(function(c){
+        var name=clientMap[c.clientcode]||c.clientcode;
+        tbody.innerHTML+='<tr><td>'+sanitize(c.arnumber||'--')+'</td><td>'+sanitize(name)+'</td><td>'+sanitize(c.branchcode||'--')+'</td><td class="amt" style="color:var(--success)">'+peso(c.amount)+'</td><td>'+fmtDate(c.date)+'</td><td>'+sanitize(c.printedby||'--')+'</td></tr>';
+      });
+    }
   }catch(e){toast('Dashboard error: '+e.message,'error',6000);}
   loading(false);
 }
@@ -1033,116 +1052,6 @@ function setDate(){updateClock();setInterval(updateClock,1000);}
 function updateClock(){var now=new Date(),ce=document.getElementById('liveClock'),de=document.getElementById('liveDate');if(ce)ce.textContent=now.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});if(de)de.textContent=now.toLocaleDateString('en-PH',{weekday:'long',year:'numeric',month:'long',day:'numeric'});}
 
 
-async function backupDatabase(){
-  if(!currentUser||!currentUser.administrator){
-    toast('Access denied. Administrators only.','error');
-    return;
-  }
-  loading(true,'Creating database backup...','Fetching all tables...',0);
-  try{
-    var stamp=new Date();
-    var dateStr=stamp.getFullYear()+'-'+String(stamp.getMonth()+1).padStart(2,'0')+'-'+String(stamp.getDate()).padStart(2,'0');
-    var timeStr=String(stamp.getHours()).padStart(2,'0')+String(stamp.getMinutes()).padStart(2,'0');
-    var fname='NBCCS_Backup_'+dateStr+'_'+timeStr+'.xls';
-
-    loading(true,'Fetching clients...',null,10);
-    var clients=await db.select('clients','?order=name.asc');
-
-    loading(true,'Fetching transactions...',null,25);
-    var changes=await db.select('changes','?order=id.desc');
-
-    loading(true,'Fetching branches...',null,40);
-    var branches=await db.select('branches','?order=name.asc');
-
-    loading(true,'Fetching MOC...',null,55);
-    var moc=await db.select('moc','?order=moc.asc');
-
-    loading(true,'Fetching users...',null,70);
-    var users=await db.select('users','?order=lastname.asc');
-
-    loading(true,'Fetching NB Master...',null,85);
-    var nbmaster=await db.select('nbmaster','?order=id.desc&limit=5000');
-
-    loading(true,'Building Excel file...',null,95);
-
-    var wb=XLSX.utils.book_new();
-
-    //  Cover Sheet 
-    var coverData=[
-      ['NEXTBANK-FASTCASH CHANGE CLAIMING SYSTEM'],
-      ['Database Backup Report'],
-      [''],
-      ['Generated By:', currentUser.firstname+' '+currentUser.lastname],
-      ['Generated At:', nowDT()],
-      ['Backup Date:', dateStr],
-      ['System URL:', 'https://nbccs.fcash.com.ph'],
-      [''],
-      ['TABLE','RECORD COUNT'],
-      ['Clients', clients.length],
-      ['Changes / Transactions', changes.length],
-      ['Branches', branches.length],
-      ['Mode of Change (MOC)', moc.length],
-      ['Users', users.length],
-      ['NB Master', nbmaster.length],
-      [''],
-      ['TOTAL RECORDS', clients.length+changes.length+branches.length+moc.length+users.length+nbmaster.length],
-    ];
-    var wsCover=XLSX.utils.aoa_to_sheet(coverData);
-    wsCover['!cols']=[{wch:30},{wch:40}];
-    XLSX.utils.book_append_sheet(wb,wsCover,'BACKUP INFO');
-
-    //  Clients Sheet 
-    var clientHeaders=['clientcode','name','branchcode','change','moc','pnno'];
-    var clientRows=clients.map(function(c){return[c.clientcode,c.name,c.branchcode,parseFloat(c.change||0),c.moc||'',c.pnno||''];});
-    var wsClients=XLSX.utils.aoa_to_sheet([clientHeaders].concat(clientRows));
-    wsClients['!cols']=[{wch:22},{wch:36},{wch:12},{wch:14},{wch:10},{wch:22}];
-    XLSX.utils.book_append_sheet(wb,wsClients,'CLIENTS');
-
-    //  Changes / Transactions Sheet 
-    var chgHeaders=['id','branchcode','clientcode','date','arnumber','amount','remarks','printedby','printeddatetime'];
-    var chgRows=changes.map(function(c){return[c.id,c.branchcode,c.clientcode,c.date,c.arnumber,parseFloat(c.amount||0),c.remarks||'',c.printedby,c.printeddatetime||''];});
-    var wsChanges=XLSX.utils.aoa_to_sheet([chgHeaders].concat(chgRows));
-    wsChanges['!cols']=[{wch:8},{wch:12},{wch:22},{wch:12},{wch:16},{wch:14},{wch:28},{wch:16},{wch:20}];
-    XLSX.utils.book_append_sheet(wb,wsChanges,'TRANSACTIONS');
-
-    //  Branches Sheet 
-    var brHeaders=['code','name','address','status'];
-    var brRows=branches.map(function(b){return[b.code,b.name,b.address||'',b.status];});
-    var wsBranches=XLSX.utils.aoa_to_sheet([brHeaders].concat(brRows));
-    wsBranches['!cols']=[{wch:14},{wch:36},{wch:44},{wch:10}];
-    XLSX.utils.book_append_sheet(wb,wsBranches,'BRANCHES');
-
-    //  MOC Sheet 
-    var mocHeaders=['moc','description'];
-    var mocRows=moc.map(function(m){return[m.moc,m.description];});
-    var wsMOC=XLSX.utils.aoa_to_sheet([mocHeaders].concat(mocRows));
-    wsMOC['!cols']=[{wch:14},{wch:36}];
-    XLSX.utils.book_append_sheet(wb,wsMOC,'MOC');
-
-    //  Users Sheet (password hash excluded) 
-    var usrHeaders=['loginname','lastname','firstname','middlename','extname','email','position','systemaccess','uploadaccess','administrator'];
-    var usrRows=users.map(function(u){return[u.loginname,u.lastname,u.firstname,u.middlename||'',u.extname||'',u.email||'',u.position||'',u.systemaccess||'All',u.uploadaccess||'All Branches',u.administrator?'Yes':'No'];});
-    var wsUsers=XLSX.utils.aoa_to_sheet([usrHeaders].concat(usrRows));
-    wsUsers['!cols']=[{wch:16},{wch:18},{wch:18},{wch:16},{wch:8},{wch:28},{wch:24},{wch:40},{wch:16},{wch:10}];
-    XLSX.utils.book_append_sheet(wb,wsUsers,'USERS');
-
-    //  NB Master Sheet 
-    var nbHeaders=['id','clientcode','pnno','name','amount','batchno'];
-    var nbRows=nbmaster.map(function(n){return[n.id,n.clientcode,n.pnno||'',n.name,parseFloat(n.amount||0),n.batchno||''];});
-    var wsNB=XLSX.utils.aoa_to_sheet([nbHeaders].concat(nbRows));
-    wsNB['!cols']=[{wch:8},{wch:22},{wch:22},{wch:36},{wch:14},{wch:20}];
-    XLSX.utils.book_append_sheet(wb,wsNB,'NB MASTER');
-
-    //  Save File 
-    XLSX.writeFile(wb,fname,{bookType:'xls'});
-    loading(false);
-    toast('Backup complete! File: '+fname,'success',6000);
-
-  }catch(e){
-    loading(false);
-    toast('Backup failed: '+e.message,'error',6000);
-  }
-}
 
 
 
