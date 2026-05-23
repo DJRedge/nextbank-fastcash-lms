@@ -91,47 +91,16 @@
     </div>
   </div>
   <div class="stat-grid">
-    <div class="stat-card" style="padding:0;overflow:hidden;border:1px solid #e2e8f0;border-radius:12px">
-      <div style="background:#061240;padding:14px 16px">
-        <span style="font-size:22px;color:#f5c518">&#128101;</span>
-        <div class="stat-label" style="color:#8899cc;margin:6px 0 0;font-size:10px;letter-spacing:.5px">TOTAL CLIENTS</div>
-      </div>
-      <div style="padding:14px 16px">
-        <div class="stat-value" id="dsh-clients" style="color:#061240;font-size:26px">--</div>
-        <div class="stat-sub">Registered accounts</div>
-      </div>
-    </div>
-    <div class="stat-card" style="padding:0;overflow:hidden;border:1px solid #e2e8f0;border-radius:12px">
-      <div style="background:#059669;padding:14px 16px">
-        <span style="font-size:22px;color:#d1fae5">&#8369;</span>
-        <div class="stat-label" style="color:#d1fae5;margin:6px 0 0;font-size:10px;letter-spacing:.5px">TOTAL UNCLAIMED CHANGE</div>
-      </div>
-      <div style="padding:14px 16px">
-        <div class="stat-value" id="dsh-pool" style="color:#059669;font-size:22px">--</div>
-        <div class="stat-sub"><span id="dsh-unclaimed-count">--</span> clients with balance</div>
-      </div>
-    </div>
-    <div class="stat-card" style="padding:0;overflow:hidden;border:1px solid #e2e8f0;border-radius:12px">
-      <div style="background:#2563eb;padding:14px 16px">
-        <span style="font-size:22px;color:#dbeafe">&#128197;</span>
-        <div class="stat-label" style="color:#dbeafe;margin:6px 0 0;font-size:10px;letter-spacing:.5px">CLAIMS TODAY</div>
-      </div>
-      <div style="padding:14px 16px">
-        <div class="stat-value" id="dsh-today" style="color:#1e3a8a;font-size:26px">--</div>
-        <div class="stat-sub">Transactions today</div>
-      </div>
-    </div>
-    <div class="stat-card" style="padding:0;overflow:hidden;border:1px solid #e2e8f0;border-radius:12px">
-      <div style="background:#ea580c;padding:14px 16px">
-        <span style="font-size:22px;color:#ffedd5">&#9989;</span>
-        <div class="stat-label" style="color:#ffedd5;margin:6px 0 0;font-size:10px;letter-spacing:.5px">TOTAL CLAIMED</div>
-      </div>
-      <div style="padding:14px 16px">
-        <div class="stat-value" id="dsh-claimed" style="color:#ea580c;font-size:22px">--</div>
-        <div class="stat-sub"><span id="dsh-claimed-clients">--</span> clients claimed</div>
-      </div>
-    </div>
+    <div class="stat-card" style="border-top-color:var(--gold)"><div class="stat-label">Total Clients</div><div class="stat-value" id="dsh-clients">--</div><div class="stat-sub">Registered accounts</div></div>
+    <div class="stat-card" style="border-top-color:#065f46"><div class="stat-label">Total Unclaimed Change</div><div class="stat-value" id="dsh-pool">--</div><div class="stat-sub">Unclaimed balance</div></div>
+    <div class="stat-card"><div class="stat-label">Claims Today</div><div class="stat-value" id="dsh-today">--</div><div class="stat-sub">Transactions</div></div>
+    <div class="stat-card" style="border-top-color:var(--danger)"><div class="stat-label">Total Claimed</div><div class="stat-value" id="dsh-claimed">--</div><div class="stat-sub">All time</div></div>
   </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">Recent Transactions</div></div>
+    <div class="tbl-wrap"><table id="dsh-table"><thead><tr><th>AR No.</th><th>Client</th><th>Branch</th><th class="amt">Amount</th><th>Date</th><th>Printed By</th></tr></thead><tbody></tbody></table></div>
+  </div>
+</div>
 
 <!-- CLIENTS -->
 <div class="page" id="page-clients">
