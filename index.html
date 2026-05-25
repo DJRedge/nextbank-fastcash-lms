@@ -598,8 +598,17 @@ async function renderDashboard(){
       tbody.innerHTML='';
       var clientMap={};
       clients.forEach(function(c){clientMap[c.clientcode]=c.name;});
-      changes.slice(0,10).forEach(function(c){
-        var name=clientMap[c.clientcode]||c.clientcode;
+      // Fetch missing client names directly
+      var recent=changes.slice(0,10);
+      var missing=[...new Set(recent.map(function(c){return c.clientcode;}).filter(function(cc){return !clientMap[cc];}))];
+      if(missing.length){
+        try{
+          var extra=await db.select('clients','?clientcode=in.('+missing.map(encodeURIComponent).join(',')+')'+'&select=clientcode,name');
+          extra.forEach(function(c){clientMap[c.clientcode]=c.name;});
+        }catch(e){}
+      }
+      recent.forEach(function(c){
+        var name=clientMap[c.clientcode]||'('+c.clientcode+')';
         tbody.innerHTML+='<tr><td>'+sanitize(c.arnumber||'--')+'</td><td>'+sanitize(name)+'</td><td>'+sanitize(c.branchcode||'--')+'</td><td class="amt" style="color:var(--success)">'+peso(c.amount)+'</td><td>'+fmtDate(c.date)+'</td><td>'+sanitize(c.printedby||'--')+'</td></tr>';
       });
     }
