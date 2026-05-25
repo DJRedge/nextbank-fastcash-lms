@@ -80,43 +80,45 @@
     <div class="content">
 <!-- DASHBOARD -->
 <div class="page active" id="page-dashboard">
-  <div class="welcome-banner">
-    <div class="welcome-text"><h2>Welcome back, <span id="wName">Administrator</span>!</h2><p>NextBank-FastCash Change Claiming System -- Live Data</p></div>
-    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
-      <div class="welcome-icon">&#127974;</div>
-      <div style="text-align:right">
-        <button id="btnBackupDB" onclick="backupDatabase(false)" class="btn btn-gold btn-sm" style="display:none;font-size:12px;padding:7px 16px;border-radius:8px">&#128190; Backup Now</button>
-        <div id="lastBackupInfo" style="font-size:10px;margin-top:4px;display:none;color:var(--success)"></div>
-      </div>
+  <div style="background:linear-gradient(135deg,#061240,#0a2060);border-radius:12px;padding:16px 22px;display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;box-shadow:0 4px 16px rgba(6,18,64,.25)">
+    <div>
+      <div style="font-size:15px;font-weight:800;color:#f5c518;margin-bottom:3px">Welcome back, <span id="wName">Administrator</span>!</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.55)">NextBank-FastCash Change Claiming System &mdash; Live Data</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+      <div style="font-size:26px">&#127974;</div>
+      <button id="btnBackupDB" onclick="backupDatabase(false)" class="btn btn-gold btn-sm" style="display:none;font-size:12px;padding:7px 16px;border-radius:8px">&#128190; Backup Now</button>
+      <div id="lastBackupInfo" style="font-size:10px;margin-top:2px;display:none;color:#4ade80"></div>
     </div>
   </div>
-  <div class="stat-grid" style="grid-template-columns:1fr 1fr 1fr 1fr">
-    <div class="stat-card" style="border-top-color:var(--gold)">
-      <div class="stat-label">Total Count of Claimed</div>
-      <div class="stat-value" id="dsh-claimed-count" style="color:var(--royal-dark)">--</div>
-      <div class="stat-sub">Clients who claimed</div>
+  <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px">
+    <div style="background:#059669;border-radius:12px;padding:18px 20px;box-shadow:0 4px 12px rgba(5,150,105,.3)">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.6px;color:#d1fae5;text-transform:uppercase;margin-bottom:10px">Claimed Count</div>
+      <div class="stat-value" id="dsh-claimed-count" style="color:#fff;font-size:28px;font-weight:800;margin-bottom:6px">--</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.65)">Clients who claimed</div>
     </div>
-    <div class="stat-card" style="border-top-color:var(--gold)">
-      <div class="stat-label">Total Amount of Claimed</div>
-      <div class="stat-value" id="dsh-claimed-amt" style="color:var(--success)">--</div>
-      <div class="stat-sub">All time claimed</div>
+    <div style="background:#047857;border-radius:12px;padding:18px 20px;box-shadow:0 4px 12px rgba(4,120,87,.3)">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.6px;color:#a7f3d0;text-transform:uppercase;margin-bottom:10px">Claimed Amount</div>
+      <div class="stat-value" id="dsh-claimed-amt" style="color:#fff;font-size:24px;font-weight:800;margin-bottom:6px">--</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.65)">All time claimed</div>
     </div>
-    <div class="stat-card" style="border-top-color:#065f46">
-      <div class="stat-label">Total Count of Unclaimed</div>
-      <div class="stat-value" id="dsh-unclaimed-count" style="color:var(--royal-dark)">--</div>
-      <div class="stat-sub">Clients with balance</div>
+    <div style="background:#1d4ed8;border-radius:12px;padding:18px 20px;box-shadow:0 4px 12px rgba(29,78,216,.3)">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.6px;color:#bfdbfe;text-transform:uppercase;margin-bottom:10px">Unclaimed Count</div>
+      <div class="stat-value" id="dsh-unclaimed-count" style="color:#fff;font-size:28px;font-weight:800;margin-bottom:6px">--</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.65)">Clients with balance</div>
     </div>
-    <div class="stat-card" style="border-top-color:#065f46">
-      <div class="stat-label">Total Amount of Unclaimed</div>
-      <div class="stat-value" id="dsh-unclaimed-amt" style="color:#065f46">--</div>
-      <div class="stat-sub">Total unclaimed balance</div>
+    <div style="background:#1e40af;border-radius:12px;padding:18px 20px;box-shadow:0 4px 12px rgba(30,64,175,.3)">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.6px;color:#bfdbfe;text-transform:uppercase;margin-bottom:10px">Unclaimed Amount</div>
+      <div class="stat-value" id="dsh-unclaimed-amt" style="color:#fff;font-size:24px;font-weight:800;margin-bottom:6px">--</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.65)">Total unclaimed balance</div>
     </div>
   </div>
   <div class="card">
     <div class="card-header"><div class="card-title">Recent Transactions</div></div>
     <div class="tbl-wrap"><table id="dsh-table"><thead><tr><th>AR No.</th><th>Client</th><th>Branch</th><th class="amt">Amount</th><th>Date</th><th>Printed By</th></tr></thead><tbody></tbody></table></div>
   </div>
-</div><!-- CLIENTS -->
+</div>
+<!-- CLIENTS -->
 <div class="page" id="page-clients">
   <div class="card">
     <div class="card-header"><div class="card-title">Client List</div></div>
@@ -598,7 +600,6 @@ async function renderDashboard(){
       tbody.innerHTML='';
       var clientMap={};
       clients.forEach(function(c){clientMap[c.clientcode]=c.name;});
-      // Fetch missing client names directly
       var recent=changes.slice(0,10);
       var missing=[...new Set(recent.map(function(c){return c.clientcode;}).filter(function(cc){return !clientMap[cc];}))];
       if(missing.length){
