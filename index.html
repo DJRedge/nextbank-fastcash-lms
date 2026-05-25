@@ -584,8 +584,8 @@ async function renderDashboard(){
   loading(true,'Loading dashboard...','Fetching live data...');
   showSkeleton('#dsh-table tbody',6,5);
   try{
-    var clients=await dbCached('clients','?select=clientcode,name,change',30000);
-    var changes=await dbCached('changes','?select=clientcode,amount,date,arnumber,branchcode,printedby&order=id.desc',30000);
+    var clients=await dbCached('clients','?select=clientcode,name,change',60000);
+    var changes=await dbCached('changes','?select=clientcode,amount,date,arnumber,branchcode,printedby&order=id.desc',60000);
     cachedClients=clients;
     var claimedCodes=new Set(changes.map(function(c){return c.clientcode;}));
     var claimedAmt=changes.reduce(function(a,c){return a+parseFloat(c.amount||0);},0);
