@@ -646,7 +646,7 @@ async function nav(page,el){
   document.querySelectorAll('.nav-item').forEach(function(i){i.classList.remove('active');});
   var pageEl=document.getElementById('page-'+page);if(!pageEl){forceNavDashboard();return;}
   pageEl.classList.add('active');if(el)el.classList.add('active');
-  var titles={dashboard:'Dashboard',clients:'Client List',upload:'Upload Collection',claiming:'Claim Change',transactions:'Transactions',reports:'Reports',branches:'Branches',moc:'Mode of Change',users:'User Management'};
+  var titles={dashboard:'Dashboard',clients:'Client List',upload:'Upload Collection',claiming:'Claim Change',transactions:'Transactions',reports:'Reports',branches:'Branches',moc:'Mode of Change',users:'User Management',audittrail:'Audit Trail'};
   document.getElementById('topbarTitle').textContent=titles[page]||page;
   history.replaceState(null,'',window.location.pathname);
   if(page==='dashboard')await renderDashboard();
