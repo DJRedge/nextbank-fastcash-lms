@@ -54,6 +54,7 @@
       <div class="nav-item" data-access="Branches" onclick="nav('branches',this)"><span class="icon">&#127974;</span> Branches</div>
       <div class="nav-item" data-access="MOC" onclick="nav('moc',this)"><span class="icon">&#128260;</span> Mode of Change</div>
       <div class="nav-item" data-access="Users" onclick="nav('users',this)"><span class="icon">&#128273;</span> User Management</div>
+      <div class="nav-item" data-access="AuditTrail" onclick="nav('audittrail',this)"><span class="icon">&#128269;</span> Audit Trail</div>
     </nav>
     <div class="sidebar-footer">
       <div class="user-chip">
@@ -450,6 +451,85 @@
   </div>
 </div>
 <iframe id="printFrame" style="display:none;position:fixed;width:0;height:0;border:none" tabindex="-1"></iframe>
+
+<!-- AUDIT TRAIL -->
+<div class="page" id="page-audittrail">
+  <div class="card" id="auditFilterCard">
+    <div class="card-header">
+      <div class="card-title">&#128269; Audit Trail</div>
+      <div class="page-actions">
+        <button class="btn btn-outline" onclick="resetAuditFilters()">&#8635; Reset</button>
+        <button class="btn btn-gold" onclick="loadAuditTrail()">&#128269; Search</button>
+        <button class="btn btn-outline" id="btnAuditExcel" onclick="exportAuditExcel()" style="display:none;border-color:var(--success);color:var(--success)">&#128202; Export Excel</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:12px;margin-top:12px">
+      <div><label class="fl">Date From</label><input class="fi" type="date" id="auditDateFrom"></div>
+      <div><label class="fl">Date To</label><input class="fi" type="date" id="auditDateTo"></div>
+      <div><label class="fl">Action</label>
+        <select class="fi" id="auditAction">
+          <option value="">-- All Actions --</option>
+          <option value="LOGIN">Login</option>
+          <option value="LOGOUT">Logout</option>
+          <option value="CLAIM">Claim Change</option>
+          <option value="UPLOAD">Upload Collection</option>
+          <option value="ADD_CLIENT">Add Client</option>
+          <option value="EDIT_CLIENT">Edit Client</option>
+          <option value="ADD_BRANCH">Add Branch</option>
+          <option value="EDIT_BRANCH">Edit Branch</option>
+          <option value="ADD_USER">Add User</option>
+          <option value="EDIT_USER">Edit User</option>
+          <option value="ADD_MOC">Add MOC</option>
+          <option value="EDIT_MOC">Edit MOC</option>
+        </select>
+      </div>
+      <div><label class="fl">User</label><input class="fi" type="text" id="auditUser" placeholder="Search user..."></div>
+      <div><label class="fl">Module</label>
+        <select class="fi" id="auditModule">
+          <option value="">-- All Modules --</option>
+          <option value="Login">Login</option>
+          <option value="Claiming">Claiming</option>
+          <option value="Upload">Upload</option>
+          <option value="Clients">Clients</option>
+          <option value="Branches">Branches</option>
+          <option value="Users">Users</option>
+          <option value="MOC">MOC</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div id="auditSummary" style="display:none">
+    <div class="stat-grid" style="grid-template-columns:repeat(4,1fr)">
+      <div class="stat-card" style="border-top-color:var(--gold)"><div class="stat-label">Total Logs</div><div class="stat-value" id="auditTotalCount">0</div></div>
+      <div class="stat-card" style="border-top-color:#059669"><div class="stat-label">Claims</div><div class="stat-value" id="auditClaimCount">0</div></div>
+      <div class="stat-card" style="border-top-color:#1d4ed8"><div class="stat-label">Logins</div><div class="stat-value" id="auditLoginCount">0</div></div>
+      <div class="stat-card" style="border-top-color:#9333ea"><div class="stat-label">Other Actions</div><div class="stat-value" id="auditOtherCount">0</div></div>
+    </div>
+  </div>
+  <div class="card" id="auditTableCard" style="display:none">
+    <div class="card-header"><div style="font-size:12px;color:var(--gray-400)" id="auditGeneratedAt"></div></div>
+    <div class="tbl-wrap">
+      <table id="auditTable">
+        <thead><tr>
+          <th>Date &amp; Time</th>
+          <th>User</th>
+          <th>Action</th>
+          <th>Module</th>
+          <th>Details</th>
+          <th>IP / Device</th>
+        </tr></thead>
+        <tbody id="auditTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div id="auditEmpty" style="display:none">
+    <div class="card" style="text-align:center;padding:40px">
+      <div style="font-size:40px;margin-bottom:12px">&#128269;</div>
+      <div style="font-size:15px;font-weight:700;color:var(--gray-600)">No audit logs found</div>
+      <div style="font-size:13px;color:var(--gray-400);margin-top:6px">Try adjusting your filters.</div>
+    </div>
+  </div>
+</div>
 
 <script>var _cache={};
 function cacheGet(key){
@@ -1166,7 +1246,7 @@ async function backupDatabase(isAuto){
     var users    = await db.select('users','?order=lastname.asc');
 
     loading(true,'Fetching NB Master...',null,85);
-    var nbmaster = await db.select('nbmaster','?order=id.desc&limit=5000');
+    var nbmaster = await db.select('nbmaster','?order=id.desc&limit=500');
 
     loading(true,'Building Excel file...',null,95);
 
