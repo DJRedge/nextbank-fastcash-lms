@@ -620,11 +620,11 @@ async function doLogin(){
       if(lbi) lbi.style.display='block';
       setTimeout(updateLastBackupDisplay, 1000);
     }
-    await renderDashboard();
+    await renderDashboard();logAudit('LOGIN','Login','Logged in: '+(user.lastname+', '+user.firstname));
   }catch(e){errEl.textContent='Connection error: '+e.message;errEl.style.display='block';}
   loading(false);
 }
-function doLogout(){
+function doLogout(){logAudit('LOGOUT','Login','User logged out');
   stopSessionTimer();clearTimeout(sessionTimer);clearInterval(countdownTimer);sessionTimer=null;countdownTimer=null;warningShown=false;stopAutoBackupScheduler();
   currentUser=null;cachedClients=[];cachedBranches=[];cachedMOC=[];cachedTx=[];cachedUsersAll=[];claimClient=null;
   window._allowedModules=new Set();window._isAllAccess=false;
@@ -807,7 +807,7 @@ async function handleUpload(input){
     if(toUpdate.length){loading(true,'Updating balances...');for(var i=0;i<toUpdate.length;i+=PAR)await Promise.all(toUpdate.slice(i,i+PAR).map(function(u){return db.update('clients',{change:u.change},'?clientcode=eq.'+encodeURIComponent(u.clientcode));}));}
     if(nbInsert.length){loading(true,'Saving records...');for(var i=0;i<nbInsert.length;i+=CHUNK)await db.insert('nbmaster',nbInsert.slice(i,i+CHUNK));}
     cachedClients=[];_uploadLog=log;_unlocatedRecords=unlocated;
-    showAlert('uploadOK','Upload complete: '+added+' new, '+updated+' accumulated'+(unlocated.length?', '+unlocated.length+' unlocated.':'.'), 'success');
+    logAudit('UPLOAD','Upload','Upload complete: '+added+' new, '+updated+' accumulated');showAlert('uploadOK','Upload complete: '+added+' new, '+updated+' accumulated'+(unlocated.length?', '+unlocated.length+' unlocated.':'.'), 'success');
     if(unlocated.length){showAlert('uploadWarn',unlocated.length+' record(s) skipped - branch not found.','warning');document.getElementById('btnDownloadUnlocated').style.display='inline-flex';}
     else document.getElementById('btnDownloadUnlocated').style.display='none';
     var tbody=document.querySelector('#uploadTable tbody');tbody.innerHTML='';
@@ -972,7 +972,7 @@ async function processClaim(){
     var arn='AR-'+new Date().getFullYear()+'-'+pad(nextNum,4);
     var moc=document.getElementById('claimMOC').value,rem=document.getElementById('claimRemarks').value.trim();
     var tx={branchcode:claimClient.branchcode,clientcode:claimClient.clientcode,date:today(),arnumber:arn,amount:amt,remarks:rem,printedby:currentUser.loginname,printeddatetime:nowDT()};
-    await db.insert('changes',tx);await db.update('clients',{change:parseFloat(claimClient.change)-amt},'?clientcode=eq.'+encodeURIComponent(claimClient.clientcode));
+    await db.insert('changes',tx);logAudit('CLAIM','Claiming','AR: '+tx.arnumber+' | Client: '+claimClient.clientcode+' | Amt: '+peso(amt));await db.update('clients',{change:parseFloat(claimClient.change)-amt},'?clientcode=eq.'+encodeURIComponent(claimClient.clientcode));
     claimClient.change=parseFloat(claimClient.change)-amt;cachedClients=[];cachedTx=[];cacheClear('clients');cacheClear('changes');
     document.getElementById('claimAvail').value=peso(claimClient.change);document.getElementById('claimAmt').value='';document.getElementById('claimRemarks').value='';document.getElementById('claimBtn').disabled=true;
     showAlert('claimOK','Claim saved! AR No: '+arn,'success');toast('Claim processed! AR: '+arn,'success',4000);showReceipt(Object.assign({},tx,{moc:moc}),claimClient);await renderDashboard();
@@ -1358,6 +1358,107 @@ function updateLastBackupDisplay(){
   el.style.color = last ? 'var(--success)' : 'var(--danger)';
 }
 
+
+// ================================================================
+// AUDIT TRAIL MODULE
+// ================================================================
+var auditData=[];
+
+async function logAudit(action,module,details){
+  if(!currentUser)return;
+  try{
+    var entry={
+      actiondate:new Date().toISOString(),
+      username:currentUser.loginname||'',
+      fullname:(currentUser.lastname||'')+', '+(currentUser.firstname||''),
+      action:action,
+      module:module,
+      details:(details||'').substring(0,200),
+      ipdevice:(navigator.userAgent||'').substring(0,80)
+    };
+    await db.insert('auditlog',entry);
+  }catch(e){}
+}
+
+function fmtDateTimeFull(d){
+  if(!d)return '--';
+  var dt=typeof d==='string'?new Date(d):d;
+  if(isNaN(dt.getTime()))return '--';
+  return dt.toLocaleDateString('en-PH',{year:'numeric',month:'short',day:'2-digit'})+' '+dt.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+async function loadAuditTrail(){
+  var df=document.getElementById('auditDateFrom').value;
+  var dt=document.getElementById('auditDateTo').value;
+  var action=document.getElementById('auditAction').value;
+  var user=(document.getElementById('auditUser').value||'').trim();
+  var module=document.getElementById('auditModule').value;
+  if(!df||!dt){toast('Please set both Date From and Date To.','warning');return;}
+  if(df>dt){toast('Date From cannot be after Date To.','error');return;}
+  loading(true,'Loading audit trail...');
+  showSkeleton('#auditTableBody',6,6);
+  try{
+    var query='?order=actiondate.desc&actiondate=gte.'+df+'T00:00:00&actiondate=lte.'+dt+'T23:59:59';
+    if(action)query+='&action=eq.'+encodeURIComponent(action);
+    if(module)query+='&module=eq.'+encodeURIComponent(module);
+    if(user)query+='&username=ilike.'+encodeURIComponent('%'+user+'%');
+    var rows=await db.select('auditlog',query);
+    auditData=rows;
+    document.getElementById('auditTotalCount').textContent=rows.length.toLocaleString('en-PH');
+    document.getElementById('auditClaimCount').textContent=rows.filter(function(r){return r.action==='CLAIM';}).length.toLocaleString('en-PH');
+    document.getElementById('auditLoginCount').textContent=rows.filter(function(r){return r.action==='LOGIN';}).length.toLocaleString('en-PH');
+    document.getElementById('auditOtherCount').textContent=rows.filter(function(r){return r.action!=='CLAIM'&&r.action!=='LOGIN';}).length.toLocaleString('en-PH');
+    document.getElementById('auditSummary').style.display='block';
+    var tbody=document.getElementById('auditTableBody');
+    tbody.innerHTML='';
+    if(!rows.length){
+      document.getElementById('auditTableCard').style.display='none';
+      document.getElementById('auditEmpty').style.display='block';
+    }else{
+      document.getElementById('auditTableCard').style.display='block';
+      document.getElementById('auditEmpty').style.display='none';
+      document.getElementById('btnAuditExcel').style.display='inline-flex';
+      document.getElementById('auditGeneratedAt').textContent='Generated: '+fmtDateTimeFull(new Date());
+      rows.forEach(function(r){
+        var ac=r.action||'';
+        var clr='#061240';
+        if(ac==='CLAIM')clr='#059669';
+        else if(ac==='LOGIN')clr='#1d4ed8';
+        else if(ac==='LOGOUT')clr='#6b7280';
+        else if(ac==='UPLOAD')clr='#d97706';
+        else if(ac.indexOf('ADD')===0)clr='#9333ea';
+        else if(ac.indexOf('EDIT')===0)clr='#ea580c';
+        tbody.innerHTML+='<tr><td style="white-space:nowrap;font-size:11px">'+sanitize(fmtDateTimeFull(r.actiondate))+'</td><td>'+sanitize(r.fullname||r.username||'--')+'</td><td><span class="badge" style="background:rgba(0,0,0,.07);color:'+clr+';font-weight:800;padding:2px 8px">'+sanitize(ac||'--')+'</span></td><td>'+sanitize(r.module||'--')+'</td><td>'+sanitize(r.details||'--')+'</td><td style="font-size:11px;color:#888">'+sanitize((r.ipdevice||'--').substring(0,50))+'</td></tr>';
+      });
+    }
+  }catch(e){toast('Audit error: '+e.message,'error');}
+  loading(false);
+}
+
+function resetAuditFilters(){
+  var now=new Date();
+  document.getElementById('auditDateFrom').value=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);
+  document.getElementById('auditDateTo').value=today();
+  ['auditAction','auditModule'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+  var u=document.getElementById('auditUser');if(u)u.value='';
+  document.getElementById('auditSummary').style.display='none';
+  document.getElementById('auditTableCard').style.display='none';
+  document.getElementById('auditEmpty').style.display='none';
+  document.getElementById('btnAuditExcel').style.display='none';
+  auditData=[];
+}
+
+function exportAuditExcel(){
+  if(!auditData.length){toast('No audit data to export.','warning');return;}
+  var ws2d=[['Date & Time','User','Full Name','Action','Module','Details','Device']];
+  auditData.forEach(function(r){ws2d.push([r.actiondate||'',r.username||'',r.fullname||'',r.action||'',r.module||'',r.details||'',r.ipdevice||'']);});
+  var wb=XLSX.utils.book_new();
+  var ws=XLSX.utils.aoa_to_sheet(ws2d);
+  ws['!cols']=[{wch:22},{wch:15},{wch:25},{wch:15},{wch:12},{wch:40},{wch:40}];
+  XLSX.utils.book_append_sheet(wb,ws,'Audit Trail');
+  XLSX.writeFile(wb,'AuditTrail_'+today()+'.xlsx');
+  toast('Audit trail exported!','success');
+}
 </script>
 </body>
 </html>
