@@ -582,7 +582,7 @@ function setAccessCheckboxes(values){var isAll=values.includes('All');ACCESS_IDS
 function getAccessValue(){var ac=document.getElementById('uAccAll');if(ac&&ac.checked)return 'All';var sel=ACCESS_IDS.filter(function(a){if(a.id==='uAccAll')return false;var el=document.getElementById(a.id);return el&&el.checked;}).map(function(a){return a.val;});return sel.length?sel.join(','):'All';}
 function renderAccessBadges(str){if(!str||str==='All')return '<span class="badge badge-info">All Modules</span>';var colors={Dashboard:'badge-success',Clients:'badge-success',Upload:'badge-warning',Claim:'badge-warning',Transactions:'badge-warning',Reports:'badge-danger',Branches:'badge-info',MOC:'badge-info',Users:'badge-info'};return str.split(',').map(function(a){return '<span class="badge '+(colors[a.trim()]||'badge-info')+'" style="margin:1px 2px;display:inline-block">'+a.trim()+'</span>';}).join('');}
 function applyAccessControl(){var access=currentUser.systemaccess||'All',isAdmin=!!currentUser.administrator,isAll=access==='All'||isAdmin;var allowed=isAll?new Set(['Dashboard','Clients','Upload','Claim','Transactions','Reports','Branches','MOC','Users']):new Set(access.split(',').map(function(s){return s.trim();}));allowed.add('Dashboard');document.querySelectorAll('.nav-item[data-access]').forEach(function(el){var m=el.getAttribute('data-access');el.style.display=isAll||allowed.has(m)?'flex':'none';});var sv=['Branches','MOC','Users'].some(function(m){return isAll||allowed.has(m);});var ss=document.querySelector('[data-access-section="Setup"]');if(ss)ss.style.display=sv?'':'none';window._allowedModules=allowed;window._isAllAccess=isAll;}
-function canAccessPage(page){if(!currentUser)return false;if(currentUser.administrator)return true;if(window._isAllAccess)return true;var map={dashboard:'Dashboard',clients:'Clients',upload:'Upload',claiming:'Claim',transactions:'Transactions',reports:'Reports',branches:'Branches',moc:'MOC',users:'Users'};return(window._allowedModules||new Set()).has(map[page]||'');}
+function canAccessPage(page){if(!currentUser)return false;if(currentUser.administrator)return true;if(window._isAllAccess)return true;var map={dashboard:'Dashboard',clients:'Clients',upload:'Upload',claiming:'Claim',transactions:'Transactions',reports:'Reports',branches:'Branches',moc:'MOC',users:'Users',audittrail:'AuditTrail'};return(window._allowedModules||new Set()).has(map[page]||'');}
 function forceNavDashboard(){document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});document.querySelectorAll('.nav-item').forEach(function(i){i.classList.remove('active');});var dp=document.getElementById('page-dashboard');if(dp)dp.classList.add('active');var dn=document.querySelector('.nav-item[data-access="Dashboard"]');if(dn)dn.classList.add('active');document.getElementById('topbarTitle').textContent='Dashboard';history.replaceState(null,'',window.location.pathname);}
 function showAccessDenied(page){var el=document.getElementById('_accessMsg');if(!el){el=document.createElement('div');el.id='_accessMsg';el.style.cssText='position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#fef2f2;border:2px solid #991b1b;border-radius:10px;padding:16px 28px;font-size:14px;font-weight:700;color:#991b1b;z-index:9999;box-shadow:0 4px 24px rgba(0,0,0,.2);text-align:center';document.body.appendChild(el);}el.style.display='block';el.innerHTML='Access Denied - You do not have permission to access this module.';setTimeout(function(){if(el)el.style.display='none';},4000);}
 window.addEventListener('hashchange',function(e){e.preventDefault();if(!currentUser)return;var h=(window.location.hash||'').replace('#','').toLowerCase().trim();if(h&&h!=='dashboard'&&!canAccessPage(h)){history.replaceState(null,'',window.location.pathname);forceNavDashboard();showAccessDenied(h);}});
@@ -620,7 +620,7 @@ async function doLogin(){
       if(lbi) lbi.style.display='block';
       setTimeout(updateLastBackupDisplay, 1000);
     }
-    await renderDashboard();logAudit('LOGIN','Login','Logged in: '+(user.lastname+', '+user.firstname));
+    await renderDashboard();logAudit('LOGIN','Login','Logged in: '+(currentUser.lastname+', '+currentUser.firstname));
   }catch(e){errEl.textContent='Connection error: '+e.message;errEl.style.display='block';}
   loading(false);
 }
@@ -658,6 +658,7 @@ async function nav(page,el){
   else if(page==='branches')await loadBranches();
   else if(page==='moc')await loadMOC();
   else if(page==='users')await loadUsers();
+  else if(page==='audittrail')resetAuditFilters();
 }
 function openModal(id){editKey[id]=null;if(id==='modalAddBranch'){document.getElementById('branchModalTitle').textContent='Add Branch';['bCode','bName','bAddr'].forEach(function(x){document.getElementById(x).value='';});document.getElementById('bStatus').value='Active';}if(id==='modalAddMOC'){document.getElementById('mocCode').value='';document.getElementById('mocDesc').value='';}if(id==='modalAddUser'){document.getElementById('userModalTitle').textContent='Add User';['uLast','uFirst','uMiddle','uExt','uLogin','uPass','uEmail','uPosition'].forEach(function(x){document.getElementById(x).value='';});setAccessCheckboxes(['All']);document.getElementById('uUploadAccess').value='All Branches';document.getElementById('uAdmin').value='0';}document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
@@ -1446,6 +1447,45 @@ function resetAuditFilters(){
   document.getElementById('auditEmpty').style.display='none';
   document.getElementById('btnAuditExcel').style.display='none';
   auditData=[];
+}
+
+function exportReportExcel(){
+  if(!rptFiltered||!rptFiltered.length){toast('Please generate a report first.','warning');return;}
+  var rows=rptFiltered;
+  var df=document.getElementById('rptDateFrom').value;
+  var dt=document.getElementById('rptDateTo').value;
+  var branch=document.getElementById('rptBranch').value||'All';
+  var moc=document.getElementById('rptMOC').value||'All';
+  var total=rows.reduce(function(a,r){return a+(r.changetype==='Unclaimed'?parseFloat(r.change||0):parseFloat(r.amount||0));},0);
+  var ws2d=[
+    ['NextBank-FastCash Change Claiming System'],
+    ['Period: '+df+' to '+dt+' | Branch: '+branch+' | MOC: '+moc],
+    ['Total Records: '+rows.length+' | Total Amount: '+peso(total)],
+    [],
+    ['Date','AR No.','Client Code','Client Name','Branch','MOC','Amount','Printed By','Type']
+  ];
+  rows.forEach(function(r){
+    var amt=r.changetype==='Unclaimed'?parseFloat(r.change||0):parseFloat(r.amount||0);
+    ws2d.push([
+      r.date||'--',
+      r.arnumber||'--',
+      r.clientcode||'--',
+      r.clientname||r.clientcode||'--',
+      r.branchcode||'--',
+      r.moc||'--',
+      amt,
+      r.printedby||'--',
+      r.changetype||'Claimed'
+    ]);
+  });
+  var wb=XLSX.utils.book_new();
+  var ws=XLSX.utils.aoa_to_sheet(ws2d);
+  ws['!cols']=[{wch:12},{wch:15},{wch:20},{wch:28},{wch:8},{wch:8},{wch:12},{wch:12},{wch:12}];
+  // Bold header row
+  ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:8}}];
+  XLSX.utils.book_append_sheet(wb,ws,'Change Report');
+  XLSX.writeFile(wb,'ChangeReport_'+df+'_to_'+dt+'.xlsx');
+  toast('Report exported successfully!','success');
 }
 
 function exportAuditExcel(){
