@@ -200,11 +200,12 @@
         <button class="btn btn-primary" onclick="printReport()">&#128424; Print</button>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-top:12px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:12px;margin-top:12px">
       <div><label class="fl">Date From</label><input class="fi" type="date" id="rptDateFrom"></div>
       <div><label class="fl">Date To</label><input class="fi" type="date" id="rptDateTo"></div>
       <div><label class="fl">Branch</label><select class="fi" id="rptBranch"><option value="">-- All Branches --</option></select></div>
       <div><label class="fl">Mode of Change</label><select class="fi" id="rptMOC"><option value="">-- All MOC --</option></select></div>
+      <div><label class="fl">Change Type</label><select class="fi" id="rptChangeType"><option value="all">All</option><option value="claimed">Claimed</option><option value="unclaimed">Unclaimed</option></select></div>
     </div>
     <div style="display:none">
       <select class="fi" id="rptSortBy"><option value="date">Date</option><option value="branchcode">Branch</option><option value="amount">Amount</option><option value="clientcode">Client Code</option></select>
@@ -254,6 +255,7 @@
           <th onclick="sortReportBy('moc')" style="cursor:pointer">MOC <span id="sort-moc"></span></th>
           <th onclick="sortReportBy('amount')" style="cursor:pointer" class="amt">Amount <span id="sort-amount"></span></th>
           <th>Printed By</th>
+          <th>Type</th>
         </tr></thead>
         <tbody id="rptTableBody"></tbody>
         <tfoot id="rptTableFoot"></tfoot>
@@ -944,29 +946,64 @@ async function initReports(){
   var now=new Date();document.getElementById('rptDateFrom').value=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);document.getElementById('rptDateTo').value=today();
   document.getElementById('rptSummary').style.display='none';document.getElementById('rptTableCard').style.display='none';document.getElementById('rptEmpty').style.display='none';
 }
-function resetReportFilters(){var now=new Date();document.getElementById('rptDateFrom').value=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);document.getElementById('rptDateTo').value=today();['rptBranch','rptMOC'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('rptSortBy').value='date';document.getElementById('rptSortOrder').value='asc';document.getElementById('rptGroupBy').value='';document.getElementById('rptSummary').style.display='none';document.getElementById('rptTableCard').style.display='none';document.getElementById('rptEmpty').style.display='none';document.getElementById('btnRptExcel').style.display='none';rptData=[];rptFiltered=[];}
+function resetReportFilters(){var now=new Date();document.getElementById('rptDateFrom').value=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);document.getElementById('rptDateTo').value=today();['rptBranch','rptMOC','rptChangeType'].forEach(function(id){var el=document.getElementById(id);if(el)el.value=el.id==='rptChangeType'?'all':'';});;document.getElementById('rptSortBy').value='date';document.getElementById('rptSortOrder').value='asc';document.getElementById('rptGroupBy').value='';document.getElementById('rptSummary').style.display='none';document.getElementById('rptTableCard').style.display='none';document.getElementById('rptEmpty').style.display='none';document.getElementById('btnRptExcel').style.display='none';rptData=[];rptFiltered=[];}
 async function generateReport(){
   var df=document.getElementById('rptDateFrom').value,dt=document.getElementById('rptDateTo').value,branch=document.getElementById('rptBranch').value,moc=document.getElementById('rptMOC').value,sortBy=document.getElementById('rptSortBy').value,sortOrder=document.getElementById('rptSortOrder').value,groupBy=document.getElementById('rptGroupBy').value;
-  if(!df||!dt){toast('Please set both Date From and Date To.','warning');return;}if(df>dt){toast('Date From cannot be after Date To.','error');return;}
+  var changeTypeEl=document.getElementById('rptChangeType');
+  var changeType=changeTypeEl?changeTypeEl.value:'all';
+  // Validate: date range required for all types
+  if(!df||!dt){toast('Please set both Date From and Date To.','warning');return;}
+  if(df>dt){toast('Date From cannot be after Date To.','error');return;}
   loading(true,'Generating report...');
   try{
-    var query='?order='+sortBy+'.'+sortOrder+'&date=gte.'+df+'&date=lte.'+dt;if(branch)query+='&branchcode=eq.'+encodeURIComponent(branch);
-    var rows=await db.select('changes',query);
-    var clients=await dbCached('clients','?select=clientcode,name,moc',60000);rptClientMap={};clients.forEach(function(c){rptClientMap[c.clientcode]={name:c.name,moc:c.moc};});
-    // Find clientcodes missing from the map and fetch them directly
-    var missingCodes=[...new Set(rows.map(function(r){return r.clientcode;}).filter(function(cc){return !rptClientMap[cc];}))];
-    if(missingCodes.length){
-      try{
-        var chunkSize=50;
-        for(var mi=0;mi<missingCodes.length;mi+=chunkSize){
-          var chunk=missingCodes.slice(mi,mi+chunkSize);
-          var missing=await db.select('clients','?clientcode=in.('+chunk.map(function(c){return encodeURIComponent(c);}).join(',')+')&select=clientcode,name,moc');
-          missing.forEach(function(c){rptClientMap[c.clientcode]={name:c.name,moc:c.moc};});
-        }
-      }catch(e){}
+    // Fetch all clients for lookup
+    var clients=await dbCached('clients','?select=clientcode,name,moc,branchcode,change',60000);
+    rptClientMap={};clients.forEach(function(c){rptClientMap[c.clientcode]={name:c.name,moc:c.moc,branchcode:c.branchcode,change:c.change};});
+    var rows=[];
+    if(changeType==='claimed'||changeType==='all'){
+      // Fetch claimed transactions within date range
+      var query='?order='+sortBy+'.'+sortOrder+'&date=gte.'+df+'&date=lte.'+dt;
+      if(branch)query+='&branchcode=eq.'+encodeURIComponent(branch);
+      var claimed=await db.select('changes',query);
+      // Fetch missing client names
+      var missingCodes=[...new Set(claimed.map(function(r){return r.clientcode;}).filter(function(cc){return !rptClientMap[cc];}))];
+      if(missingCodes.length){
+        try{
+          var chunkSize=50;
+          for(var mi=0;mi<missingCodes.length;mi+=chunkSize){
+            var chunk=missingCodes.slice(mi,mi+chunkSize);
+            var missing=await db.select('clients','?clientcode=in.('+chunk.map(function(c){return encodeURIComponent(c);}).join(',')+')&select=clientcode,name,moc,branchcode,change');
+            missing.forEach(function(c){rptClientMap[c.clientcode]={name:c.name,moc:c.moc,branchcode:c.branchcode,change:c.change};});
+          }
+        }catch(e){}
+      }
+      claimed=claimed.map(function(r){var cm=rptClientMap[r.clientcode]||{};return Object.assign({},r,{clientname:cm.name||'('+r.clientcode+')',moc:cm.moc||r.moc||'--',changetype:'Claimed'});});
+      if(moc)claimed=claimed.filter(function(r){return r.moc===moc;});
+      rows=rows.concat(claimed);
     }
-    rows=rows.map(function(r){var cm=rptClientMap[r.clientcode]||{};return Object.assign({},r,{clientname:cm.name||'('+r.clientcode+')',moc:cm.moc||r.moc||'--'});});
-    if(moc)rows=rows.filter(function(r){return r.moc===moc;});rptData=rows;rptFiltered=rows;rptCurrentSort={col:sortBy,order:sortOrder};
+    if(changeType==='unclaimed'||changeType==='all'){
+      // Unclaimed = clients with change > 0 within period (by upload/batch date)
+      // Since unclaimed has no transaction date, filter by branch/moc only
+      var unclaimed=clients.filter(function(c){
+        return parseFloat(c.change||0)>0
+          &&(!branch||c.branchcode===branch)
+          &&(!moc||(rptClientMap[c.clientcode]||{}).moc===moc||c.moc===moc);
+      });
+      var unclaimedRows=unclaimed.map(function(c){return {
+        clientcode:c.clientcode,
+        clientname:c.name||'('+c.clientcode+')',
+        branchcode:c.branchcode||'--',
+        amount:0,
+        change:parseFloat(c.change||0),
+        arnumber:'--',
+        date:'--',
+        moc:c.moc||'--',
+        printedby:'--',
+        changetype:'Unclaimed'
+      };});
+      rows=rows.concat(unclaimedRows);
+    }
+    rptData=rows;rptFiltered=rows;rptCurrentSort={col:sortBy,order:sortOrder};
     renderReportTable(groupBy,df,dt,branch,moc);
   }catch(e){toast('Report error: '+e.message,'error');}loading(false);
 }
@@ -986,32 +1023,15 @@ function renderReportTable(groupBy,df,dt,branch,moc){
   else rows.forEach(function(r){tbody.innerHTML+=buildReportRow(r);});
   tfoot.innerHTML='<tr style="background:var(--royal);color:var(--white)"><td colspan="6" style="padding:11px 14px;font-weight:700;font-size:13px">GRAND TOTAL - '+rows.length+' Transaction(s)</td><td class="amt" style="padding:11px 14px;font-weight:700;font-size:15px;color:var(--gold)">'+peso(total)+'</td><td></td></tr>';
 }
-function buildReportRow(r){return '<tr><td>'+fmtDate(r.date)+'</td><td><b>'+sanitize(r.arnumber)+'</b></td><td>'+sanitize(r.clientcode)+'</td><td>'+sanitize(r.clientname)+'</td><td>'+sanitize(r.branchcode)+'</td><td><span class="badge badge-info">'+sanitize(r.moc||'--')+'</span></td><td class="amt" style="color:var(--success)">'+peso(r.amount)+'</td><td>'+sanitize(r.printedby)+'</td></tr>';}
-function sortReportBy(col){if(rptCurrentSort.col===col)rptCurrentSort.order=rptCurrentSort.order==='asc'?'desc':'asc';else rptCurrentSort={col:col,order:'asc'};rptFiltered.sort(function(a,b){var va=a[col]||'',vb=b[col]||'';if(col==='amount'){va=parseFloat(va||0);vb=parseFloat(vb||0);}else{va=String(va).toLowerCase();vb=String(vb).toLowerCase();}if(va<vb)return rptCurrentSort.order==='asc'?-1:1;if(va>vb)return rptCurrentSort.order==='asc'?1:-1;return 0;});renderReportTable('',null,null,null,null);}
-function printReport(){if(!rptFiltered.length){toast('Please generate a report first.','warning');return;}document.getElementById('rptPrintHeader').style.display='block';window.print();document.getElementById('rptPrintHeader').style.display='none';}
-function exportReportExcel(){
-  if(!rptFiltered.length){toast('Please generate a report first.','warning');return;}
-  var rows=rptFiltered,total=rows.reduce(function(a,r){return a+parseFloat(r.amount||0);},0);
-  var df=document.getElementById('rptDateFrom').value,dt=document.getElementById('rptDateTo').value;
-  var branch=document.getElementById('rptBranch').value||'All Branches',moc=document.getElementById('rptMOC').value||'All';
-  var avg=rows.length?total/rows.length:0,max=rows.length?Math.max.apply(null,rows.map(function(r){return parseFloat(r.amount||0);})):0;
-  var wb=XLSX.utils.book_new();
-  var ws1=XLSX.utils.aoa_to_sheet([['NextBank-FastCash LMS - Change Claimed Report'],['Generated:',nowDT(),'By:',currentUser?currentUser.loginname:''],[],'Category,Value'.split(','),['Period From',fmtDateExcel(df)],['Period To',fmtDateExcel(dt)],['Branch',branch],['MOC',moc],[],['Total Transactions',rows.length],['Total Amount',total],['Average',avg],['Highest',max]]);
-  ws1['!cols']=[{wch:20},{wch:20}];XLSX.utils.book_append_sheet(wb,ws1,'Summary');
-  var ws2d=[['Date','AR No.','Client Code','Client Name','Branch','MOC','Amount','Printed By']];
-  rows.forEach(function(r){ws2d.push([fmtDateExcel(r.date),r.arnumber,r.clientcode,r.clientname,r.branchcode,r.moc,parseFloat(r.amount||0),r.printedby]);});
-  ws2d.push(['','','','','','GRAND TOTAL',total,'']);
-  var ws2=XLSX.utils.aoa_to_sheet(ws2d);
-  ws2['!cols']=[{wch:12},{wch:16},{wch:22},{wch:32},{wch:12},{wch:10},{wch:16},{wch:16}];XLSX.utils.book_append_sheet(wb,ws2,'All Records');
-  var branchGroups={};rows.forEach(function(r){if(!branchGroups[r.branchcode])branchGroups[r.branchcode]=[];branchGroups[r.branchcode].push(r);});
-  var branchRows=[['Branch Code','No. of Claims','Total Amount']];Object.keys(branchGroups).sort().forEach(function(k){var g=branchGroups[k];var gt=g.reduce(function(a,r){return a+parseFloat(r.amount||0);},0);branchRows.push([k,g.length,gt]);});branchRows.push(['TOTAL',rows.length,total]);
-  var ws3=XLSX.utils.aoa_to_sheet(branchRows);ws3['!cols']=[{wch:14},{wch:14},{wch:18}];XLSX.utils.book_append_sheet(wb,ws3,'Per Branch');
-  var mocGroups={};rows.forEach(function(r){if(!mocGroups[r.moc])mocGroups[r.moc]=[];mocGroups[r.moc].push(r);});
-  var mocRows=[['Mode of Change','No. of Claims','Total Amount']];Object.keys(mocGroups).sort().forEach(function(k){var g=mocGroups[k];var gt=g.reduce(function(a,r){return a+parseFloat(r.amount||0);},0);mocRows.push([k,g.length,gt]);});mocRows.push(['TOTAL',rows.length,total]);
-  var ws4=XLSX.utils.aoa_to_sheet(mocRows);ws4['!cols']=[{wch:20},{wch:14},{wch:18}];XLSX.utils.book_append_sheet(wb,ws4,'Per MOC');
-  XLSX.writeFile(wb,'Change_Claimed_Report_'+fmtDateExcel(df)+'_to_'+fmtDateExcel(dt)+'.xls',{bookType:'xls'});
+function buildReportRow(r){
+  var typeBadge=r.changetype==='Unclaimed'
+    ?'<span class="badge" style="background:#fffbeb;color:#92400e;border:1px solid #f59e0b">Unclaimed</span>'
+    :'<span class="badge" style="background:#ecfdf5;color:#065f46;border:1px solid #059669">Claimed</span>';
+  var amtDisplay=r.changetype==='Unclaimed'
+    ?'<td class="amt" style="color:var(--warning)">'+peso(r.change)+'</td>'
+    :'<td class="amt" style="color:var(--success)">'+peso(r.amount)+'</td>';
+  return '<tr><td>'+fmtDate(r.date)+'</td><td><b>'+sanitize(r.arnumber)+'</b></td><td>'+sanitize(r.clientcode)+'</td><td>'+sanitize(r.clientname||r.clientcode)+'</td><td>'+sanitize(r.branchcode)+'</td><td><span class="badge badge-info">'+sanitize(r.moc||'--')+'</span></td>'+amtDisplay+'<td>'+sanitize(r.printedby)+'</td><td>'+typeBadge+'</td></tr>';
 }
-
 async function loadBranches(){loading(true,'Loading branches...');showSkeleton('#branchTable tbody',5,6);try{cachedBranches=await db.select('branches','?order=name.asc');var tbody=document.querySelector('#branchTable tbody');tbody.innerHTML='';cachedBranches.forEach(function(b){tbody.innerHTML+='<tr><td><b>'+sanitize(b.code)+'</b></td><td>'+sanitize(b.name)+'</td><td>'+(b.address||'--')+'</td><td><span class="badge '+(b.status==='Active'?'badge-success':'badge-danger')+'">'+b.status+'</span></td><td><button class="btn btn-outline btn-sm" onclick="editBranch(\''+b.code.replace(/'/g,"\\'")+'\')">Edit</button></td></tr>';});}catch(e){toast('Error: '+e.message,'error');}loading(false);}
 async function editBranch(code){var b=cachedBranches.find(function(x){return x.code===code;});if(!b)return;editKey['modalAddBranch']=code;document.getElementById('branchModalTitle').textContent='Edit Branch';document.getElementById('bCode').value=b.code;document.getElementById('bName').value=b.name;document.getElementById('bAddr').value=b.address||'';document.getElementById('bStatus').value=b.status;document.getElementById('modalAddBranch').classList.add('open');}
 async function saveBranch(){var obj={code:document.getElementById('bCode').value.trim(),name:document.getElementById('bName').value.trim(),address:document.getElementById('bAddr').value.trim(),status:document.getElementById('bStatus').value};if(!obj.code||!obj.name){toast('Branch Code and Name are required.','error');return;}loading(true,'Saving...');try{if(editKey['modalAddBranch'])await db.update('branches',{name:obj.name,address:obj.address,status:obj.status},'?code=eq.'+encodeURIComponent(obj.code));else await db.insert('branches',obj);cachedBranches=[];cacheClear('branches');closeModal('modalAddBranch');await loadBranches();toast('Branch saved!','success');}catch(e){toast('Save error: '+e.message,'error');}loading(false);}
