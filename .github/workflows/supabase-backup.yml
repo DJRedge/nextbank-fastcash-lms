@@ -26,18 +26,19 @@ jobs:
 
       - name: Export database tables to temp CSV files
         id: export
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
-          SUPABASE_URL="${{ secrets.SUPABASE_URL }}"
-          SUPABASE_KEY="${{ secrets.SUPABASE_SERVICE_KEY }}"
-          TMPDIR=$(mktemp -d)
-          echo "tmpdir=$TMPDIR" >> $GITHUB_OUTPUT
+          EXPORT_DIR=$(mktemp -d)
+          echo "export_dir=$EXPORT_DIR" >> $GITHUB_OUTPUT
 
           TABLES=("clients" "changes" "branches" "moc" "users" "nbmaster")
           FAILED=0
 
           for TABLE in "${TABLES[@]}"; do
             echo "Exporting $TABLE..."
-            HTTP_STATUS=$(curl -s -o "$TMPDIR/${TABLE}.csv" -w "%{http_code}" \
+            HTTP_STATUS=$(curl -s --max-time 30 -o "$EXPORT_DIR/${TABLE}.csv" -w "%{http_code}" \
               "${SUPABASE_URL}/rest/v1/${TABLE}?select=*" \
               -H "apikey: ${SUPABASE_KEY}" \
               -H "Authorization: Bearer ${SUPABASE_KEY}" \
@@ -47,7 +48,7 @@ jobs:
               echo "ERROR: Failed to export $TABLE (HTTP $HTTP_STATUS)"
               FAILED=1
             else
-              ROWS=$(wc -l < "$TMPDIR/${TABLE}.csv")
+              ROWS=$(wc -l < "$EXPORT_DIR/${TABLE}.csv")
               echo "$TABLE exported: $ROWS rows"
             fi
           done
@@ -58,10 +59,11 @@ jobs:
           fi
 
       - name: Upload CSV exports to Supabase Storage (private bucket)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
-          SUPABASE_URL="${{ secrets.SUPABASE_URL }}"
-          SUPABASE_KEY="${{ secrets.SUPABASE_SERVICE_KEY }}"
-          TMPDIR="${{ steps.export.outputs.tmpdir }}"
+          EXPORT_DIR="${{ steps.export.outputs.export_dir }}"
           DATE="${{ steps.timestamp.outputs.date }}"
           TABLES=("clients" "changes" "branches" "moc" "users" "nbmaster")
 
@@ -69,12 +71,12 @@ jobs:
             STORAGE_PATH="${DATE}/${TABLE}.csv"
             echo "Uploading $TABLE to storage: $STORAGE_PATH"
 
-            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            HTTP_STATUS=$(curl -s --max-time 30 -o /dev/null -w "%{http_code}" \
               -X POST "${SUPABASE_URL}/storage/v1/object/db-backups/${STORAGE_PATH}" \
               -H "Authorization: Bearer ${SUPABASE_KEY}" \
               -H "Content-Type: text/csv" \
               -H "x-upsert: true" \
-              --data-binary "@${TMPDIR}/${TABLE}.csv")
+              --data-binary "@${EXPORT_DIR}/${TABLE}.csv")
 
             if [ "$HTTP_STATUS" != "200" ] && [ "$HTTP_STATUS" != "201" ]; then
               echo "ERROR: Failed to upload $TABLE to storage (HTTP $HTTP_STATUS)"
@@ -84,23 +86,29 @@ jobs:
           done
 
       - name: Generate backup summary (no sensitive data)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
-          SUPABASE_URL="${{ secrets.SUPABASE_URL }}"
-          SUPABASE_KEY="${{ secrets.SUPABASE_SERVICE_KEY }}"
           DATE="${{ steps.timestamp.outputs.date }}"
           TIMESTAMP="${{ steps.timestamp.outputs.timestamp }}"
-          TMPDIR="${{ steps.export.outputs.tmpdir }}"
+          EXPORT_DIR="${{ steps.export.outputs.export_dir }}"
           SUMMARY_DIR="backups/${DATE}"
 
           mkdir -p "$SUMMARY_DIR"
 
           get_count() {
-            local file="$TMPDIR/$1.csv"
+            local file="$EXPORT_DIR/$1.csv"
             if [ -f "$file" ]; then
               echo $(( $(wc -l < "$file") - 1 ))
             else
               echo "N/A"
             fi
+          }
+
+          sum_if_numeric() {
+            local val="$1"
+            if [[ "$val" =~ ^[0-9]+$ ]]; then echo "$val"; else echo "0"; fi
           }
 
           CLIENTS=$(get_count "clients")
@@ -109,7 +117,7 @@ jobs:
           MOC=$(get_count "moc")
           USERS=$(get_count "users")
           NBMASTER=$(get_count "nbmaster")
-          TOTAL=$(( CLIENTS + CHANGES + BRANCHES + MOC + USERS + NBMASTER ))
+          TOTAL=$(( $(sum_if_numeric "$CLIENTS") + $(sum_if_numeric "$CHANGES") + $(sum_if_numeric "$BRANCHES") + $(sum_if_numeric "$MOC") + $(sum_if_numeric "$USERS") + $(sum_if_numeric "$NBMASTER") ))
 
           cat > "$SUMMARY_DIR/BACKUP_SUMMARY.txt" << EOF
           ================================================
@@ -139,14 +147,6 @@ jobs:
           echo "Summary written to $SUMMARY_DIR/BACKUP_SUMMARY.txt"
           cat "$SUMMARY_DIR/BACKUP_SUMMARY.txt"
 
-      - name: Remove backups older than 90 days
-        run: |
-          BACKUP_COUNT=$(ls -d backups/20*/ 2>/dev/null | wc -l)
-          if [ "$BACKUP_COUNT" -gt 90 ]; then
-            ls -d backups/20*/ | sort | head -n $(( BACKUP_COUNT - 90 )) | xargs rm -rf
-            echo "Pruned old backup summaries."
-          fi
-
       - name: Commit backup summary to repository
         run: |
           git config user.name "github-actions[bot]"
@@ -161,4 +161,4 @@ jobs:
 
       - name: Clean up temp files
         if: always()
-        run: rm -rf "${{ steps.export.outputs.tmpdir }}"
+        run: rm -rf "${{ steps.export.outputs.export_dir }}"
