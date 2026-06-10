@@ -1,15 +1,9 @@
-name: Weekly Supabase Database Backup
+name: Supabase Daily Backup
 
 on:
   schedule:
-    - cron: '0 0 * * 1'
-  workflow_dispatch:
-
-permissions:
-  contents: write
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    - cron: '0 0 * * *'   # Daily at midnight UTC (8 AM Manila)
+  workflow_dispatch:        # Allow manual trigger
 
 jobs:
   backup:
@@ -18,156 +12,153 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
-          persist-credentials: true
-          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set backup timestamp
-        id: ts
+      - name: Set backup timestamp (Manila time)
+        id: timestamp
         run: |
+          TIMESTAMP=$(TZ='Asia/Manila' date '+%Y-%m-%d_%H-%M')
           DATE=$(TZ='Asia/Manila' date '+%Y-%m-%d')
-          TIME=$(TZ='Asia/Manila' date '+%H%M')
-          echo "date=${DATE}" >> $GITHUB_OUTPUT
-          echo "time=${TIME}" >> $GITHUB_OUTPUT
-          echo "folder=backups/${DATE}" >> $GITHUB_OUTPUT
-          echo "Backup: ${DATE} ${TIME} PHT"
+          echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
+          echo "date=$DATE" >> $GITHUB_OUTPUT
 
-      - name: Create backup folders
+      - name: Export database tables to temp CSV files
+        id: export
         run: |
-          mkdir -p ${{ steps.ts.outputs.folder }}/database
-          mkdir -p ${{ steps.ts.outputs.folder }}/system
-          echo "Folders created: ${{ steps.ts.outputs.folder }}"
+          SUPABASE_URL="${{ secrets.SUPABASE_URL }}"
+          SUPABASE_KEY="${{ secrets.SUPABASE_SERVICE_KEY }}"
+          TMPDIR=$(mktemp -d)
+          echo "tmpdir=$TMPDIR" >> $GITHUB_OUTPUT
 
-      - name: Backup index.html
-        run: |
-          if [ -f "index.html" ]; then
-            cp index.html "${{ steps.ts.outputs.folder }}/system/index_${{ steps.ts.outputs.date }}.html"
-            echo "index.html backed up - $(wc -c < index.html | tr -d ' ') bytes"
-          else
-            echo "WARNING: index.html not found in root"
+          TABLES=("clients" "changes" "branches" "moc" "users" "nbmaster")
+          FAILED=0
+
+          for TABLE in "${TABLES[@]}"; do
+            echo "Exporting $TABLE..."
+            HTTP_STATUS=$(curl -s -o "$TMPDIR/${TABLE}.csv" -w "%{http_code}" \
+              "${SUPABASE_URL}/rest/v1/${TABLE}?select=*" \
+              -H "apikey: ${SUPABASE_KEY}" \
+              -H "Authorization: Bearer ${SUPABASE_KEY}" \
+              -H "Accept: text/csv")
+
+            if [ "$HTTP_STATUS" != "200" ]; then
+              echo "ERROR: Failed to export $TABLE (HTTP $HTTP_STATUS)"
+              FAILED=1
+            else
+              ROWS=$(wc -l < "$TMPDIR/${TABLE}.csv")
+              echo "$TABLE exported: $ROWS rows"
+            fi
+          done
+
+          if [ "$FAILED" -eq 1 ]; then
+            echo "One or more exports failed — aborting backup."
+            exit 1
           fi
 
-      - name: Export clients
+      - name: Upload CSV exports to Supabase Storage (private bucket)
         run: |
-          curl -sf \
-            -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}" \
-            -H "Accept: text/csv" \
-            "${{ secrets.SUPABASE_URL }}/rest/v1/clients?order=name.asc&select=clientcode,name,branchcode,change,moc,pnno" \
-            -o "${{ steps.ts.outputs.folder }}/database/clients.csv"
-          echo "clients.csv - $(tail -n +2 ${{ steps.ts.outputs.folder }}/database/clients.csv | wc -l | tr -d ' ') records"
+          SUPABASE_URL="${{ secrets.SUPABASE_URL }}"
+          SUPABASE_KEY="${{ secrets.SUPABASE_SERVICE_KEY }}"
+          TMPDIR="${{ steps.export.outputs.tmpdir }}"
+          DATE="${{ steps.timestamp.outputs.date }}"
+          TABLES=("clients" "changes" "branches" "moc" "users" "nbmaster")
 
-      - name: Export changes
-        run: |
-          curl -sf \
-            -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}" \
-            -H "Accept: text/csv" \
-            "${{ secrets.SUPABASE_URL }}/rest/v1/changes?order=id.desc&select=id,branchcode,clientcode,date,arnumber,amount,remarks,printedby,printeddatetime" \
-            -o "${{ steps.ts.outputs.folder }}/database/changes.csv"
-          echo "changes.csv - $(tail -n +2 ${{ steps.ts.outputs.folder }}/database/changes.csv | wc -l | tr -d ' ') records"
+          for TABLE in "${TABLES[@]}"; do
+            STORAGE_PATH="${DATE}/${TABLE}.csv"
+            echo "Uploading $TABLE to storage: $STORAGE_PATH"
 
-      - name: Export branches
-        run: |
-          curl -sf \
-            -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}" \
-            -H "Accept: text/csv" \
-            "${{ secrets.SUPABASE_URL }}/rest/v1/branches?order=name.asc&select=code,name,address,status" \
-            -o "${{ steps.ts.outputs.folder }}/database/branches.csv"
-          echo "branches.csv - $(tail -n +2 ${{ steps.ts.outputs.folder }}/database/branches.csv | wc -l | tr -d ' ') records"
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              -X POST "${SUPABASE_URL}/storage/v1/object/db-backups/${STORAGE_PATH}" \
+              -H "Authorization: Bearer ${SUPABASE_KEY}" \
+              -H "Content-Type: text/csv" \
+              -H "x-upsert: true" \
+              --data-binary "@${TMPDIR}/${TABLE}.csv")
 
-      - name: Export moc
-        run: |
-          curl -sf \
-            -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}" \
-            -H "Accept: text/csv" \
-            "${{ secrets.SUPABASE_URL }}/rest/v1/moc?order=moc.asc&select=moc,description" \
-            -o "${{ steps.ts.outputs.folder }}/database/moc.csv"
-          echo "moc.csv - $(tail -n +2 ${{ steps.ts.outputs.folder }}/database/moc.csv | wc -l | tr -d ' ') records"
+            if [ "$HTTP_STATUS" != "200" ] && [ "$HTTP_STATUS" != "201" ]; then
+              echo "ERROR: Failed to upload $TABLE to storage (HTTP $HTTP_STATUS)"
+              exit 1
+            fi
+            echo "$TABLE uploaded successfully."
+          done
 
-      - name: Export users
+      - name: Generate backup summary (no sensitive data)
         run: |
-          curl -sf \
-            -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}" \
-            -H "Accept: text/csv" \
-            "${{ secrets.SUPABASE_URL }}/rest/v1/users?order=lastname.asc&select=loginname,lastname,firstname,middlename,extname,email,position,systemaccess,uploadaccess,administrator" \
-            -o "${{ steps.ts.outputs.folder }}/database/users.csv"
-          echo "users.csv - $(tail -n +2 ${{ steps.ts.outputs.folder }}/database/users.csv | wc -l | tr -d ' ') records"
+          SUPABASE_URL="${{ secrets.SUPABASE_URL }}"
+          SUPABASE_KEY="${{ secrets.SUPABASE_SERVICE_KEY }}"
+          DATE="${{ steps.timestamp.outputs.date }}"
+          TIMESTAMP="${{ steps.timestamp.outputs.timestamp }}"
+          TMPDIR="${{ steps.export.outputs.tmpdir }}"
+          SUMMARY_DIR="backups/${DATE}"
 
-      - name: Export nbmaster
-        run: |
-          curl -sf \
-            -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}" \
-            -H "Accept: text/csv" \
-            "${{ secrets.SUPABASE_URL }}/rest/v1/nbmaster?order=id.desc&select=id,clientcode,pnno,name,amount,batchno" \
-            -o "${{ steps.ts.outputs.folder }}/database/nbmaster.csv"
-          echo "nbmaster.csv - $(tail -n +2 ${{ steps.ts.outputs.folder }}/database/nbmaster.csv | wc -l | tr -d ' ') records"
+          mkdir -p "$SUMMARY_DIR"
 
-      - name: Create summary
-        run: |
-          C=$(tail -n +2 ${{ steps.ts.outputs.folder }}/database/clients.csv  | wc -l | tr -d ' ')
-          T=$(tail -n +2 ${{ steps.ts.outputs.folder }}/database/changes.csv  | wc -l | tr -d ' ')
-          B=$(tail -n +2 ${{ steps.ts.outputs.folder }}/database/branches.csv | wc -l | tr -d ' ')
-          M=$(tail -n +2 ${{ steps.ts.outputs.folder }}/database/moc.csv      | wc -l | tr -d ' ')
-          U=$(tail -n +2 ${{ steps.ts.outputs.folder }}/database/users.csv    | wc -l | tr -d ' ')
-          N=$(tail -n +2 ${{ steps.ts.outputs.folder }}/database/nbmaster.csv | wc -l | tr -d ' ')
-          TOT=$((C+T+B+M+U+N))
-          {
-            echo "NEXTBANK-FASTCASH LMS - BACKUP SUMMARY"
-            echo "========================================"
-            echo "Date     : ${{ steps.ts.outputs.date }}"
-            echo "Time     : ${{ steps.ts.outputs.time }} PHT"
-            echo "URL      : https://nbccs.fcash.com.ph"
-            echo "========================================"
-            echo "Clients              : $C"
-            echo "Changes/Transactions : $T"
-            echo "Branches             : $B"
-            echo "MOC                  : $M"
-            echo "Users                : $U"
-            echo "NB Master            : $N"
-            echo "----------------------------------------"
-            echo "TOTAL RECORDS        : $TOT"
-            echo "========================================"
-            echo "Passwords NOT included in this backup."
-          } > ${{ steps.ts.outputs.folder }}/BACKUP_SUMMARY.txt
-          cat ${{ steps.ts.outputs.folder }}/BACKUP_SUMMARY.txt
+          get_count() {
+            local file="$TMPDIR/$1.csv"
+            if [ -f "$file" ]; then
+              echo $(( $(wc -l < "$file") - 1 ))
+            else
+              echo "N/A"
+            fi
+          }
 
-      - name: Commit and push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CLIENTS=$(get_count "clients")
+          CHANGES=$(get_count "changes")
+          BRANCHES=$(get_count "branches")
+          MOC=$(get_count "moc")
+          USERS=$(get_count "users")
+          NBMASTER=$(get_count "nbmaster")
+          TOTAL=$(( CLIENTS + CHANGES + BRANCHES + MOC + USERS + NBMASTER ))
+
+          cat > "$SUMMARY_DIR/BACKUP_SUMMARY.txt" << EOF
+          ================================================
+            NEXTBANK-FASTCASH LMS — Backup Summary
+          ================================================
+          Date     : $DATE
+          Time     : $TIMESTAMP PHT
+          Site     : https://nbccs.fcash.com.ph/
+
+          Record Counts:
+            Clients          : $CLIENTS
+            Changes/Trans.   : $CHANGES
+            Branches         : $BRANCHES
+            MOC              : $MOC
+            Users            : $USERS
+            NB Master        : $NBMASTER
+          ------------------------------------------------
+            TOTAL            : $TOTAL records
+
+          Storage: Uploaded to Supabase Storage bucket [db-backups]
+          Note: Passwords are NOT included in backups.
+          Note: Raw data is stored in Supabase Storage ONLY,
+                not committed to this repository.
+          ================================================
+          EOF
+
+          echo "Summary written to $SUMMARY_DIR/BACKUP_SUMMARY.txt"
+          cat "$SUMMARY_DIR/BACKUP_SUMMARY.txt"
+
+      - name: Remove backups older than 90 days
         run: |
-          git config user.name "NBCCS Backup Bot"
-          git config user.email "actions@github.com"
-          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
+          BACKUP_COUNT=$(ls -d backups/20*/ 2>/dev/null | wc -l)
+          if [ "$BACKUP_COUNT" -gt 90 ]; then
+            ls -d backups/20*/ | sort | head -n $(( BACKUP_COUNT - 90 )) | xargs rm -rf
+            echo "Pruned old backup summaries."
+          fi
+
+      - name: Commit backup summary to repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add backups/
           if git diff --staged --quiet; then
-            echo "Nothing new to commit"
+            echo "No changes to commit."
           else
-            git commit -m "Auto-backup: ${{ steps.ts.outputs.date }} ${{ steps.ts.outputs.time }} PHT"
-            git push origin HEAD:main
-            echo "Backup committed and pushed successfully"
+            git commit -m "chore: daily backup summary ${{ steps.timestamp.outputs.date }}"
+            git push
           fi
 
-      - name: Cleanup old backups
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          if [ -d "backups" ]; then
-            COUNT=$(ls -1d backups/*/ 2>/dev/null | wc -l | tr -d ' ')
-            echo "Total backup folders: ${COUNT}"
-            if [ "$COUNT" -gt 12 ]; then
-              ls -1d backups/*/ | sort | head -n -12 | xargs rm -rf
-              git add backups/
-              if ! git diff --staged --quiet; then
-                git commit -m "Cleanup: removed backups older than 12 weeks"
-                git push origin HEAD:main
-              fi
-            else
-              echo "No cleanup needed - keeping all ${COUNT} backups"
-            fi
-          fi
+      - name: Clean up temp files
+        if: always()
+        run: rm -rf "${{ steps.export.outputs.tmpdir }}"
