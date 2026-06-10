@@ -1,0 +1,23 @@
+# Sensitive data — never commit
+*.csv
+*.json.bak
+.env
+.env.local
+.env.production
+
+# Supabase local dev
+.branches/
+.temp/
+
+# Node (if tooling is added later)
+node_modules/
+dist/
+.cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/settings.json
+.idea/
