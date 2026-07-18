@@ -4,9 +4,6 @@
 <meta charset="UTF-8">
 <meta http-equiv="Cache-Control" content="max-age=3600">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
-<meta http-equiv="X-Frame-Options" content="DENY">
-<meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
 <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,AAABAAEAEBAQAAEABAAoAQAAFgAAACgAAAAQAAAAIAAAAAEABAAAAAAAgAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAA/4QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA">
 <title>NextBank-FastCash LMS</title>
 <link rel="dns-prefetch" href="https://bbpurrnroinfncwtyqsn.supabase.co">
@@ -1102,7 +1099,7 @@ async function generateReport(){
   }catch(e){toast('Report error: '+e.message,'error');}loading(false);
 }
 function renderReportTable(groupBy,df,dt,branch,moc){
-  var rows=rptFiltered,total=rows.reduce(function(a,r){return a+parseFloat(r.amount||0);},0),avg=rows.length?total/rows.length:0,max=rows.length?Math.max.apply(null,rows.map(function(r){return parseFloat(r.amount||0);})):0;
+  var rows=rptFiltered,total=rows.reduce(function(a,r){return a+(r.changetype==='Unclaimed'?parseFloat(r.change||0):parseFloat(r.amount||0));},0),avg=rows.length?total/rows.length:0,max=rows.length?Math.max.apply(null,rows.map(function(r){return r.changetype==='Unclaimed'?parseFloat(r.change||0):parseFloat(r.amount||0);})):0;
   document.getElementById('rptTotalCount').textContent=rows.length.toLocaleString('en-PH');document.getElementById('rptTotalAmount').textContent=peso(total);document.getElementById('rptAvgAmount').textContent=peso(avg);document.getElementById('rptMaxAmount').textContent=peso(max);
   if(!rows.length){document.getElementById('rptSummary').style.display='none';document.getElementById('rptTableCard').style.display='none';document.getElementById('rptEmpty').style.display='block';return;}
   document.getElementById('rptSummary').style.display='grid';document.getElementById('rptTableCard').style.display='block';document.getElementById('rptEmpty').style.display='none';
@@ -1124,7 +1121,7 @@ function buildReportRow(r){
   var amtDisplay=r.changetype==='Unclaimed'
     ?'<td class="amt" style="color:var(--warning)">'+peso(r.change)+'</td>'
     :'<td class="amt" style="color:var(--success)">'+peso(r.amount)+'</td>';
-  return '<tr><td>'+fmtDate(r.date)+'</td><td><b>'+sanitize(r.arnumber)+'</b></td><td>'+sanitize(r.clientcode)+'</td><td>'+sanitize(r.clientname||r.clientcode)+'</td><td>'+sanitize(r.branchcode)+'</td><td><span class="badge badge-info">'+sanitize(r.moc||'--')+'</span></td>'+amtDisplay+'<td>'+sanitize(r.printedby)+'</td><td>'+typeBadge+'</td></tr>';
+  var dateDisplay=r.changetype==='Unclaimed'||r.date==='--'||!r.date?'--':fmtDate(r.date);return '<tr><td>'+dateDisplay+'</td><td><b>'+sanitize(r.arnumber)+'</b></td><td>'+sanitize(r.clientcode)+'</td><td>'+sanitize(r.clientname||r.clientcode)+'</td><td>'+sanitize(r.branchcode)+'</td><td><span class="badge badge-info">'+sanitize(r.moc||'--')+'</span></td>'+amtDisplay+'<td>'+sanitize(r.printedby)+'</td><td>'+typeBadge+'</td></tr>';
 }
 async function loadBranches(){loading(true,'Loading branches...');showSkeleton('#branchTable tbody',5,6);try{cachedBranches=await db.select('branches','?order=name.asc');var tbody=document.querySelector('#branchTable tbody');tbody.innerHTML='';cachedBranches.forEach(function(b){tbody.innerHTML+='<tr><td><b>'+sanitize(b.code)+'</b></td><td>'+sanitize(b.name)+'</td><td>'+(b.address||'--')+'</td><td><span class="badge '+(b.status==='Active'?'badge-success':'badge-danger')+'">'+b.status+'</span></td><td><button class="btn btn-outline btn-sm" onclick="editBranch(\''+b.code.replace(/'/g,"\\'")+'\')">Edit</button></td></tr>';});}catch(e){toast('Error: '+e.message,'error');}loading(false);}
 async function editBranch(code){var b=cachedBranches.find(function(x){return x.code===code;});if(!b)return;editKey['modalAddBranch']=code;document.getElementById('branchModalTitle').textContent='Edit Branch';document.getElementById('bCode').value=b.code;document.getElementById('bName').value=b.name;document.getElementById('bAddr').value=b.address||'';document.getElementById('bStatus').value=b.status;document.getElementById('modalAddBranch').classList.add('open');}
@@ -1546,6 +1543,26 @@ function exportAuditExcel(){
   XLSX.writeFile(wb,'AuditTrail_'+today()+'.xlsx');
   toast('Audit trail exported!','success');
 }
+
+// SUPABASE AUTO-PING - Keeps project alive on free tier
+// Pings every 3 days silently in background
+function startSupabasePing(){
+  var PING_INTERVAL=3*24*60*60*1000;
+  var PING_KEY='sb_last_ping';
+  async function pingSupabase(){
+    try{
+      await db.select('branches','?limit=1');
+      localStorage.setItem(PING_KEY,Date.now().toString());
+    }catch(e){}
+  }
+  function checkPing(){
+    var last=parseInt(localStorage.getItem(PING_KEY)||'0');
+    if(Date.now()-last>PING_INTERVAL){pingSupabase();}
+  }
+  checkPing();
+  setInterval(checkPing,6*60*60*1000);
+}
+startSupabasePing();
 </script>
 </body>
 </html>
