@@ -237,6 +237,35 @@
     <div class="alert alert-danger" id="uploadAlert"></div>
     <div class="alert alert-success" id="uploadOK"></div>
     <div class="alert alert-warning" id="uploadWarn"></div>
+    <!-- UPLOAD PROGRESS BAR -->
+    <div id="uploadProgressBox" style="display:none;margin-bottom:18px;background:#f8f9fe;border:1px solid #e2e8f0;border-radius:10px;padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:13px;font-weight:700;color:#061240" id="uploadStatusText">Preparing...</div>
+        <div style="font-size:13px;font-weight:800;color:#061240" id="uploadPct">0%</div>
+      </div>
+      <div style="background:#e2e8f0;border-radius:20px;height:10px;overflow:hidden;margin-bottom:10px">
+        <div id="uploadProgressBar" style="height:100%;width:0%;border-radius:20px;background:linear-gradient(90deg,#061240,#1a3a8f);transition:width .3s ease"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px">
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px;text-align:center">
+          <div style="font-size:16px;font-weight:800;color:#061240" id="upTotalRows">0</div>
+          <div style="font-size:10px;color:#888;text-transform:uppercase">Total Rows</div>
+        </div>
+        <div style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:8px;padding:8px;text-align:center">
+          <div style="font-size:16px;font-weight:800;color:#059669" id="upNewClients">0</div>
+          <div style="font-size:10px;color:#888;text-transform:uppercase">New Clients</div>
+        </div>
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px;text-align:center">
+          <div style="font-size:16px;font-weight:800;color:#1d4ed8" id="upUpdated">0</div>
+          <div style="font-size:10px;color:#888;text-transform:uppercase">Updated</div>
+        </div>
+        <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:8px;text-align:center">
+          <div style="font-size:16px;font-weight:800;color:#dc2626" id="upUnlocated">0</div>
+          <div style="font-size:10px;color:#888;text-transform:uppercase">Unlocated</div>
+        </div>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:#888;text-align:center" id="uploadChunkText"></div>
+    </div>
     <p style="font-size:13px;color:var(--gray-400);margin-bottom:18px">Required columns: <b>branchcode, clientcode, name, amount, pnno, batchno</b></p>
     <div class="tbl-wrap"><table id="uploadTable"><thead><tr><th>Batch No.</th><th>Client Code</th><th>Name</th><th>Branch</th><th>PN No.</th><th class="amt">Amount</th><th>Status</th></tr></thead><tbody></tbody></table></div>
   </div>
@@ -801,6 +830,32 @@ function downloadBranchTemplate(){makeXLSX(['branchcode','branchname','address',
 function downloadMOCTemplate(){makeXLSX(['moc','description'],[['CASH','Cash Over Counter'],['CHECK',"Manager's Check"]],'MOC_Template.xls');}
 function downloadUnlocated(){if(!_unlocatedRecords.length){toast('No unlocated records.','warning');return;}makeXLSX(['Branch Code','Client Code','Name','Amount','PN No.','Batch No.','Reason'],_unlocatedRecords.map(function(r){return[r.branchcode,r.clientcode,r.name,parseFloat(r.amount)||0,r.pnno,r.batchno,'Branch not found'];}),'Unlocated_Branches_'+today()+'.xls');}
 
+function setUploadProgress(pct, status, chunk, total, added, updated, unlocated){
+  var box = document.getElementById('uploadProgressBox');
+  if(box) box.style.display = 'block';
+  var bar = document.getElementById('uploadProgressBar');
+  var pctEl = document.getElementById('uploadPct');
+  var statusEl = document.getElementById('uploadStatusText');
+  var chunkEl = document.getElementById('uploadChunkText');
+  var totalEl = document.getElementById('upTotalRows');
+  var newEl = document.getElementById('upNewClients');
+  var updEl = document.getElementById('upUpdated');
+  var unlocEl = document.getElementById('upUnlocated');
+  if(bar) bar.style.width = pct + '%';
+  if(pctEl) pctEl.textContent = pct + '%';
+  if(statusEl) statusEl.textContent = status;
+  if(chunkEl && chunk) chunkEl.textContent = chunk;
+  if(totalEl && total !== undefined) totalEl.textContent = total.toLocaleString('en-PH');
+  if(newEl && added !== undefined) newEl.textContent = added.toLocaleString('en-PH');
+  if(updEl && updated !== undefined) updEl.textContent = updated.toLocaleString('en-PH');
+  if(unlocEl && unlocated !== undefined) unlocEl.textContent = unlocated.toLocaleString('en-PH');
+}
+
+function hideUploadProgress(){
+  var box = document.getElementById('uploadProgressBox');
+  if(box) box.style.display = 'none';
+}
+
 async function handleUpload(input){
   var file=input.files[0];if(!file)return;
   var ext=file.name.split('.').pop().toLowerCase(),isX=ext==='xlsx'||ext==='xls';
@@ -831,10 +886,13 @@ async function handleUpload(input){
       if(!nbSeen.has(nbKey)){nbSeen.add(nbKey);nbInsert.push({clientcode:row.clientcode,pnno:row.pnno,name:row.name,amount:row.amount,batchno:row.batchno});}
     }
     var CHUNK=500,PAR=50;
-    if(toInsert.length){for(var i=0;i<toInsert.length;i+=CHUNK){var pct=Math.round(((i+CHUNK)/toInsert.length)*100);loading(true,'Saving new clients...',(Math.min(i+CHUNK,toInsert.length))+' of '+toInsert.length+' records',pct);await db.insert('clients',toInsert.slice(i,i+CHUNK));}}
-    if(toUpdate.length){loading(true,'Updating balances...');for(var i=0;i<toUpdate.length;i+=PAR)await Promise.all(toUpdate.slice(i,i+PAR).map(function(u){return db.update('clients',{change:u.change},'?clientcode=eq.'+encodeURIComponent(u.clientcode));}));}
-    if(nbInsert.length){loading(true,'Saving records...');for(var i=0;i<nbInsert.length;i+=CHUNK)await db.insert('nbmaster',nbInsert.slice(i,i+CHUNK));}
+    setUploadProgress(5,'Validating records...','Processing '+dataRows.length+' rows...',dataRows.length,added,updated,unlocated.length);
+    if(toInsert.length){for(var i=0;i<toInsert.length;i+=CHUNK){var pct=Math.round(((i+CHUNK)/toInsert.length)*100);var insertPct=Math.round(10+((i+CHUNK)/toInsert.length)*40);
+        setUploadProgress(insertPct,'Saving new clients...','Inserting '+(Math.min(i+CHUNK,toInsert.length))+' of '+toInsert.length+' new clients...',dataRows.length,added,updated,unlocated.length);await db.insert('clients',toInsert.slice(i,i+CHUNK));}}
+    if(toUpdate.length){setUploadProgress(55,'Updating client balances...','Updating '+toUpdate.length+' client balances...',dataRows.length,added,updated,unlocated.length);for(var i=0;i<toUpdate.length;i+=PAR)await Promise.all(toUpdate.slice(i,i+PAR).map(function(u){return db.update('clients',{change:u.change},'?clientcode=eq.'+encodeURIComponent(u.clientcode));}));}
+    if(nbInsert.length){setUploadProgress(75,'Saving NB master records...','Saving '+nbInsert.length+' NB records...',dataRows.length,added,updated,unlocated.length);for(var i=0;i<nbInsert.length;i+=CHUNK)await db.insert('nbmaster',nbInsert.slice(i,i+CHUNK));}
     cachedClients=[];_uploadLog=log;_unlocatedRecords=unlocated;
+    setUploadProgress(100,'Upload Complete!','All records processed successfully!',dataRows.length,added,updated,unlocated.length);
     logAudit('UPLOAD','Upload','Upload complete: '+added+' new, '+updated+' accumulated');showAlert('uploadOK','Upload complete: '+added+' new, '+updated+' accumulated'+(unlocated.length?', '+unlocated.length+' unlocated.':'.'), 'success');
     if(unlocated.length){showAlert('uploadWarn',unlocated.length+' record(s) skipped - branch not found.','warning');document.getElementById('btnDownloadUnlocated').style.display='inline-flex';}
     else document.getElementById('btnDownloadUnlocated').style.display='none';
