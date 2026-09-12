@@ -876,36 +876,26 @@ function renderClientPage(){
   var cur=_pages.clients.cur,size=_pages.clients.size,total=_clientTotal;
   var pagerEl=document.getElementById('clientPager');
   if(pagerEl)renderPager('clientPager',cur,total,size,function(p){goClientPage(p);});
-  cachedClients.forEach(function(c,idx){
+  cachedClients.forEach(function(c){
     var bal=parseFloat(c.change||0);
     var hasBalance=bal>0;
     var amtStyle=hasBalance?'color:var(--success)':'color:var(--danger)';
-    var viewDis=hasBalance?'':'disabled title="No available balance"';
-    var claimDis=hasBalance?'':'disabled title="No available balance"';
-    var viewStyle=hasBalance?'':'opacity:.4;cursor:not-allowed;';
+    var btnDis=hasBalance?'':'disabled';
+    var btnStyle=hasBalance?'':'opacity:.4;cursor:not-allowed;';
+    // Clean name - remove pension type prefix like ) or (SR) etc
+    var cleanName=sanitize(c.name||'').replace(/^[\s\)\(SR\)SDIS\)SITF\)SD\)]+/,'').trim();
     var tr='<tr>';
     tr+='<td><b>'+sanitize(c.clientcode)+'<\/b><\/td>';
-    tr+='<td>'+sanitize(c.name)+'<\/td>';
+    tr+='<td>'+cleanName+'<\/td>';
     tr+='<td>'+sanitize(c.branchcode)+'<\/td>';
     tr+='<td>'+sanitize(c.pnno||'--')+'<\/td>';
     tr+='<td class="amt" style="'+amtStyle+'">'+peso(c.change)+'<\/td>';
     tr+='<td><span class="badge badge-info">'+sanitize(c.moc||'--')+'<\/span><\/td>';
     tr+='<td style="display:flex;gap:6px">';
-    tr+='<button class="btn btn-gold btn-sm" '+viewDis+' style="'+viewStyle+'" data-idx="'+idx+'" data-action="view">View<\/button>';
-    tr+='<button class="btn btn-primary btn-sm" '+claimDis+' style="'+viewStyle+'" data-idx="'+idx+'" data-action="claim">Claim<\/button>';
+    tr+='<button class="btn btn-gold btn-sm" '+btnDis+' style="'+btnStyle+'" onclick="viewClient('+JSON.stringify(c.clientcode)+')">View<\/button>';
+    tr+='<button class="btn btn-primary btn-sm" '+btnDis+' style="'+btnStyle+'" onclick="claimFromClient('+JSON.stringify(c.clientcode)+')">Claim<\/button>';
     tr+='<\/td><\/tr>';
     tbody.innerHTML+=tr;
-  });
-  // Attach click handlers after rendering
-  tbody.querySelectorAll('button[data-action]').forEach(function(btn){
-    btn.addEventListener('click',function(){
-      var idx=parseInt(this.getAttribute('data-idx'));
-      var action=this.getAttribute('data-action');
-      var client=filtered[idx];
-      if(!client)return;
-      if(action==='view') viewClient(client.clientcode);
-      else if(action==='claim') claimFromClient(client.clientcode);
-    });
   });
 }
 async function viewClient(code){
