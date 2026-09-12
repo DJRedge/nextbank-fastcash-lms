@@ -872,30 +872,41 @@ function filterClients(){
 }
 
 function renderClientPage(){
-  var tbody=document.querySelector('#clientTable tbody');tbody.innerHTML='';
+  var tbody=document.querySelector('#clientTable tbody');
+  if(!tbody)return;
+  tbody.innerHTML='';
   var cur=_pages.clients.cur,size=_pages.clients.size,total=_clientTotal;
   var pagerEl=document.getElementById('clientPager');
   if(pagerEl)renderPager('clientPager',cur,total,size,function(p){goClientPage(p);});
-  cachedClients.forEach(function(c){
+  window._clientRows=cachedClients;
+  cachedClients.forEach(function(c,i){
     var bal=parseFloat(c.change||0);
     var hasBalance=bal>0;
-    var amtStyle=hasBalance?'color:var(--success)':'color:var(--danger)';
+    var amtStyle=hasBalance?'color:var(--success);font-weight:700':'color:var(--danger)';
     var btnDis=hasBalance?'':'disabled';
     var btnStyle=hasBalance?'':'opacity:.4;cursor:not-allowed;';
-    // Clean name - remove pension type prefix like ) or (SR) etc
-    var cleanName=sanitize(c.name||'').replace(/^[\s\)\(SR\)SDIS\)SITF\)SD\)]+/,'').trim();
-    var tr='<tr>';
-    tr+='<td><b>'+sanitize(c.clientcode)+'<\/b><\/td>';
-    tr+='<td>'+cleanName+'<\/td>';
-    tr+='<td>'+sanitize(c.branchcode)+'<\/td>';
-    tr+='<td>'+sanitize(c.pnno||'--')+'<\/td>';
-    tr+='<td class="amt" style="'+amtStyle+'">'+peso(c.change)+'<\/td>';
-    tr+='<td><span class="badge badge-info">'+sanitize(c.moc||'--')+'<\/span><\/td>';
-    tr+='<td style="display:flex;gap:6px">';
-    tr+='<button class="btn btn-gold btn-sm" '+btnDis+' style="'+btnStyle+'" onclick="viewClient('+JSON.stringify(c.clientcode)+')">View<\/button>';
-    tr+='<button class="btn btn-primary btn-sm" '+btnDis+' style="'+btnStyle+'" onclick="claimFromClient('+JSON.stringify(c.clientcode)+')">Claim<\/button>';
-    tr+='<\/td><\/tr>';
-    tbody.innerHTML+=tr;
+    var cleanName=sanitize(c.name||'').replace(/^[^A-Z]*/,'');
+    var tr=document.createElement('tr');
+    tr.setAttribute('data-code',c.clientcode);
+    tr.innerHTML='<td><b>'+sanitize(c.clientcode)+'<\/b><\/td>'+
+      '<td>'+cleanName+'<\/td>'+
+      '<td>'+sanitize(c.branchcode||'--')+'<\/td>'+
+      '<td>'+sanitize(c.pnno||'--')+'<\/td>'+
+      '<td class="amt" style="'+amtStyle+'">'+peso(c.change)+'<\/td>'+
+      '<td><span class="badge badge-info">'+sanitize(c.moc||'--')+'<\/span><\/td>'+
+      '<td style="display:flex;gap:6px">'+
+        '<button class="btn btn-gold btn-sm" '+btnDis+' style="'+btnStyle+'" data-action="view">View<\/button>'+
+        '<button class="btn btn-primary btn-sm" '+btnDis+' style="'+btnStyle+'" data-action="claim">Claim<\/button>'+
+      '<\/td>';
+    var code=c.clientcode;
+    tr.querySelectorAll('button[data-action]').forEach(function(btn){
+      btn.addEventListener('click',function(e){
+        e.stopPropagation();
+        if(this.getAttribute('data-action')==='view') viewClient(code);
+        else claimFromClient(code);
+      });
+    });
+    tbody.appendChild(tr);
   });
 }
 async function viewClient(code){
