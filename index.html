@@ -789,15 +789,14 @@ async function loadClients(){
   loading(true,'Loading clients...','Please wait...');
   showSkeleton('#clientTable tbody',7,8);
   try{
-    // Get total count first using HEAD request
-    var countRes=await sbFetch('GET','clients','','?select=clientcode&order=name.asc&limit=1&offset=0');
-    // Fetch first page only - server side pagination
-    cachedClients=await db.select('clients','?order=name.asc&limit=50&offset=0');
-    _clientTotal=await getClientTotal();
+    cachedClients=await db.select('clients','?order=name.asc&limit='+_pages.clients.size+'&offset=0');
+    _clientTotal=cachedClients.length<_pages.clients.size?cachedClients.length:999999;
   }catch(e){toast('Error: '+e.message,'error');}
   loading(false);
   _pages.clients.cur=1;
   renderClientPage();
+  // Get real total in background
+  getClientTotal().then(function(t){if(t>0){_clientTotal=t;renderClientPage();}});
 }
 
 async function getClientTotal(){
@@ -817,17 +816,15 @@ async function getClientTotal(){
 
 async function goClientPage(p){
   _pages.clients.cur=p;
-  loading(true,'Loading clients...','Fetching page '+p+'...');
   showSkeleton('#clientTable tbody',7,8);
   try{
     var q=document.getElementById('clientSearch')?document.getElementById('clientSearch').value.trim():'';
     var by=document.getElementById('clientSearchBy')?document.getElementById('clientSearchBy').value:'name';
-    var filter=q?('&'+by+'=ilike.*'+q.replace(/ /g,'%20')+'*'):'';
-    var offset=(_pages.clients.cur-1)*_pages.clients.size;
+    var filter=q?('&'+by+'=ilike.*'+encodeURIComponent(q)+'*'):'';
+    var offset=(p-1)*_pages.clients.size;
     cachedClients=await db.select('clients','?order=name.asc&limit='+_pages.clients.size+'&offset='+offset+filter);
-    _clientTotal=await getClientTotal();
+    if(cachedClients.length<_pages.clients.size)_clientTotal=(p-1)*_pages.clients.size+cachedClients.length;
   }catch(e){toast('Error: '+e.message,'error');}
-  loading(false);
   renderClientPage();
 }
 var _cST=null;
@@ -1178,12 +1175,14 @@ async function loadTransactions(){
   loading(true,'Loading transactions...','Please wait...');
   showSkeleton('#txTable tbody',8,8);
   try{
-    cachedTx=await db.select('changes','?order=id.desc&limit=50&offset=0');
-    _txTotal=await getTxTotal();
+    cachedTx=await db.select('changes','?order=id.desc&limit='+_pages.transactions.size+'&offset=0');
+    _txTotal=cachedTx.length<_pages.transactions.size?cachedTx.length:999999;
   }catch(e){toast('Error: '+e.message,'error');}
   loading(false);
   _pages.transactions.cur=1;
   renderTxPage();
+  // Get real total in background
+  getTxTotal().then(function(t){if(t>0){_txTotal=t;renderTxPage();}});
 }
 
 async function getTxTotal(){
@@ -1201,16 +1200,14 @@ async function getTxTotal(){
 
 async function goTxPage(p){
   _pages.transactions.cur=p;
-  loading(true,'Loading transactions...','Fetching page '+p+'...');
   showSkeleton('#txTable tbody',8,8);
   try{
     var q=document.getElementById('txSearch')?document.getElementById('txSearch').value.trim():'';
     var filter=q?('&arnumber=ilike.*'+encodeURIComponent(q)+'*'):'';
-    var offset=(_pages.transactions.cur-1)*_pages.transactions.size;
+    var offset=(p-1)*_pages.transactions.size;
     cachedTx=await db.select('changes','?order=id.desc&limit='+_pages.transactions.size+'&offset='+offset+filter);
-    _txTotal=await getTxTotal();
+    if(cachedTx.length<_pages.transactions.size)_txTotal=(p-1)*_pages.transactions.size+cachedTx.length;
   }catch(e){toast('Error: '+e.message,'error');}
-  loading(false);
   renderTxPage();
 }
 function filterTransactions(){
