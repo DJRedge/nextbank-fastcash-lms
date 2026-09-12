@@ -601,6 +601,10 @@ var SB_URL='https://bbpurrnroinfncwtyqsn.supabase.co',SB_KEY='sb_publishable_k1c
 var _pages={clients:{cur:1,size:50},transactions:{cur:1,size:50}};
 var _clientTotal=0;
 var _txTotal=0;
+var cachedClients=[];
+var cachedTx=[];
+var cachedBranches=[];
+var cachedMOC=[];
 async function sbFetch(method,table,body,query){query=query||'';var url=SB_URL+'/rest/v1/'+table+query;var headers={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};if(method!=='GET')headers['Prefer']='return=representation';var opts={method:method,headers:headers};if(body)opts.body=JSON.stringify(body);var res=await fetch(url,opts);if(!res.ok){var msg='HTTP '+res.status;try{var j=await res.json();msg=j.message||j.hint||msg;}catch(e){}throw new Error(msg);}var text=await res.text();return text?JSON.parse(text):[];}
 var db={select:function(t,q){return sbFetch('GET',t,null,q);},insert:function(t,d){return sbFetch('POST',t,d,'');},update:function(t,d,q){return sbFetch('PATCH',t,d,q);},delete:function(t,q){return sbFetch('DELETE',t,null,q);}};
 var currentUser=null,editKey={},cachedClients=[],cachedBranches=[],cachedMOC=[],cachedTx=[],cachedUsersAll=[],claimClient=null,_uploadLog=[],_branchLog=[],_unlocatedRecords=[],rptData=[],rptFiltered=[],rptClientMap={},rptCurrentSort={col:'date',order:'asc'};
