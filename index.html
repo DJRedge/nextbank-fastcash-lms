@@ -971,7 +971,15 @@ async function handleUpload(input){
     loading(true,'Validating branches...');
     var branches=await dbCached('branches','?select=code',300000);
     var validCodes=new Set(branches.map(function(b){return b.code.toUpperCase();}));
-    var existing=await db.select('clients','?select=clientcode,change');
+    var existing=[];
+    var exPage=0;
+    while(true){
+      var exBatch=await db.select('clients','?select=clientcode,change&limit=1000&offset='+(exPage*1000));
+      if(!Array.isArray(exBatch)||exBatch.length===0)break;
+      existing=existing.concat(exBatch);
+      if(exBatch.length<1000)break;
+      exPage++;
+    }
     var added=0,updated=0,log=[],unlocated=[],toInsert=[],toUpdate=[],nbInsert=[],nbSeen=new Set();
     var dataRows=lines.slice(1).filter(function(r){return r.length>=6;});
     for(var idx=0;idx<dataRows.length;idx++){
@@ -985,12 +993,38 @@ async function handleUpload(input){
       var nbKey=row.clientcode+'|'+row.batchno+'|'+row.pnno;
       if(!nbSeen.has(nbKey)){nbSeen.add(nbKey);nbInsert.push({clientcode:row.clientcode,pnno:row.pnno,name:row.name,amount:row.amount,batchno:row.batchno});}
     }
-    var CHUNK=500,PAR=50;
+    var CHUNK=100,PAR=10;
     setUploadProgress(5,'Validating records...','Processing '+dataRows.length+' rows...',dataRows.length,added,updated,unlocated.length);
-    if(toInsert.length){for(var i=0;i<toInsert.length;i+=CHUNK){var pct=Math.round(((i+CHUNK)/toInsert.length)*100);var insertPct=Math.round(10+((i+CHUNK)/toInsert.length)*40);
-        setUploadProgress(insertPct,'Saving new clients...','Inserting '+(Math.min(i+CHUNK,toInsert.length))+' of '+toInsert.length+' new clients...',dataRows.length,added,updated,unlocated.length);await db.insert('clients',toInsert.slice(i,i+CHUNK));}}
-    if(toUpdate.length){setUploadProgress(55,'Updating client balances...','Updating '+toUpdate.length+' client balances...',dataRows.length,added,updated,unlocated.length);for(var i=0;i<toUpdate.length;i+=PAR)await Promise.all(toUpdate.slice(i,i+PAR).map(function(u){return db.update('clients',{change:u.change},'?clientcode=eq.'+encodeURIComponent(u.clientcode));}));}
-    if(nbInsert.length){setUploadProgress(75,'Saving NB master records...','Saving '+nbInsert.length+' NB records...',dataRows.length,added,updated,unlocated.length);for(var i=0;i<nbInsert.length;i+=CHUNK)await db.insert('nbmaster',nbInsert.slice(i,i+CHUNK));}
+    if(toInsert.length){
+      for(var i=0;i<toInsert.length;i+=CHUNK){
+        var insertPct=Math.round(10+((i+CHUNK)/toInsert.length)*40);
+        setUploadProgress(insertPct,'Saving new clients...','Inserting '+(Math.min(i+CHUNK,toInsert.length))+' of '+toInsert.length+' new clients...',dataRows.length,added,updated,unlocated.length);
+        try{await db.insert('clients',toInsert.slice(i,i+CHUNK));}
+        catch(chunkErr){
+          // Retry once on failure
+          try{
+            await new Promise(function(r){setTimeout(r,2000);});
+            await db.insert('clients',toInsert.slice(i,i+CHUNK));
+          }catch(retryErr){toast('Warning: Some records may not have saved. Please check.','warning');}
+        }
+      }
+    }
+    if(toUpdate.length){
+      for(var i=0;i<toUpdate.length;i+=PAR){
+        var updPct=Math.round(55+((i+PAR)/toUpdate.length)*20);
+        setUploadProgress(updPct,'Updating client balances...','Updating '+(Math.min(i+PAR,toUpdate.length))+' of '+toUpdate.length+' balances...',dataRows.length,added,updated,unlocated.length);
+        try{await Promise.all(toUpdate.slice(i,i+PAR).map(function(u){return db.update('clients',{change:u.change},'?clientcode=eq.'+encodeURIComponent(u.clientcode));}));}
+        catch(updErr){await new Promise(function(r){setTimeout(r,1000);});}
+      }
+    }
+    if(nbInsert.length){
+      for(var i=0;i<nbInsert.length;i+=CHUNK){
+        var nbPct=Math.round(75+((i+CHUNK)/nbInsert.length)*20);
+        setUploadProgress(nbPct,'Saving NB master records...','Saving '+(Math.min(i+CHUNK,nbInsert.length))+' of '+nbInsert.length+' NB records...',dataRows.length,added,updated,unlocated.length);
+        try{await db.insert('nbmaster',nbInsert.slice(i,i+CHUNK));}
+        catch(nbErr){await new Promise(function(r){setTimeout(r,1000);});}
+      }
+    }
     cachedClients=[];_uploadLog=log;_unlocatedRecords=unlocated;
     setUploadProgress(100,'Upload Complete!','All records processed successfully!',dataRows.length,added,updated,unlocated.length);
     logAudit('UPLOAD','Upload','Upload complete: '+added+' new, '+updated+' accumulated');showAlert('uploadOK','Upload complete: '+added+' new, '+updated+' accumulated'+(unlocated.length?', '+unlocated.length+' unlocated.':'.'), 'success');
