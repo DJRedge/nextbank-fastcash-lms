@@ -607,7 +607,7 @@ var cachedBranches=[];
 var cachedMOC=[];
 async function sbFetch(method,table,body,query){query=query||'';var url=SB_URL+'/rest/v1/'+table+query;var headers={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};if(method!=='GET')headers['Prefer']='return=representation';var opts={method:method,headers:headers};if(body)opts.body=JSON.stringify(body);var res=await fetch(url,opts);if(!res.ok){var msg='HTTP '+res.status;try{var j=await res.json();msg=j.message||j.hint||msg;}catch(e){}throw new Error(msg);}var text=await res.text();return text?JSON.parse(text):[];}
 var db={select:function(t,q){return sbFetch('GET',t,null,q);},insert:function(t,d){return sbFetch('POST',t,d,'');},update:function(t,d,q){return sbFetch('PATCH',t,d,q);},delete:function(t,q){return sbFetch('DELETE',t,null,q);}};
-var currentUser=null,editKey={},cachedClients=[],cachedBranches=[],cachedMOC=[],cachedTx=[],cachedUsersAll=[],claimClient=null,_uploadLog=[],_branchLog=[],_unlocatedRecords=[],rptData=[],rptFiltered=[],rptClientMap={},rptCurrentSort={col:'date',order:'asc'};
+var currentUser=null,editKey={},cachedUsers=[];
 function peso(n){return '\u20b1'+parseFloat(n||0).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function sanitize(s){if(!s)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function today(){return new Date().toISOString().slice(0,10);}
@@ -845,6 +845,27 @@ async function serverSearchClients(){
     loading(false);
   },400);
 }
+function renderPager(containerId, cur, total, size, onPage){
+  var el=document.getElementById(containerId);
+  if(!el)return;
+  if(total<=size){el.innerHTML='<div style="font-size:12px;color:#888;padding:8px 0">Showing '+total.toLocaleString('en-PH')+' records</div>';return;}
+  var pages=Math.ceil(total/size);
+  var html='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;flex-wrap:wrap;gap:8px">';
+  html+='<div style="font-size:12px;color:#888">Showing '+(((cur-1)*size)+1)+'-'+Math.min(cur*size,total)+' of '+total.toLocaleString('en-PH')+' records</div>';
+  html+='<div style="display:flex;gap:4px;align-items:center">';
+  html+='<button onclick="('+onPage+')(1)" '+(cur===1?'disabled':'')+' style="padding:5px 10px;border-radius:6px;border:1px solid #e2e8f0;background:'+(cur===1?'#f8f9fe':'#fff')+';cursor:'+(cur===1?'default':'pointer')+';font-size:12px;font-weight:700;color:#061240">&laquo;</button>';
+  html+='<button onclick="('+onPage+')('+(cur-1)+')" '+(cur===1?'disabled':'')+' style="padding:5px 10px;border-radius:6px;border:1px solid #e2e8f0;background:'+(cur===1?'#f8f9fe':'#fff')+';cursor:'+(cur===1?'default':'pointer')+';font-size:12px;color:#061240">&lsaquo;</button>';
+  var start=Math.max(1,cur-2),end=Math.min(pages,cur+2);
+  for(var p=start;p<=end;p++){
+    var active=p===cur;
+    html+='<button onclick="('+onPage+')('+p+')" style="padding:5px 10px;border-radius:6px;border:1px solid '+(active?'#061240':'#e2e8f0')+';background:'+(active?'#061240':'#fff')+';color:'+(active?'#f5c518':'#061240')+';font-size:12px;font-weight:'+(active?'800':'400')+';cursor:pointer">'+p+'</button>';
+  }
+  html+='<button onclick="('+onPage+')('+(cur+1)+')" '+(cur===pages?'disabled':'')+' style="padding:5px 10px;border-radius:6px;border:1px solid #e2e8f0;background:'+(cur===pages?'#f8f9fe':'#fff')+';cursor:'+(cur===pages?'default':'pointer')+';font-size:12px;color:#061240">&rsaquo;</button>';
+  html+='<button onclick="('+onPage+')('+pages+')" '+(cur===pages?'disabled':'')+' style="padding:5px 10px;border-radius:6px;border:1px solid #e2e8f0;background:'+(cur===pages?'#f8f9fe':'#fff')+';cursor:'+(cur===pages?'default':'pointer')+';font-size:12px;font-weight:700;color:#061240">&raquo;</button>';
+  html+='</div></div>';
+  el.innerHTML=html;
+}
+
 function filterClients(){
   _pages.clients.cur=1;
   goClientPage(1);
