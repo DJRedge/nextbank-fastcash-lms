@@ -38,7 +38,10 @@
     <label class="login-label">Username</label>
     <input class="login-input" type="text" id="loginUser" placeholder="Enter username" autocomplete="username">
     <label class="login-label">Password</label>
-    <input class="login-input" type="password" id="loginPass" placeholder="Enter password" autocomplete="current-password">
+    <div style="position:relative">
+      <input class="login-input" type="password" id="loginPass" placeholder="Enter password" autocomplete="current-password" style="padding-right:44px;width:100%">
+      <button type="button" onclick="toggleShowPass()" id="btnShowPass" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#888;font-size:16px;padding:0;line-height:1" title="Show/Hide password">&#128065;</button>
+    </div>
     <button class="login-btn" onclick="doLogin()">Sign In</button>
   </div>
 </div>
@@ -597,6 +600,20 @@ function forceNavDashboard(){document.querySelectorAll('.page').forEach(function
 function showAccessDenied(page){var el=document.getElementById('_accessMsg');if(!el){el=document.createElement('div');el.id='_accessMsg';el.style.cssText='position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#fef2f2;border:2px solid #991b1b;border-radius:10px;padding:16px 28px;font-size:14px;font-weight:700;color:#991b1b;z-index:9999;box-shadow:0 4px 24px rgba(0,0,0,.2);text-align:center';document.body.appendChild(el);}el.style.display='block';el.innerHTML='Access Denied - You do not have permission to access this module.';setTimeout(function(){if(el)el.style.display='none';},4000);}
 window.addEventListener('hashchange',function(e){e.preventDefault();if(!currentUser)return;var h=(window.location.hash||'').replace('#','').toLowerCase().trim();if(h&&h!=='dashboard'&&!canAccessPage(h)){history.replaceState(null,'',window.location.pathname);forceNavDashboard();showAccessDenied(h);}});
 window.addEventListener('popstate',function(){if(!currentUser)return;history.replaceState(null,'',window.location.pathname);forceNavDashboard();});
+
+function toggleShowPass(){
+  var inp=document.getElementById('loginPass');
+  var btn=document.getElementById('btnShowPass');
+  if(inp.type==='password'){
+    inp.type='text';
+    btn.innerHTML='&#128065;&#65039;';
+    btn.style.color='#061240';
+  } else {
+    inp.type='password';
+    btn.innerHTML='&#128065;';
+    btn.style.color='#888';
+  }
+}
 
 async function doLogin(){
   var u=document.getElementById('loginUser').value.trim(),p=document.getElementById('loginPass').value.trim();
