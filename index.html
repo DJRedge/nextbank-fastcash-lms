@@ -218,7 +218,7 @@
       <input class="search-input" id="clientSearch" placeholder="Search clients..." oninput="serverSearchClients()">
       <button class="btn btn-outline" onclick="loadClients()">&#8635; Refresh</button>
     </div>
-    <div class="tbl-wrap"><table id="clientTable"><thead><tr><th>Client Code</th><th>Name</th><th>Branch</th><th>PN No.</th><th class="amt">Change Bal.</th><th>MOC</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+    <div class="tbl-wrap"><table id="clientTable"><thead><tr><th>Client Code</th><th>Name</th><th>Branch</th><th>PN No.</th><th class="amt">Change Bal.</th><th>MOC</th><th>Actions</th></tr></thead><tbody></tbody></table><div id="clientPager"></div></div>
   </div>
 </div>
 
@@ -304,7 +304,7 @@
   <div class="card">
     <div class="card-header"><div class="card-title">All Transactions</div><button class="btn btn-outline" onclick="loadTransactions()">&#8635; Refresh</button></div>
     <div class="search-bar"><input class="search-input" id="txSearch" placeholder="Search AR No., client, branch..." oninput="filterTransactions()"></div>
-    <div class="tbl-wrap"><table id="txTable"><thead><tr><th>AR No.</th><th>Date</th><th>Client Code</th><th>Branch</th><th class="amt">Amount</th><th>Remarks</th><th>Printed By</th><th>Action</th></tr></thead><tbody></tbody></table></div>
+    <div class="tbl-wrap"><table id="txTable"><thead><tr><th>AR No.</th><th>Date</th><th>Client Code</th><th>Branch</th><th class="amt">Amount</th><th>Remarks</th><th>Printed By</th><th>Action</th></tr></thead><tbody></tbody></table><div id="txPager"></div></div>
   </div>
 </div>
 
@@ -786,10 +786,23 @@ async function renderDashboard(){
 }
 
 async function loadClients(){
-  loading(true,'Loading clients...','Please wait...');
+  loading(true,'Loading clients...','Fetching all records...');
   showSkeleton('#clientTable tbody',7,8);
-  try{cachedClients=await db.select('clients','?order=name.asc&limit=500');}catch(e){toast('Error: '+e.message,'error');}
-  loading(false);filterClients();
+  try{
+    var all=[];
+    var page=0;
+    while(true){
+      var batch=await db.select('clients','?order=name.asc&limit=1000&offset='+(page*1000));
+      if(!Array.isArray(batch)||batch.length===0)break;
+      all=all.concat(batch);
+      if(batch.length<1000)break;
+      page++;
+    }
+    cachedClients=all;
+  }catch(e){toast('Error: '+e.message,'error');}
+  loading(false);
+  _pages.clients.cur=1;
+  filterClients();
 }
 var _cST=null;
 async function serverSearchClients(){
@@ -806,7 +819,14 @@ function filterClients(){
   var q=document.getElementById('clientSearch').value.toLowerCase(),by=document.getElementById('clientSearchBy').value;
   var tbody=document.querySelector('#clientTable tbody');tbody.innerHTML='';
   var filtered=cachedClients.filter(function(c){var v=(by==='name'?c.name:by==='clientcode'?c.clientcode:c.pnno||'').toLowerCase();return !q||v.includes(q);});
-  filtered.forEach(function(c,idx){
+  var size=_pages.clients.size,cur=_pages.clients.cur;
+  var total=filtered.length;
+  var paginated=filtered.slice((cur-1)*size,cur*size);
+  // Reset to page 1 if current page is out of range
+  if((cur-1)*size>=total&&total>0){_pages.clients.cur=1;cur=1;paginated=filtered.slice(0,size);}
+  var pagerEl=document.getElementById('clientPager');
+  if(pagerEl)renderPager('clientPager',cur,total,size,function(p){_pages.clients.cur=p;filterClients();});
+  paginated.forEach(function(c,idx){
     var bal=parseFloat(c.change||0);
     var hasBalance=bal>0;
     var amtStyle=hasBalance?'color:var(--success)':'color:var(--danger)';
@@ -1129,8 +1149,36 @@ function printReceipt(){
   setTimeout(function(){try{iframe.contentWindow.focus();iframe.contentWindow.print();}catch(e){}},600);
 }
 
-async function loadTransactions(){loading(true,'Loading transactions...','Up to 1,000 records...');showSkeleton('#txTable tbody',8,8);try{cachedTx=await db.select('changes','?order=id.desc&limit=1000');}catch(e){toast('Error: '+e.message,'error');}loading(false);filterTransactions();}
-function filterTransactions(){var q=(document.getElementById('txSearch')||{value:''}).value.toLowerCase();var tbody=document.querySelector('#txTable tbody');tbody.innerHTML='';cachedTx.filter(function(c){return !q||c.arnumber.toLowerCase().includes(q)||c.clientcode.toLowerCase().includes(q)||c.branchcode.toLowerCase().includes(q);}).forEach(function(c){tbody.innerHTML+='<tr><td><b>'+sanitize(c.arnumber)+'</b></td><td>'+fmtDate(c.date)+'</td><td>'+sanitize(c.clientcode)+'</td><td>'+sanitize(c.branchcode)+'</td><td class="amt" style="color:var(--success)">'+peso(c.amount)+'</td><td>'+(sanitize(c.remarks)||'--')+'</td><td>'+sanitize(c.printedby)+'</td><td><button class="btn btn-outline btn-sm" onclick="showReceiptById('+c.id+')">Receipt</button></td></tr>';});}
+async function loadTransactions(){
+  loading(true,'Loading transactions...','Fetching all records...');
+  showSkeleton('#txTable tbody',8,8);
+  try{
+    var all=[];
+    var page=0;
+    while(true){
+      var batch=await db.select('changes','?order=id.desc&limit=1000&offset='+(page*1000));
+      if(!Array.isArray(batch)||batch.length===0)break;
+      all=all.concat(batch);
+      if(batch.length<1000)break;
+      page++;
+    }
+    cachedTx=all;
+  }catch(e){toast('Error: '+e.message,'error');}
+  loading(false);
+  _pages.transactions.cur=1;
+  filterTransactions();
+}
+function filterTransactions(){
+  var q=(document.getElementById('txSearch')||{value:''}).value.toLowerCase();
+  var tbody=document.querySelector('#txTable tbody');tbody.innerHTML='';
+  var filtered=cachedTx.filter(function(c){return !q||c.arnumber.toLowerCase().includes(q)||c.clientcode.toLowerCase().includes(q)||c.branchcode.toLowerCase().includes(q);});
+  var size=_pages.transactions.size,cur=_pages.transactions.cur;
+  var total=filtered.length;
+  var paginated=filtered.slice((cur-1)*size,cur*size);
+  if((cur-1)*size>=total&&total>0){_pages.transactions.cur=1;cur=1;paginated=filtered.slice(0,size);}
+  var pagerEl=document.getElementById('txPager');
+  if(pagerEl)renderPager('txPager',cur,total,size,function(p){_pages.transactions.cur=p;filterTransactions();});
+  paginated.forEach(function(c){tbody.innerHTML+='<tr><td><b>'+sanitize(c.arnumber)+'</b></td><td>'+fmtDate(c.date)+'</td><td>'+sanitize(c.clientcode)+'</td><td>'+sanitize(c.branchcode)+'</td><td class="amt" style="color:var(--success)">'+peso(c.amount)+'</td><td>'+(sanitize(c.remarks)||'--')+'</td><td>'+sanitize(c.printedby)+'</td><td><button class="btn btn-outline btn-sm" onclick="showReceiptById('+c.id+')">Receipt</button></td></tr>';});}
 async function showReceiptById(id){loading(true,'Loading...');try{var txRows=await db.select('changes','?id=eq.'+id);var tx=txRows[0];if(!tx){loading(false);return;}var clRows=await db.select('clients','?clientcode=eq.'+encodeURIComponent(tx.clientcode));var cl=clRows[0]||{name:tx.clientcode,clientcode:tx.clientcode,branchcode:tx.branchcode,moc:'--',change:0};showReceipt(tx,cl);}catch(e){toast('Error: '+e.message,'error');}loading(false);}
 
 async function initReports(){
