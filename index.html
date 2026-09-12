@@ -786,23 +786,49 @@ async function renderDashboard(){
 }
 
 async function loadClients(){
-  loading(true,'Loading clients...','Fetching all records...');
+  loading(true,'Loading clients...','Please wait...');
   showSkeleton('#clientTable tbody',7,8);
   try{
-    var all=[];
-    var page=0;
-    while(true){
-      var batch=await db.select('clients','?order=name.asc&limit=1000&offset='+(page*1000));
-      if(!Array.isArray(batch)||batch.length===0)break;
-      all=all.concat(batch);
-      if(batch.length<1000)break;
-      page++;
-    }
-    cachedClients=all;
+    // Get total count first using HEAD request
+    var countRes=await sbFetch('GET','clients','','?select=clientcode&order=name.asc&limit=1&offset=0');
+    // Fetch first page only - server side pagination
+    cachedClients=await db.select('clients','?order=name.asc&limit=50&offset=0');
+    _clientTotal=await getClientTotal();
   }catch(e){toast('Error: '+e.message,'error');}
   loading(false);
   _pages.clients.cur=1;
-  filterClients();
+  renderClientPage();
+}
+
+async function getClientTotal(){
+  try{
+    var q=document.getElementById('clientSearch')?document.getElementById('clientSearch').value.trim():'';
+    var by=document.getElementById('clientSearchBy')?document.getElementById('clientSearchBy').value:'name';
+    var filter=q?('&'+by+'=ilike.*'+q.replace(/ /g,'%20')+'*'):'';
+    // Fetch with high limit to get total - use count via rpc or large offset
+    var url=SB_URL+'/rest/v1/clients?select=clientcode'+filter+'&limit=1';
+    var headers={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'count=exact','Range-Unit':'items','Range':'0-0'};
+    var res=await fetch(url,{method:'GET',headers:headers});
+    var cr=res.headers.get('Content-Range');
+    if(cr){var m=cr.match(/\/([0-9]+)/);if(m)return parseInt(m[1]);}
+    return 0;
+  }catch(e){return 0;}
+}
+
+async function goClientPage(p){
+  _pages.clients.cur=p;
+  loading(true,'Loading clients...','Fetching page '+p+'...');
+  showSkeleton('#clientTable tbody',7,8);
+  try{
+    var q=document.getElementById('clientSearch')?document.getElementById('clientSearch').value.trim():'';
+    var by=document.getElementById('clientSearchBy')?document.getElementById('clientSearchBy').value:'name';
+    var filter=q?('&'+by+'=ilike.*'+q.replace(/ /g,'%20')+'*'):'';
+    var offset=(_pages.clients.cur-1)*_pages.clients.size;
+    cachedClients=await db.select('clients','?order=name.asc&limit='+_pages.clients.size+'&offset='+offset+filter);
+    _clientTotal=await getClientTotal();
+  }catch(e){toast('Error: '+e.message,'error');}
+  loading(false);
+  renderClientPage();
 }
 var _cST=null;
 async function serverSearchClients(){
@@ -816,17 +842,16 @@ async function serverSearchClients(){
   },400);
 }
 function filterClients(){
-  var q=document.getElementById('clientSearch').value.toLowerCase(),by=document.getElementById('clientSearchBy').value;
+  _pages.clients.cur=1;
+  goClientPage(1);
+}
+
+function renderClientPage(){
   var tbody=document.querySelector('#clientTable tbody');tbody.innerHTML='';
-  var filtered=cachedClients.filter(function(c){var v=(by==='name'?c.name:by==='clientcode'?c.clientcode:c.pnno||'').toLowerCase();return !q||v.includes(q);});
-  var size=_pages.clients.size,cur=_pages.clients.cur;
-  var total=filtered.length;
-  var paginated=filtered.slice((cur-1)*size,cur*size);
-  // Reset to page 1 if current page is out of range
-  if((cur-1)*size>=total&&total>0){_pages.clients.cur=1;cur=1;paginated=filtered.slice(0,size);}
+  var cur=_pages.clients.cur,size=_pages.clients.size,total=_clientTotal;
   var pagerEl=document.getElementById('clientPager');
-  if(pagerEl)renderPager('clientPager',cur,total,size,function(p){_pages.clients.cur=p;filterClients();});
-  paginated.forEach(function(c,idx){
+  if(pagerEl)renderPager('clientPager',cur,total,size,function(p){goClientPage(p);});
+  cachedClients.forEach(function(c,idx){
     var bal=parseFloat(c.change||0);
     var hasBalance=bal>0;
     var amtStyle=hasBalance?'color:var(--success)':'color:var(--danger)';
@@ -1150,35 +1175,55 @@ function printReceipt(){
 }
 
 async function loadTransactions(){
-  loading(true,'Loading transactions...','Fetching all records...');
+  loading(true,'Loading transactions...','Please wait...');
   showSkeleton('#txTable tbody',8,8);
   try{
-    var all=[];
-    var page=0;
-    while(true){
-      var batch=await db.select('changes','?order=id.desc&limit=1000&offset='+(page*1000));
-      if(!Array.isArray(batch)||batch.length===0)break;
-      all=all.concat(batch);
-      if(batch.length<1000)break;
-      page++;
-    }
-    cachedTx=all;
+    cachedTx=await db.select('changes','?order=id.desc&limit=50&offset=0');
+    _txTotal=await getTxTotal();
   }catch(e){toast('Error: '+e.message,'error');}
   loading(false);
   _pages.transactions.cur=1;
-  filterTransactions();
+  renderTxPage();
+}
+
+async function getTxTotal(){
+  try{
+    var q=document.getElementById('txSearch')?document.getElementById('txSearch').value.trim():'';
+    var filter=q?('&arnumber=ilike.*'+encodeURIComponent(q)+'*'):'';
+    var url=SB_URL+'/rest/v1/changes?select=id'+filter+'&limit=1';
+    var headers={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'count=exact','Range-Unit':'items','Range':'0-0'};
+    var res=await fetch(url,{method:'GET',headers:headers});
+    var cr=res.headers.get('Content-Range');
+    if(cr){var m=cr.match(/\/([0-9]+)/);if(m)return parseInt(m[1]);}
+    return 0;
+  }catch(e){return 0;}
+}
+
+async function goTxPage(p){
+  _pages.transactions.cur=p;
+  loading(true,'Loading transactions...','Fetching page '+p+'...');
+  showSkeleton('#txTable tbody',8,8);
+  try{
+    var q=document.getElementById('txSearch')?document.getElementById('txSearch').value.trim():'';
+    var filter=q?('&arnumber=ilike.*'+encodeURIComponent(q)+'*'):'';
+    var offset=(_pages.transactions.cur-1)*_pages.transactions.size;
+    cachedTx=await db.select('changes','?order=id.desc&limit='+_pages.transactions.size+'&offset='+offset+filter);
+    _txTotal=await getTxTotal();
+  }catch(e){toast('Error: '+e.message,'error');}
+  loading(false);
+  renderTxPage();
 }
 function filterTransactions(){
-  var q=(document.getElementById('txSearch')||{value:''}).value.toLowerCase();
+  _pages.transactions.cur=1;
+  goTxPage(1);
+}
+
+function renderTxPage(){
   var tbody=document.querySelector('#txTable tbody');tbody.innerHTML='';
-  var filtered=cachedTx.filter(function(c){return !q||c.arnumber.toLowerCase().includes(q)||c.clientcode.toLowerCase().includes(q)||c.branchcode.toLowerCase().includes(q);});
-  var size=_pages.transactions.size,cur=_pages.transactions.cur;
-  var total=filtered.length;
-  var paginated=filtered.slice((cur-1)*size,cur*size);
-  if((cur-1)*size>=total&&total>0){_pages.transactions.cur=1;cur=1;paginated=filtered.slice(0,size);}
+  var cur=_pages.transactions.cur,size=_pages.transactions.size,total=_txTotal;
   var pagerEl=document.getElementById('txPager');
-  if(pagerEl)renderPager('txPager',cur,total,size,function(p){_pages.transactions.cur=p;filterTransactions();});
-  paginated.forEach(function(c){tbody.innerHTML+='<tr><td><b>'+sanitize(c.arnumber)+'</b></td><td>'+fmtDate(c.date)+'</td><td>'+sanitize(c.clientcode)+'</td><td>'+sanitize(c.branchcode)+'</td><td class="amt" style="color:var(--success)">'+peso(c.amount)+'</td><td>'+(sanitize(c.remarks)||'--')+'</td><td>'+sanitize(c.printedby)+'</td><td><button class="btn btn-outline btn-sm" onclick="showReceiptById('+c.id+')">Receipt</button></td></tr>';});}
+  if(pagerEl)renderPager('txPager',cur,total,size,function(p){goTxPage(p);});
+  cachedTx.forEach(function(c){tbody.innerHTML+='<tr><td><b>'+sanitize(c.arnumber)+'</b></td><td>'+fmtDate(c.date)+'</td><td>'+sanitize(c.clientcode)+'</td><td>'+sanitize(c.branchcode)+'</td><td class="amt" style="color:var(--success)">'+peso(c.amount)+'</td><td>'+(sanitize(c.remarks)||'--')+'</td><td>'+sanitize(c.printedby)+'</td><td><button class="btn btn-outline btn-sm" onclick="showReceiptById('+c.id+')">Receipt</button></td></tr>';});}
 async function showReceiptById(id){loading(true,'Loading...');try{var txRows=await db.select('changes','?id=eq.'+id);var tx=txRows[0];if(!tx){loading(false);return;}var clRows=await db.select('clients','?clientcode=eq.'+encodeURIComponent(tx.clientcode));var cl=clRows[0]||{name:tx.clientcode,clientcode:tx.clientcode,branchcode:tx.branchcode,moc:'--',change:0};showReceipt(tx,cl);}catch(e){toast('Error: '+e.message,'error');}loading(false);}
 
 async function initReports(){
