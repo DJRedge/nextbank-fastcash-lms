@@ -246,11 +246,7 @@
       <div style="background:#e2e8f0;border-radius:20px;height:10px;overflow:hidden;margin-bottom:10px">
         <div id="uploadProgressBar" style="height:100%;width:0%;border-radius:20px;background:linear-gradient(90deg,#061240,#1a3a8f);transition:width .3s ease"></div>
       </div>
-      <div style="background:#fffbeb;border:2px solid #f5c518;border-radius:8px;padding:10px 14px;margin-top:10px;display:flex;justify-content:space-between;align-items:center">
-        <div style="font-size:12px;font-weight:700;color:#061240;text-transform:uppercase;letter-spacing:.4px">Total Amount Uploaded</div>
-        <div style="font-size:20px;font-weight:800;color:#061240" id="upTotalAmt">&#8369;0.00</div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px">
         <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px;text-align:center">
           <div style="font-size:16px;font-weight:800;color:#061240" id="upTotalRows">0</div>
           <div style="font-size:10px;color:#888;text-transform:uppercase">Total Rows</div>
@@ -609,10 +605,6 @@ var cachedClients=[];
 var cachedTx=[];
 var cachedBranches=[];
 var cachedMOC=[];
-var _testMode=false;
-var _uploadLog=[];
-var _unlocatedRecords=[];
-var _branchLog={};
 async function sbFetch(method,table,body,query){query=query||'';var url=SB_URL+'/rest/v1/'+table+query;var headers={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};if(method!=='GET')headers['Prefer']='return=representation';var opts={method:method,headers:headers};if(body)opts.body=JSON.stringify(body);var res=await fetch(url,opts);if(!res.ok){var msg='HTTP '+res.status;try{var j=await res.json();msg=j.message||j.hint||msg;}catch(e){}throw new Error(msg);}var text=await res.text();return text?JSON.parse(text):[];}
 var db={select:function(t,q){return sbFetch('GET',t,null,q);},insert:function(t,d){return sbFetch('POST',t,d,'');},update:function(t,d,q){return sbFetch('PATCH',t,d,q);},delete:function(t,q){return sbFetch('DELETE',t,null,q);}};
 var currentUser=null,editKey={},cachedUsers=[];
@@ -938,7 +930,7 @@ function downloadBranchTemplate(){makeXLSX(['branchcode','branchname','address',
 function downloadMOCTemplate(){makeXLSX(['moc','description'],[['CASH','Cash Over Counter'],['CHECK',"Manager's Check"]],'MOC_Template.xls');}
 function downloadUnlocated(){if(!_unlocatedRecords.length){toast('No unlocated records.','warning');return;}makeXLSX(['Branch Code','Client Code','Name','Amount','PN No.','Batch No.','Reason'],_unlocatedRecords.map(function(r){return[r.branchcode,r.clientcode,r.name,parseFloat(r.amount)||0,r.pnno,r.batchno,'Branch not found'];}),'Unlocated_Branches_'+today()+'.xls');}
 
-function setUploadProgress(pct, status, chunk, total, added, updated, unlocated, totalAmt){
+function setUploadProgress(pct, status, chunk, total, added, updated, unlocated){
   var box = document.getElementById('uploadProgressBox');
   if(box) box.style.display = 'block';
   var bar = document.getElementById('uploadProgressBar');
@@ -949,7 +941,6 @@ function setUploadProgress(pct, status, chunk, total, added, updated, unlocated,
   var newEl = document.getElementById('upNewClients');
   var updEl = document.getElementById('upUpdated');
   var unlocEl = document.getElementById('upUnlocated');
-  var amtEl = document.getElementById('upTotalAmt');
   if(bar) bar.style.width = pct + '%';
   if(pctEl) pctEl.textContent = pct + '%';
   if(statusEl) statusEl.textContent = status;
@@ -958,7 +949,6 @@ function setUploadProgress(pct, status, chunk, total, added, updated, unlocated,
   if(newEl && added !== undefined) newEl.textContent = added.toLocaleString('en-PH');
   if(updEl && updated !== undefined) updEl.textContent = updated.toLocaleString('en-PH');
   if(unlocEl && unlocated !== undefined) unlocEl.textContent = unlocated.toLocaleString('en-PH');
-  if(amtEl && totalAmt !== undefined) amtEl.textContent = peso(totalAmt);
 }
 
 function hideUploadProgress(){
@@ -978,58 +968,37 @@ async function handleUpload(input){
     var headers=lines[0].map(function(h){return h.toLowerCase().trim();});
     var missing=['branchcode','clientcode','name','amount','pnno','batchno'].filter(function(r){return !headers.includes(r);});
     if(missing.length){showAlert('uploadAlert','Missing columns: '+missing.join(', '),'danger');return;}
-    loading(true,'Validating file...');
-    // Check if this batchno was already uploaded (with timeout)
-    var batchNos=[...new Set(dataRows.map(function(r){return (r[5]||'').trim();}))].filter(Boolean);
-    if(batchNos.length>0){
-      try{
-        var batchCheckPromise=db.select('nbmaster','?batchno=eq.'+encodeURIComponent(batchNos[0])+'&limit=1');
-        var timeoutPromise=new Promise(function(resolve){setTimeout(function(){resolve([]);},5000);});
-        var existingBatch=await Promise.race([batchCheckPromise,timeoutPromise]);
-        if(existingBatch&&existingBatch.length>0){
-          var proceed=confirm('WARNING: Batch "'+batchNos[0]+'" was already uploaded before!\n\nUploading again will DOUBLE the amounts for existing clients.\n\nAre you sure you want to continue?');
-          if(!proceed){loading(false);showAlert('uploadAlert','Upload cancelled - batch already exists.','warning');return;}
-        }
-      }catch(batchErr){
-        // If check fails just continue with upload
-      }
-    }
     loading(true,'Validating branches...');
     var branches=await dbCached('branches','?select=code',300000);
     var validCodes=new Set(branches.map(function(b){return b.code.toUpperCase();}));
-    // Fetch existing clients from DB efficiently
-    loading(true,'Checking existing clients...');
     var existing=[];
-    try{
-      var exPage=0;
-      while(true){
-        var exBatch=await db.select('clients','?select=clientcode,change&limit=1000&offset='+(exPage*1000));
-        if(!Array.isArray(exBatch)||exBatch.length===0)break;
-        existing=existing.concat(exBatch);
-        if(exBatch.length<1000)break;
-        exPage++;
-      }
-    }catch(exErr){}
+    var exPage=0;
+    while(true){
+      var exBatch=await db.select('clients','?select=clientcode,change&limit=1000&offset='+(exPage*1000));
+      if(!Array.isArray(exBatch)||exBatch.length===0)break;
+      existing=existing.concat(exBatch);
+      if(exBatch.length<1000)break;
+      exPage++;
+    }
     var added=0,updated=0,log=[],unlocated=[],toInsert=[],toUpdate=[],nbInsert=[],nbSeen=new Set();
     var dataRows=lines.slice(1).filter(function(r){return r.length>=6;});
     for(var idx=0;idx<dataRows.length;idx++){
       var vals=dataRows[idx];
-      var row={branchcode:(vals[0]||'').trim().toUpperCase(),clientcode:(vals[1]||'').trim(),name:(vals[2]||'').trim(),amount:Math.round((parseFloat(vals[3])||0)*100)/100,pnno:(vals[4]||'').trim(),batchno:(vals[5]||'').trim()};
+      var row={branchcode:(vals[0]||'').trim().toUpperCase(),clientcode:(vals[1]||'').trim(),name:(vals[2]||'').trim(),amount:parseFloat(vals[3])||0,pnno:(vals[4]||'').trim(),batchno:(vals[5]||'').trim()};
       if(!row.clientcode)continue;
       if(!validCodes.has(row.branchcode)){unlocated.push(row);log.push(Object.assign({},row,{status:'Branch Not Found'}));continue;}
       var ex=existing.find(function(c){return c.clientcode===row.clientcode;});
-      if(ex){ex.change=Math.round((parseFloat(ex.change||0)+row.amount)*100)/100;toUpdate.push({clientcode:row.clientcode,change:ex.change});updated++;log.push(Object.assign({},row,{status:'Accumulated'}));}
-      else{toInsert.push({branchcode:row.branchcode,clientcode:row.clientcode,name:row.name,change:Math.round(row.amount*100)/100,moc:'CASH',pnno:row.pnno});existing.push({clientcode:row.clientcode,change:row.amount});added++;log.push(Object.assign({},row,{status:'New'}));}
+      if(ex){ex.change=parseFloat(ex.change||0)+row.amount;toUpdate.push({clientcode:row.clientcode,change:ex.change});updated++;log.push(Object.assign({},row,{status:'Accumulated'}));}
+      else{toInsert.push({branchcode:row.branchcode,clientcode:row.clientcode,name:row.name,change:row.amount,moc:'CASH',pnno:row.pnno});existing.push({clientcode:row.clientcode,change:row.amount});added++;log.push(Object.assign({},row,{status:'New'}));}
       var nbKey=row.clientcode+'|'+row.batchno+'|'+row.pnno;
       if(!nbSeen.has(nbKey)){nbSeen.add(nbKey);nbInsert.push({clientcode:row.clientcode,pnno:row.pnno,name:row.name,amount:row.amount,batchno:row.batchno});}
     }
-    var CHUNK=300,PAR=30;
-    var totalUploadAmt=Math.round(dataRows.filter(function(r){return (r[1]||'').trim()&&validCodes.has((r[0]||'').trim().toUpperCase());}).reduce(function(a,r){return a+Math.round((parseFloat(r[3])||0)*100)/100;},0)*100)/100;
-    setUploadProgress(5,'Validating records...','Processing '+dataRows.length+' rows...',dataRows.length,added,updated,unlocated.length,totalUploadAmt);
+    var CHUNK=100,PAR=10;
+    setUploadProgress(5,'Validating records...','Processing '+dataRows.length+' rows...',dataRows.length,added,updated,unlocated.length);
     if(toInsert.length){
       for(var i=0;i<toInsert.length;i+=CHUNK){
         var insertPct=Math.round(10+((i+CHUNK)/toInsert.length)*40);
-        setUploadProgress(insertPct,'Saving new clients...','Inserting '+(Math.min(i+CHUNK,toInsert.length))+' of '+toInsert.length+' new clients...',dataRows.length,added,updated,unlocated.length,totalUploadAmt);
+        setUploadProgress(insertPct,'Saving new clients...','Inserting '+(Math.min(i+CHUNK,toInsert.length))+' of '+toInsert.length+' new clients...',dataRows.length,added,updated,unlocated.length);
         try{await db.insert('clients',toInsert.slice(i,i+CHUNK));}
         catch(chunkErr){
           // Retry once on failure
@@ -1041,28 +1010,23 @@ async function handleUpload(input){
       }
     }
     if(toUpdate.length){
-      // Use already-fetched existing array for update amounts
-      var toUpdateFinal=toUpdate;
-      for(var i=0;i<toUpdateFinal.length;i+=PAR){
-        var updPct=Math.round(55+((i+PAR)/toUpdateFinal.length)*20);
-        setUploadProgress(updPct,'Updating client balances...','Updating '+(Math.min(i+PAR,toUpdateFinal.length))+' of '+toUpdateFinal.length+' balances...',dataRows.length,added,updated,unlocated.length,totalUploadAmt);
-        try{await Promise.all(toUpdateFinal.slice(i,i+PAR).map(function(u){return db.update('clients',{change:u.change},'?clientcode=eq.'+encodeURIComponent(u.clientcode));}));}
+      for(var i=0;i<toUpdate.length;i+=PAR){
+        var updPct=Math.round(55+((i+PAR)/toUpdate.length)*20);
+        setUploadProgress(updPct,'Updating client balances...','Updating '+(Math.min(i+PAR,toUpdate.length))+' of '+toUpdate.length+' balances...',dataRows.length,added,updated,unlocated.length);
+        try{await Promise.all(toUpdate.slice(i,i+PAR).map(function(u){return db.update('clients',{change:u.change},'?clientcode=eq.'+encodeURIComponent(u.clientcode));}));}
         catch(updErr){await new Promise(function(r){setTimeout(r,1000);});}
       }
     }
     if(nbInsert.length){
-      setUploadProgress(80,'Saving NB master records...','Saving '+nbInsert.length+' NB records...',dataRows.length,added,updated,unlocated.length,totalUploadAmt);
-      // Run NB inserts in parallel chunks for speed
-      var nbChunks=[];
-      for(var i=0;i<nbInsert.length;i+=CHUNK) nbChunks.push(nbInsert.slice(i,i+CHUNK));
-      for(var i=0;i<nbChunks.length;i+=3){
-        var batch=nbChunks.slice(i,i+3);
-        try{await Promise.all(batch.map(function(chunk){return db.insert('nbmaster',chunk);}));}
-        catch(nbErr){await new Promise(function(r){setTimeout(r,500);});}
+      for(var i=0;i<nbInsert.length;i+=CHUNK){
+        var nbPct=Math.round(75+((i+CHUNK)/nbInsert.length)*20);
+        setUploadProgress(nbPct,'Saving NB master records...','Saving '+(Math.min(i+CHUNK,nbInsert.length))+' of '+nbInsert.length+' NB records...',dataRows.length,added,updated,unlocated.length);
+        try{await db.insert('nbmaster',nbInsert.slice(i,i+CHUNK));}
+        catch(nbErr){await new Promise(function(r){setTimeout(r,1000);});}
       }
     }
     cachedClients=[];_uploadLog=log;_unlocatedRecords=unlocated;
-    setUploadProgress(100,'Upload Complete!','All records processed successfully!',dataRows.length,added,updated,unlocated.length,totalUploadAmt);
+    setUploadProgress(100,'Upload Complete!','All records processed successfully!',dataRows.length,added,updated,unlocated.length);
     logAudit('UPLOAD','Upload','Upload complete: '+added+' new, '+updated+' accumulated');showAlert('uploadOK','Upload complete: '+added+' new, '+updated+' accumulated'+(unlocated.length?', '+unlocated.length+' unlocated.':'.'), 'success');
     if(unlocated.length){showAlert('uploadWarn',unlocated.length+' record(s) skipped - branch not found.','warning');document.getElementById('btnDownloadUnlocated').style.display='inline-flex';}
     else document.getElementById('btnDownloadUnlocated').style.display='none';
