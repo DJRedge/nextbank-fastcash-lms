@@ -609,6 +609,10 @@ var cachedClients=[];
 var cachedTx=[];
 var cachedBranches=[];
 var cachedMOC=[];
+var _testMode=false;
+var _uploadLog=[];
+var _unlocatedRecords=[];
+var _branchLog={};
 async function sbFetch(method,table,body,query){query=query||'';var url=SB_URL+'/rest/v1/'+table+query;var headers={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};if(method!=='GET')headers['Prefer']='return=representation';var opts={method:method,headers:headers};if(body)opts.body=JSON.stringify(body);var res=await fetch(url,opts);if(!res.ok){var msg='HTTP '+res.status;try{var j=await res.json();msg=j.message||j.hint||msg;}catch(e){}throw new Error(msg);}var text=await res.text();return text?JSON.parse(text):[];}
 var db={select:function(t,q){return sbFetch('GET',t,null,q);},insert:function(t,d){return sbFetch('POST',t,d,'');},update:function(t,d,q){return sbFetch('PATCH',t,d,q);},delete:function(t,q){return sbFetch('DELETE',t,null,q);}};
 var currentUser=null,editKey={},cachedUsers=[];
@@ -993,18 +997,19 @@ async function handleUpload(input){
     loading(true,'Validating branches...');
     var branches=await dbCached('branches','?select=code',300000);
     var validCodes=new Set(branches.map(function(b){return b.code.toUpperCase();}));
-    // Only fetch clients that exist in this upload file - much faster!
+    // Fetch existing clients from DB efficiently
     loading(true,'Checking existing clients...');
-    var fileClientCodes=[...new Set(dataRows.map(function(r){return (r[1]||'').trim();}).filter(Boolean))];
     var existing=[];
-    // Fetch in batches of 50 clientcodes using IN filter
-    for(var ci=0;ci<fileClientCodes.length;ci+=50){
-      var codes=fileClientCodes.slice(ci,ci+50);
-      try{
-        var batch=await db.select('clients','?select=clientcode,change&clientcode=in.('+codes.map(function(c){return encodeURIComponent(c);}).join(',')+')');
-        if(Array.isArray(batch)) existing=existing.concat(batch);
-      }catch(e){}
-    }
+    try{
+      var exPage=0;
+      while(true){
+        var exBatch=await db.select('clients','?select=clientcode,change&limit=1000&offset='+(exPage*1000));
+        if(!Array.isArray(exBatch)||exBatch.length===0)break;
+        existing=existing.concat(exBatch);
+        if(exBatch.length<1000)break;
+        exPage++;
+      }
+    }catch(exErr){}
     var added=0,updated=0,log=[],unlocated=[],toInsert=[],toUpdate=[],nbInsert=[],nbSeen=new Set();
     var dataRows=lines.slice(1).filter(function(r){return r.length>=6;});
     for(var idx=0;idx<dataRows.length;idx++){
