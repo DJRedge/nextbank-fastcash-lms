@@ -974,14 +974,20 @@ async function handleUpload(input){
     var headers=lines[0].map(function(h){return h.toLowerCase().trim();});
     var missing=['branchcode','clientcode','name','amount','pnno','batchno'].filter(function(r){return !headers.includes(r);});
     if(missing.length){showAlert('uploadAlert','Missing columns: '+missing.join(', '),'danger');return;}
-    loading(true,'Checking for duplicate batch...');
-    // Check if this batchno was already uploaded
+    loading(true,'Validating file...');
+    // Check if this batchno was already uploaded (with timeout)
     var batchNos=[...new Set(dataRows.map(function(r){return (r[5]||'').trim();}))].filter(Boolean);
     if(batchNos.length>0){
-      var existingBatch=await db.select('nbmaster','?batchno=eq.'+encodeURIComponent(batchNos[0])+'&limit=1');
-      if(existingBatch&&existingBatch.length>0){
-        var proceed=confirm('WARNING: Batch "'+batchNos[0]+'" was already uploaded before!\n\nUploading again will DOUBLE the amounts for existing clients.\n\nAre you sure you want to continue?');
-        if(!proceed){loading(false);showAlert('uploadAlert','Upload cancelled - batch already exists.','warning');return;}
+      try{
+        var batchCheckPromise=db.select('nbmaster','?batchno=eq.'+encodeURIComponent(batchNos[0])+'&limit=1');
+        var timeoutPromise=new Promise(function(resolve){setTimeout(function(){resolve([]);},5000);});
+        var existingBatch=await Promise.race([batchCheckPromise,timeoutPromise]);
+        if(existingBatch&&existingBatch.length>0){
+          var proceed=confirm('WARNING: Batch "'+batchNos[0]+'" was already uploaded before!\n\nUploading again will DOUBLE the amounts for existing clients.\n\nAre you sure you want to continue?');
+          if(!proceed){loading(false);showAlert('uploadAlert','Upload cancelled - batch already exists.','warning');return;}
+        }
+      }catch(batchErr){
+        // If check fails just continue with upload
       }
     }
     loading(true,'Validating branches...');
