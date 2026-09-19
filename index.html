@@ -2,6 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=()">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.supabase.co https://cdnjs.cloudflare.com; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co;">
 <meta http-equiv="Cache-Control" content="max-age=3600">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,AAABAAEAEBAQAAEABAAoAQAAFgAAACgAAAAQAAAAIAAAAAEABAAAAAAAgAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAA/4QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA">
@@ -78,7 +84,11 @@
         <span class="db-status db-offline" id="dbStatus">Connecting...</span>
         <div style="background:#059669;color:#fff;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:800;letter-spacing:.3px">&#127381; LIVE</div><div class="topbar-badge">GSIS &middot; PVAO &middot; SSS</div>
         <div class="clock-box">
-          <div style="display:flex;flex-direction:column;align-items:flex-end;line-height:1.2">
+          <div style="background:#fffbeb;border:2px solid #f5c518;border-radius:8px;padding:10px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:12px;font-weight:700;color:#061240;text-transform:uppercase;letter-spacing:.5px">Total Amount Uploaded</div>
+          <div style="font-size:22px;font-weight:800;color:#061240" id="upTotalAmt">&#8369;0.00</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;line-height:1.2">
             <span id="liveClock" style="font-family:Nunito,sans-serif;font-size:17px;font-weight:800;color:var(--gold);letter-spacing:1.5px;font-variant-numeric:tabular-nums"></span>
             <span id="liveDate" style="font-family:Nunito,sans-serif;font-size:10px;color:rgba(255,255,255,.75);font-weight:600"></span>
           </div>
@@ -968,6 +978,20 @@ async function handleUpload(input){
     var headers=lines[0].map(function(h){return h.toLowerCase().trim();});
     var missing=['branchcode','clientcode','name','amount','pnno','batchno'].filter(function(r){return !headers.includes(r);});
     if(missing.length){showAlert('uploadAlert','Missing columns: '+missing.join(', '),'danger');return;}
+    loading(true,'Checking for duplicate batch...');
+    // Duplicate batch check with 5s timeout
+    var batchNos=[...new Set(dataRows.map(function(r){return (r[5]||'').trim();}))].filter(Boolean);
+    if(batchNos.length>0){
+      try{
+        var batchCheckPromise=db.select('nbmaster','?batchno=eq.'+encodeURIComponent(batchNos[0])+'&limit=1');
+        var timeoutPromise=new Promise(function(resolve){setTimeout(function(){resolve([]);},5000);});
+        var existingBatch=await Promise.race([batchCheckPromise,timeoutPromise]);
+        if(existingBatch&&existingBatch.length>0){
+          var proceed=confirm('WARNING: Batch "'+batchNos[0]+'" was already uploaded!\n\nUploading again will DOUBLE the amounts.\n\nAre you sure you want to continue?');
+          if(!proceed){loading(false);showAlert('uploadAlert','Upload cancelled - batch already exists.','warning');return;}
+        }
+      }catch(batchErr){}
+    }
     loading(true,'Validating branches...');
     var branches=await dbCached('branches','?select=code',300000);
     var validCodes=new Set(branches.map(function(b){return b.code.toUpperCase();}));
