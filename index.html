@@ -980,7 +980,7 @@ async function handleUpload(input){
       if(exBatch.length<1000)break;
       exPage++;
     }
-    var added=0,updated=0,log=[],unlocated=[],toInsert=[],toUpdate=[],nbInsert=[],nbSeen=new Set();
+    var added=0,updated=0,log=[],unlocated=[],toInsert=[],toUpdate=[],toUpdateMap={},nbInsert=[],nbSeen=new Set();
     var dataRows=lines.slice(1).filter(function(r){return r.length>=6;});
     for(var idx=0;idx<dataRows.length;idx++){
       var vals=dataRows[idx];
@@ -988,8 +988,8 @@ async function handleUpload(input){
       if(!row.clientcode)continue;
       if(!validCodes.has(row.branchcode)){unlocated.push(row);log.push(Object.assign({},row,{status:'Branch Not Found'}));continue;}
       var ex=existing.find(function(c){return c.clientcode===row.clientcode;});
-      if(ex){ex.change=parseFloat(ex.change||0)+row.amount;toUpdate.push({clientcode:row.clientcode,change:ex.change});updated++;log.push(Object.assign({},row,{status:'Accumulated'}));}
-      else{toInsert.push({branchcode:row.branchcode,clientcode:row.clientcode,name:row.name,change:row.amount,moc:'CASH',pnno:row.pnno});existing.push({clientcode:row.clientcode,change:row.amount});added++;log.push(Object.assign({},row,{status:'New'}));}
+      if(ex){ex.change=Math.round((parseFloat(ex.change||0)+row.amount)*100)/100;toUpdateMap[row.clientcode]=ex.change;updated++;log.push(Object.assign({},row,{status:'Accumulated'}));}
+      else{toInsert.push({branchcode:row.branchcode,clientcode:row.clientcode,name:row.name,change:Math.round(row.amount*100)/100,moc:'CASH',pnno:row.pnno});existing.push({clientcode:row.clientcode,change:row.amount});added++;log.push(Object.assign({},row,{status:'New'}));}
       var nbKey=row.clientcode+'|'+row.batchno+'|'+row.pnno;
       if(!nbSeen.has(nbKey)){nbSeen.add(nbKey);nbInsert.push({clientcode:row.clientcode,pnno:row.pnno,name:row.name,amount:row.amount,batchno:row.batchno});}
     }
@@ -1009,6 +1009,8 @@ async function handleUpload(input){
         }
       }
     }
+    // Convert map to array - ensures each clientcode has only ONE final value
+    toUpdate=Object.keys(toUpdateMap).map(function(code){return {clientcode:code,change:toUpdateMap[code]};});
     if(toUpdate.length){
       for(var i=0;i<toUpdate.length;i+=PAR){
         var updPct=Math.round(55+((i+PAR)/toUpdate.length)*20);
